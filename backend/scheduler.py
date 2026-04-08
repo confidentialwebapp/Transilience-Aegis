@@ -4,8 +4,6 @@ import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-from db import get_client
-
 logger = logging.getLogger(__name__)
 
 _scheduler: AsyncIOScheduler | None = None
@@ -14,6 +12,7 @@ _scheduler: AsyncIOScheduler | None = None
 async def _run_module_for_all_orgs(module_func, module_name: str):
     logger.info(f"Scheduler: running {module_name} for all orgs")
     try:
+        from db import get_client
         client = get_client()
         orgs = client.table("orgs").select("id").execute()
         for org in orgs.data:

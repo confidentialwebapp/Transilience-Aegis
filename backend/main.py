@@ -27,8 +27,18 @@ limiter = Limiter(key_func=get_remote_address)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting TAI-AEGIS API...")
-    get_client()
-    start_scheduler()
+    if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_KEY:
+        try:
+            get_client()
+            logger.info("Supabase client initialized.")
+        except Exception as e:
+            logger.warning(f"Supabase init failed (will retry on first request): {e}")
+    else:
+        logger.warning("Supabase credentials not configured.")
+    try:
+        start_scheduler()
+    except Exception as e:
+        logger.warning(f"Scheduler start failed: {e}")
     logger.info("TAI-AEGIS API ready.")
     yield
     stop_scheduler()

@@ -1,247 +1,139 @@
 <div align="center">
-   
-   <!-- Animated Logo Effect -->
-   <img src="logo.png" alt="Transillience Aegis Logo" width="280" style="filter: drop-shadow(0 0 10px rgba(0,255,255,0.5));">
-     
+   <img src="logo.png" alt="TAI-AEGIS Logo" width="200">
+   <h1>TAI-AEGIS</h1>
+   <p><strong>Threat Intelligence & Digital Risk Monitoring Platform</strong></p>
+
+   [![License: MIT](https://img.shields.io/badge/License-MIT-cyan.svg)](LICENSE)
+   [![CI/CD](https://github.com/confidentialwebapp/Transilience-Aegis/actions/workflows/deploy.yml/badge.svg)](https://github.com/confidentialwebapp/Transilience-Aegis/actions)
 </div>
 
-
-## Overview
-
-Transillience Aegis is an OSINT (Open Source Intelligence) platform designed for cybersecurity professionals and authorized investigators. It combines Tor-based anonymous routing with large language model intelligence to search, scrape, filter, and summarize content across 16+ dark web search engines — all through a clean Streamlit web interface.
-
 ---
 
-## Table of Contents
-
-- [Features](#features)
-- [Architecture](#architecture)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Contributing](#contributing)
-- [Legal Disclaimer](#legal-disclaimer)
-- [Acknowledgements](#acknowledgements)
-
----
+A full-stack external threat intelligence platform that continuously monitors the surface web, breach databases, paste sites, GitHub leaks, domain squatting, and social media for threats targeting your organization. Built entirely on free-tier infrastructure.
 
 ## Features
 
-### AI-Powered Intelligence
-- **Query Refinement** — LLMs automatically optimize raw search queries for dark web context.
-- **Intelligent Filtering** — AI ranks and filters results by relevance before presenting them.
-- **Multi-Model Support** — Integrates with OpenAI, Anthropic Claude, Google Gemini, OpenRouter, Ollama, and LlamaCPP.
+| Module | Description |
+|--------|-------------|
+| **Dark & Deep Web Monitoring** | HIBP breach checks, Pastebin monitoring, GitHub secret scanning, IntelX dark web search |
+| **Brand Risk Monitoring** | Typosquat domain generation, URLScan.io phishing detection, VirusTotal reputation, DNS monitoring |
+| **Data Leak Detection** | Regex-based secret scanning (AWS keys, Stripe tokens, etc.), GitHub code search, paste site monitoring |
+| **Surface Web Monitoring** | Google dork automation via DuckDuckGo, Google News RSS monitoring, Shodan exposure scanning |
+| **Certificate Transparency** | crt.sh subdomain enumeration, new certificate alerts, subdomain diff tracking |
+| **Credential Exposure** | Email breach correlation, paste site exposure, domain-wide email pattern checks |
 
-### Privacy & Security
-- **Tor Integration** — All traffic is routed anonymously via SOCKS5 proxy.
-- **Local AI Processing** — Use Ollama or LlamaCPP for fully on-premise, zero-egress AI inference.
-- **Docker Isolation** — Containerized deployment ensures a clean, sandboxed runtime environment.
+## Tech Stack
 
-### Dark Web Coverage
-- **16+ Search Engines** — Covers Ahmia, OnionLand, Torgle, Amnesia, Kaizer, Tor66, DeepSearches, and more.
-- **Parallel Scraping** — High-throughput concurrent crawling of `.onion` sites.
-- **Real-Time Dashboard** — Live results streamed into the investigation interface.
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | Next.js 14 (App Router), TypeScript, Tailwind CSS, Recharts, Supabase Realtime |
+| **Backend** | Python 3.11+, FastAPI, APScheduler, httpx, BeautifulSoup4 |
+| **Database** | Supabase (PostgreSQL + Auth + Realtime + Row Level Security) |
+| **Hosting** | Vercel (frontend), Render (backend) |
+| **CI/CD** | GitHub Actions |
 
-### Investigation Tools
-- **Custom Reports** — Export investigation results to structured files.
-- **Search History** — Revisit and resume past investigations at any time.
-- **Streamlit UI** — Responsive, browser-based interface requiring no frontend setup.
+## Quick Start
 
----
+### Prerequisites
+- Node.js 20+
+- Python 3.11+
+- Supabase project ([supabase.com](https://supabase.com))
 
-## Architecture
-
-```mermaid
-flowchart TD
-    A[🔍 User Query] -->|Input| B["🌐 Streamlit Web UI<br/>Port 8501"]
-    B -->|Raw Query| C["🤖 LLM Refinement Engine"]
-    
-    subgraph LLM["🧠 LLM Providers"]
-        L1[OpenAI GPT]
-        L2[Anthropic Claude]
-        L3[Google Gemini]
-        L4[OpenRouter]
-        L5[🦙 Ollama Local]
-        L6[🦙 LlamaCPP Local]
-    end
-    
-    C -.->|API Call| LLM
-    C -->|Optimized Query| D["🔒 Tor Proxy<br/>SOCKS5://127.0.0.1:9050"]
-    D -->|Route| E["🕸️ Search Engine Matrix"]
-    
-    subgraph SE["🔍 16+ Dark Web Engines"]
-        S1[Ahmia]
-        S2[OnionLand]
-        S3[Torgle]
-        S4[Amnesia]
-        S5[Kaizer]
-        S6[Tor66]
-        S7[DeepSearches]
-    end
-    
-    E --> SE
-    SE -->|.onion URLs| F["⚡ Parallel Scraper"]
-    F -->|Raw Content| G["🎯 LLM Result Filter"]
-    G -->|Ranked Data| H["📊 AI Summary Engine"]
-    H -->|Final Report| I["📄 Investigation Report"]
-    
-    HM["💓 Health Monitor"] -.->|Watch| E
-    HM -.->|Watch| G
-    HM -.->|Watch| H
-```
-
-A health monitor runs alongside the pipeline, watching each stage (search, filter, summary) and surfacing failures in real time.
-
----
-
-## Prerequisites
-
-- **Python** 3.10 or higher (for local development)
-- **Docker & Docker Compose** (recommended for deployment)
-- **Tor** service running locally
-
-### Install Tor
+### 1. Clone & setup
 
 ```bash
-# Linux / WSL
-sudo apt install tor && sudo service tor start
-
-# macOS
-brew install tor && brew services start tor
+git clone https://github.com/confidentialwebapp/Transilience-Aegis.git
+cd Transilience-Aegis
 ```
 
----
-
-## Installation
-
-### Option 1 — Docker (Recommended)
+### 2. Backend
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/confidentialwebapp/Transillience-Aegis.git
-cd Transillience-Aegis
-
-# 2. Start Tor
-sudo service tor start   # Linux
-# brew services start tor  # macOS
-
-# 3. Launch the application
-docker-compose up
-```
-
-Open your browser at `http://localhost:8501`.
-
-**Persisting investigations across container restarts:**
-
-```bash
-docker run --rm \
-  -v "$(pwd)/.env:/app/.env" \
-  -v "$(pwd)/investigations:/app/investigations" \
-  --add-host=host.docker.internal:host-gateway \
-  -p 8501:8501 \
-  transillience-aegis:latest
-```
-
----
-
-### Option 2 — Python (Local Development)
-
-```bash
-# 1. Clone and enter the repository
-git clone https://github.com/confidentialwebapp/Transillience-Aegis.git
-cd Transillience-Aegis
-
-# 2. Install dependencies
+cd backend
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
-
-# 3. Start Tor (see above)
-
-# 4. Launch the UI
-streamlit run ui.py
+cp .env.example .env
+# Edit .env with your Supabase and API keys
+uvicorn main:app --reload --port 8000
 ```
 
----
-
-## Usage
-
-| Step | Action | Notes |
-|------|--------|-------|
-| 1 | Confirm Tor is running | `sudo service tor status` |
-| 2 | Start the application | Docker or `streamlit run ui.py` |
-| 3 | Enter your search query | Natural language accepted |
-| 4 | AI refines the query | Automatically optimized |
-| 5 | Parallel search executes | Queries 16+ engines concurrently |
-| 6 | Review filtered results | AI-ranked by relevance |
-| 7 | Save the investigation | Exported to `investigations/` |
-
----
-
-## Configuration
-
-Copy `.env.example` to `.env` and populate the relevant API keys:
-
-```env
-# LLM Provider (choose one or configure multiple)
-OPENAI_API_KEY=your_key_here
-ANTHROPIC_API_KEY=your_key_here
-GOOGLE_API_KEY=your_key_here
-OPENROUTER_API_KEY=your_key_here
-
-# For local inference (no key required)
-OLLAMA_BASE_URL=http://localhost:11434
-LLAMACPP_BASE_URL=http://localhost:8080
-
-# Tor proxy (default)
-TOR_PROXY=socks5://127.0.0.1:9050
-```
-
----
-
-## Contributing
-
-Contributions are welcome. Please follow the standard fork-and-PR workflow:
+### 3. Frontend
 
 ```bash
-# 1. Fork the repository on GitHub
-
-# 2. Create a feature branch
-git checkout -b feature/your-feature-name
-
-# 3. Make your changes and commit
-git commit -m "feat: describe your change"
-
-# 4. Push to your fork
-git push origin feature/your-feature-name
-
-# 5. Open a Pull Request against main
+cd frontend
+npm install
+cp .env.example .env.local
+# Edit .env.local with your Supabase URL and anon key
+npm run dev
 ```
 
-**Issue types accepted:**
-- Bug reports
-- Feature requests
-- Documentation improvements
-- Usage questions
+### 4. Database
 
----
+Run the SQL migration in your Supabase SQL editor:
+```
+supabase/migrations/001_initial_schema.sql
+```
 
-## Legal Disclaimer
+Enable Realtime on the `alerts` table in Supabase Dashboard.
 
-This tool is intended exclusively for **authorized OSINT investigations** and **lawful cybersecurity research**.
+## Environment Variables
 
-- You are solely responsible for ensuring your use complies with all applicable local, national, and international laws.
-- You must have explicit authorization before investigating any target system or individual.
-- LLM API usage is subject to each provider's terms of service.
-- The authors and maintainers of this project accept no liability for any misuse or unlawful application of this software.
+### Backend (`backend/.env`)
 
-**By using Transillience Aegis, you accept full responsibility for your actions.**
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `SUPABASE_URL` | Supabase project URL | Yes |
+| `SUPABASE_SERVICE_KEY` | Supabase service role key | Yes |
+| `HIBP_API_KEY` | HaveIBeenPwned API key | No |
+| `VIRUSTOTAL_API_KEY` | VirusTotal API key | No |
+| `URLSCAN_API_KEY` | URLScan.io API key | No |
+| `GITHUB_PAT` | GitHub Personal Access Token | No |
+| `GREYNOISE_API_KEY` | GreyNoise Community API key | No |
+| `SHODAN_API_KEY` | Shodan API key | No |
+| `OTX_API_KEY` | AlienVault OTX API key | No |
+| `RESEND_API_KEY` | Resend.com email API key | No |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot token | No |
 
----
+### Frontend (`frontend/.env.local`)
 
-## Acknowledgements
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
+| `NEXT_PUBLIC_API_BASE_URL` | Backend API URL |
 
-- [OSINT-Assistant](https://github.com/AXRoux/OSINT-Assistant) — LLM prompt references
+## Project Structure
 
----
+```
+TAI-AEGIS/
+├── backend/
+│   ├── main.py              # FastAPI app
+│   ├── config.py            # Settings
+│   ├── db.py                # Supabase client
+│   ├── scheduler.py         # APScheduler cron jobs
+│   ├── routers/             # API endpoints
+│   ├── modules/             # Scan engines (6 modules)
+│   └── utils/               # Scoring, notifications, rate limiting
+├── frontend/
+│   ├── app/                 # Next.js 14 App Router pages
+│   ├── components/          # React components
+│   ├── hooks/               # Custom hooks (Realtime, data fetching)
+│   └── lib/                 # API client, Supabase, utilities
+├── supabase/migrations/     # SQL schema
+├── render.yaml              # Render deployment config
+├── vercel.json              # Vercel deployment config
+└── .github/workflows/       # CI/CD pipeline
+```
 
-<sub>Transillience Aegis — Illuminating the dark web for authorized investigators.</sub>
+## Deployment
+
+| Platform | Purpose | Guide |
+|----------|---------|-------|
+| **Supabase** | Database + Auth + Realtime | Create project, run migration, enable Realtime on `alerts` |
+| **Render** | Backend API | Import `render.yaml` as Blueprint, set env vars |
+| **Vercel** | Frontend | Connect repo, set root to `frontend`, set env vars |
+
+## License
+
+MIT

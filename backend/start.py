@@ -27,6 +27,21 @@ def create_app():
     async def health():
         return {"status": "healthy", "service": "tai-aegis-api"}
 
+    @app.get("/debug/imports")
+    async def debug_imports():
+        results = {}
+        modules_to_test = [
+            "db", "config", "routers.assets", "routers.alerts",
+            "routers.scans", "routers.intel", "routers.dashboard",
+        ]
+        for mod in modules_to_test:
+            try:
+                __import__(mod)
+                results[mod] = "OK"
+            except Exception as e:
+                results[mod] = str(e)
+        return results
+
     logger.info("Loading routers...")
     try:
         from routers import assets, alerts, scans, intel, dashboard

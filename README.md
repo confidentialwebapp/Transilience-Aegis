@@ -1,17 +1,67 @@
 <div align="center">
-   <img src=".github/assets/logo.png" alt="Logo" width="300">
-   <br><a href="https://github.com/confidentialwebapp/Transillience-Aegis/actions/workflows/release.yml"><img alt="Release" src="https://github.com/confidentialwebapp/Transillience-Aegis/actions/workflows/release.yml/badge.svg"></a> <a href="https://github.com/confidentialwebapp/Transillience-Aegis/releases"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/confidentialwebapp/Transillience-Aegis"></a> <a href="https://hub.docker.com/r/apurvsg/transilience-ai"><img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/apurvsg/transilience-ai"></a>
-   <h1>Transilience AI: Dark Web OSINT Platform</h1>
+   <img src=".github/assets/transilience.png" alt="transilience.ai Logo" width="300">
+   <br><a href="https://github.com/confidentialwebapp/transilience.ai/actions/workflows/release.yml"><img alt="Release" src="https://github.com/confidentialwebapp/transilience.ai/actions/workflows/release.yml/badge.svg"></a> <a href="https://github.com/confidentialwebapp/transilience.ai/releases"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/confidentialwebapp/transilience.ai"></a> <a href="https://hub.docker.com/r/transilience/transilience.ai"><img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/transilience/transilience.ai"></a>
+   <h1>transilience.ai: Dark Web OSINT Platform</h1>
 
-   <p>Transilience AI is an AI-powered platform for conducting dark web OSINT investigations. It leverages LLMs to refine queries, filter search results from dark web search engines, and provide an investigation summary.</p>
+   <p>transilience.ai is an AI-powered platform for conducting dark web OSINT investigations. It leverages LLMs to refine queries, filter search results from dark web search engines, and provide an investigation summary.</p>
    <a href="#installation">Installation</a> &bull; <a href="#usage">Usage</a> &bull; <a href="#contributing">Contributing</a> &bull; <a href="#acknowledgements">Acknowledgements</a><br><br>
 </div>
 
-![Demo](.github/assets/screen-ui.png)
+![Demo]
 
 
 ## Architecture
-![Workflow](.github/assets/transilience-workflow.png)
+![Workflow]
+
+flowchart TD
+
+    A[User] -->|query| B[Streamlit Web UI<br/>ui.py : port 8501]
+
+    B -->|raw query| C[LLM Query Refinement<br/>llm.py : refine_query()]
+
+    %% LLM Providers
+    C -. API calls .-> LLM[LLM Providers<br/>OpenAI<br/>Anthropic Claude<br/>Google Gemini<br/>OpenRouter<br/>Ollama (local)<br/>LlamaCPP (local)]
+
+    %% Tor Layer
+    C -->|refined query| D[Tor Proxy Network<br/>socks5://127.0.0.1:9050]
+
+    %% Dark Web Search
+    D -->|parallel queries x16| E[Dark Web Search Engines<br/>search.py : ThreadPoolExecutor]
+
+    E --> Ahmia
+    E --> OnionLand
+    E --> Torgle
+    E --> Amnesia
+    E --> Kaizer
+    E --> Anima
+    E --> Tornado
+    E --> TorNet
+    E --> Torland
+    E --> FindTor
+    E --> Excavator
+    E --> Onionway
+    E --> Tor66
+    E --> OSS
+    E --> Torgol
+    E --> DeepSearches
+
+    %% Scraping
+    E -->|onion URLs| F[Parallel Onion Scraping<br/>scrape.py : scrape_multiple()<br/>ThreadPoolExecutor]
+
+    %% Filtering
+    F -->|scraped content| G[LLM Result Filtering<br/>llm.py : filter_results()]
+
+    %% Summary
+    G --> H[LLM Investigation Summary<br/>llm.py : generate_summary()]
+
+    %% Report
+    H --> I[Investigation Report<br/>display in UI + save to file]
+
+    %% Health Monitor
+    HM[Health Monitor<br/>health.py]
+    HM -. monitors .-> E
+    HM -. monitors .-> G
+    HM -. monitors .-> H
 
 ---
 
@@ -31,7 +81,7 @@
 >
 > Use responsibly and at your own risk. Ensure you comply with all relevant laws and institutional policies before conducting OSINT investigations.
 >
-> Additionally, Transilience AI leverages third-party APIs (including LLMs). Be cautious when sending potentially sensitive queries, and review the terms of service for any API or model provider you use.
+> Additionally, transilience.ai leverages third-party APIs (including LLMs). Be cautious when sending potentially sensitive queries, and review the terms of service for any API or model provider you use.
 
 ## Installation
 > [!NOTE]
@@ -44,9 +94,9 @@
 
 ### Docker [Recommended]
 
-- Pull the latest Transilience AI docker image
+- Pull the latest transilience.ai docker image
 ```bash
-docker pull apurvsg/transilience-ai:latest
+docker pull transilience/transilience.ai:latest
 ```
 
 - Run the docker image as:
@@ -55,7 +105,7 @@ docker run --rm \
    -v "$(pwd)/.env:/app/.env" \
    --add-host=host.docker.internal:host-gateway \
    -p 8501:8501 \
-   apurvsg/transilience-ai:latest
+   transilience/transilience.ai:latest
 ```
 
 > [!TIP]
@@ -66,7 +116,7 @@ docker run --rm \
 >    -v "$(pwd)/investigations:/app/investigations" \
 >    --add-host=host.docker.internal:host-gateway \
 >    -p 8501:8501 \
->    apurvsg/transilience-ai:latest
+>    transilience/transilience.ai:latest
 > ```
 > Investigations are saved to the `investigations/` folder in your working directory and can be loaded from the **Past Investigations** panel in the sidebar.
 
@@ -106,12 +156,8 @@ Open an Issue for any of these situations:
 ## Acknowledgements
 
 - Idea inspiration from [Thomas Roccia](https://x.com/fr0gger_) and his demo of [Perplexity of the Dark Web](https://x.com/fr0gger_/status/1908051083068645558).
-- Built by [Transillience Aegis AI](https://transillience-aegis.ai)
+- Made by [transilience.ai](https://transilience.ai)
 - LLM Prompt inspiration from [OSINT-Assistant](https://github.com/AXRoux/OSINT-Assistant) repository.
-- Logo Design by Transillience Aegis AI
-
-
-
-
+- Logo Design by transilience.ai
 
 

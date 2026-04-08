@@ -105,7 +105,7 @@ def cached_scrape_multiple(filtered: list, threads: int):
 
 # Streamlit page configuration
 st.set_page_config(
-    page_title="Transilience AI: Dark Web OSINT Platform",
+    page_title="transilience.ai: Dark Web OSINT Platform",
     page_icon="🕵️‍♂️",
     initial_sidebar_state="expanded",
 )
@@ -127,10 +127,10 @@ st.markdown(
 
 
 # Sidebar
-st.sidebar.title("Transilience AI")
+st.sidebar.title("transilience.ai")
 st.sidebar.text("Dark Web OSINT Platform")
 st.sidebar.markdown(
-    """Made by [Transillience Aegis AI](https://transillience-aegis.ai)"""
+    """Made by [transilience.ai](https://transilience.ai)"""
 )
 st.sidebar.subheader("Settings")
 def _env_is_set(value) -> bool:
@@ -155,7 +155,7 @@ if not model_options:
     st.error(
         "⛔ **No LLM models available.**\n\n"
         "No API keys or local providers are configured. "
-        "Set at least one in your `.env` file and restart Transilience AI.\n\n"
+        "Set at least one in your `.env` file and restart transilience.ai.\n\n"
         "See **Provider Configuration** in the sidebar for details."
     )
     st.warning("To configure:\n1. Create a `.env` file with your API keys\n2. Restart the Docker container")
@@ -308,7 +308,7 @@ else:
 # Main UI - logo and input
 _, logo_col, _ = st.columns(3)
 with logo_col:
-    st.image(".github/assets/logo.png", width=200)
+    st.image(".github/assets/transilience.png", width=200)
 
 # Display text box and button
 with st.form("search_form", clear_on_submit=True):

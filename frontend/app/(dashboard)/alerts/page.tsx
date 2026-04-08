@@ -1,35 +1,43 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { api, type Alert } from "@/lib/api";
+import { api, getOrgId, type Alert } from "@/lib/api";
 import { AlertCard } from "@/components/alerts/AlertCard";
 import { AlertFilters } from "@/components/alerts/AlertFilters";
 import { AlertDetailSheet } from "@/components/alerts/AlertDetailSheet";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-
-const ORG_ID = "00000000-0000-0000-0000-000000000001";
+import { Loader2, AlertTriangle, RefreshCw } from "lucide-react";
 
 export default function AlertsPage() {
+  const [orgId, setOrgIdLocal] = useState("");
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [filters, setFilters] = useState({ severity: "", module: "", status: "" });
 
+  useEffect(() => {
+    setOrgIdLocal(getOrgId());
+  }, []);
+
   const fetchAlerts = useCallback(async () => {
+    if (!orgId) return;
     setLoading(true);
+    setError(null);
     try {
-      const result = await api.getAlerts(ORG_ID, { ...filters, page });
-      setAlerts(result.data);
-      setTotal(result.total);
+      const result = await api.getAlerts(orgId, { ...filters, page });
+      setAlerts(result.data || []);
+      setTotal(result.total || 0);
     } catch (e) {
-      toast.error("Failed to fetch alerts");
+      const msg = e instanceof Error ? e.message : "Failed to fetch alerts";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
-  }, [filters, page]);
+  }, [orgId, filters, page]);
 
   useEffect(() => {
     fetchAlerts();
@@ -37,7 +45,7 @@ export default function AlertsPage() {
 
   const handleStatusChange = async (alertId: string, status: string) => {
     try {
-      await api.updateAlertStatus(ORG_ID, alertId, status);
+      await api.updateAlertStatus(orgId, alertId, status);
       setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, status } : a)));
       setSelectedAlert(null);
       toast.success(`Alert marked as ${status}`);
@@ -51,7 +59,7 @@ export default function AlertsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Alerts</h1>
-          <p className="text-sm text-slate-400 mt-1">{total} total alerts</p>
+          <p className="text-sm text-slate-400 mt-1">{total} total alert{total !== 1 ? "s" : ""}</p>
         </div>
       </div>
 
@@ -61,9 +69,28 @@ export default function AlertsPage() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
         </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <AlertTriangle className="w-8 h-8 text-orange-400 mb-3" />
+          <p className="text-sm text-slate-400 mb-3">{error}</p>
+          <button
+            onClick={fetchAlerts}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Retry
+          </button>
+        </div>
       ) : alerts.length === 0 ? (
-        <div className="text-center py-20 text-slate-500">
-          No alerts found matching your filters.
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center mb-3">
+            <AlertTriangle className="w-6 h-6 text-slate-500" />
+          </div>
+          <p className="text-slate-400 text-sm">
+            {filters.severity || filters.module || filters.status
+              ? "No alerts found matching your filters. Try adjusting your search criteria."
+              : "No alerts yet. Run a scan from Settings to start detecting threats."}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -73,7 +100,7 @@ export default function AlertsPage() {
         </div>
       )}
 
-      {total > 25 && (
+      {total > 25 && !loading && !error && (
         <div className="flex items-center justify-center gap-2">
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}

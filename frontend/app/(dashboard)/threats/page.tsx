@@ -1,39 +1,47 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { api, type Alert } from "@/lib/api";
+import { api, getOrgId, type Alert } from "@/lib/api";
 import { SeverityBadge } from "@/components/shared/SeverityBadge";
 import { ModuleBadge } from "@/components/shared/ModuleBadge";
 import { RiskScoreMeter } from "@/components/shared/RiskScoreMeter";
 import { formatDistanceToNow } from "date-fns";
-import { Loader2, ExternalLink } from "lucide-react";
+import { Loader2, ExternalLink, AlertTriangle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
-const ORG_ID = "00000000-0000-0000-0000-000000000001";
-
 export default function ThreatsPage() {
+  const [orgId, setOrgIdLocal] = useState("");
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filterModule, setFilterModule] = useState("");
   const [filterSeverity, setFilterSeverity] = useState("");
 
   useEffect(() => {
+    setOrgIdLocal(getOrgId());
+  }, []);
+
+  useEffect(() => {
+    if (!orgId) return;
     const fetchAlerts = async () => {
       setLoading(true);
+      setError(null);
       try {
-        const result = await api.getAlerts(ORG_ID, {
+        const result = await api.getAlerts(orgId, {
           module: filterModule || undefined,
           severity: filterSeverity || undefined,
         });
-        setAlerts(result.data);
-      } catch {
-        toast.error("Failed to load threats");
+        setAlerts(result.data || []);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Failed to load threats";
+        setError(msg);
+        toast.error(msg);
       } finally {
         setLoading(false);
       }
     };
     fetchAlerts();
-  }, [filterModule, filterSeverity]);
+  }, [orgId, filterModule, filterSeverity]);
 
   return (
     <div className="space-y-6">
@@ -73,10 +81,23 @@ export default function ThreatsPage() {
         <div className="flex justify-center py-20">
           <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
         </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <AlertTriangle className="w-8 h-8 text-orange-400 mb-3" />
+          <p className="text-sm text-slate-400 mb-3">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Retry
+          </button>
+        </div>
       ) : (
         <div className="relative">
-          {/* Timeline line */}
-          <div className="absolute left-6 top-0 bottom-0 w-px bg-slate-700/50" />
+          {alerts.length > 0 && (
+            <div className="absolute left-6 top-0 bottom-0 w-px bg-slate-700/50" />
+          )}
 
           <div className="space-y-4">
             {alerts.map((alert) => (
@@ -92,7 +113,7 @@ export default function ThreatsPage() {
                 <div className="flex-1 bg-slate-900 rounded-xl border border-slate-700/50 p-4 hover:bg-slate-800/80 transition-colors">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <ModuleBadge module={alert.module} />
                         <SeverityBadge severity={alert.severity} />
                       </div>
@@ -121,8 +142,13 @@ export default function ThreatsPage() {
             ))}
 
             {alerts.length === 0 && (
-              <div className="text-center py-20 text-slate-500">
-                No threats detected yet. Run a scan to start monitoring.
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center mb-3">
+                  <AlertTriangle className="w-6 h-6 text-slate-500" />
+                </div>
+                <p className="text-slate-400 text-sm">
+                  No threats detected yet. Run a scan from Settings to start monitoring.
+                </p>
               </div>
             )}
           </div>

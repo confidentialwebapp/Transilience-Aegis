@@ -1,3 +1,6 @@
+import os
+from typing import Optional
+
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -29,7 +32,8 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
 
     class Config:
-        env_file = ".env"
+        # Only load .env file if it exists; on Render env vars come from the environment
+        env_file = ".env" if os.path.isfile(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")) else None
         env_file_encoding = "utf-8"
 
 

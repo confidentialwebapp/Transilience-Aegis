@@ -1,4 +1,21 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://tai-aegis-api.onrender.com";
+
+const DEMO_ORG_ID = "00000000-0000-0000-0000-000000000001";
+
+/** Retrieve the org ID from localStorage, falling back to the demo org */
+export function getOrgId(): string {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("tai_org_id") || DEMO_ORG_ID;
+  }
+  return DEMO_ORG_ID;
+}
+
+/** Store the org ID in localStorage */
+export function setOrgId(orgId: string): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("tai_org_id", orgId);
+  }
+}
 
 interface FetchOptions {
   method?: string;
@@ -6,28 +23,76 @@ interface FetchOptions {
   orgId?: string;
 }
 
+/**
+ * Core fetch wrapper with retry logic for Render cold starts.
+ * - 45s timeout per attempt
+ * - Up to 2 attempts (one automatic retry on network/timeout errors)
+ */
 async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T> {
   const { method = "GET", body, orgId } = options;
 
+  const resolvedOrgId = orgId || getOrgId();
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "X-Org-Id": resolvedOrgId,
   };
-  if (orgId) {
-    headers["X-Org-Id"] = orgId;
+
+  const url = `${API_BASE}${path}`;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
+
+      const res = await fetch(url, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ detail: `Request failed with status ${res.status}` }));
+        throw new ApiError(error.detail || `API error: ${res.status}`, res.status);
+      }
+
+      // Handle 204 No Content (e.g. DELETE)
+      if (res.status === 204) {
+        return undefined as T;
+      }
+
+      return res.json();
+    } catch (e) {
+      // Don't retry API errors (4xx/5xx with a response) - only retry network/timeout
+      if (e instanceof ApiError) {
+        throw e;
+      }
+      // On first attempt, retry once for network failures / cold start timeouts
+      if (attempt === 0) {
+        continue;
+      }
+      // On second failure, wrap and throw
+      throw new ApiError(
+        e instanceof Error ? e.message : "Network request failed",
+        0
+      );
+    }
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  // Should never reach here, but TypeScript needs it
+  throw new ApiError("Request failed after retries", 0);
+}
 
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: "Request failed" }));
-    throw new Error(error.detail || `API error: ${res.status}`);
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
   }
-
-  return res.json();
 }
 
 export const api = {
@@ -55,7 +120,7 @@ export const api = {
     apiFetch<Asset>("/api/v1/assets/", { method: "POST", body: data, orgId }),
 
   deleteAsset: (orgId: string, assetId: string) =>
-    apiFetch(`/api/v1/assets/${assetId}`, { method: "DELETE", orgId }),
+    apiFetch<void>(`/api/v1/assets/${assetId}`, { method: "DELETE", orgId }),
 
   // Alerts
   getAlerts: (orgId: string, params?: AlertFilters) => {

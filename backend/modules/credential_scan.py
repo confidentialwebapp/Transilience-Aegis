@@ -1,5 +1,6 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Dict, List, Optional
 
 import httpx
 
@@ -10,50 +11,103 @@ from utils.scoring import calculate_risk_score, severity_from_score
 from utils.notify import dispatch_alert
 
 logger = logging.getLogger(__name__)
-settings = get_settings()
-rate_limiter = RateLimiter()
+
+_rate_limiter: Optional[RateLimiter] = None
 
 
-async def check_hibp_breaches(email: str) -> list[dict]:
+def _get_rate_limiter() -> RateLimiter:
+    global _rate_limiter
+    if _rate_limiter is None:
+        _rate_limiter = RateLimiter()
+    return _rate_limiter
+
+
+async def check_hibp_breaches(email: str) -> List[Dict]:
+    """Check HIBP v3 for breaches associated with an email.
+
+    Handles rate limits (1 req/1.5s), 404 = no breach, 429 = rate limited.
+    """
+    settings = get_settings()
     if not settings.HIBP_API_KEY:
+        logger.warning("HIBP_API_KEY not configured, skipping breach check")
         return []
 
-    await rate_limiter.wait("hibp", min_interval=1.5)
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(
-            f"https://haveibeenpwned.com/api/v3/breachedaccount/{email}",
-            headers={
-                "hibp-api-key": settings.HIBP_API_KEY,
-                "user-agent": "TAI-AEGIS-ThreatIntel",
-            },
-            params={"truncateResponse": "false"},
-            timeout=30,
-        )
-        if resp.status_code == 200:
-            return resp.json()
+    rl = _get_rate_limiter()
+    await rl.wait("hibp", min_interval=1.5)
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.get(
+                f"https://haveibeenpwned.com/api/v3/breachedaccount/{email}",
+                headers={
+                    "hibp-api-key": settings.HIBP_API_KEY,
+                    "user-agent": "TAI-AEGIS-ThreatIntel",
+                },
+                params={"truncateResponse": "false"},
+            )
+            if resp.status_code == 200:
+                return resp.json()
+            elif resp.status_code == 404:
+                return []
+            elif resp.status_code == 429:
+                logger.warning(f"HIBP rate limited for {email}")
+                return []
+            else:
+                logger.warning(f"HIBP returned {resp.status_code} for {email}")
+                return []
+    except httpx.TimeoutException:
+        logger.warning(f"HIBP breach check timed out for {email}")
+        return []
+    except Exception as e:
+        logger.error(f"HIBP breach check failed for {email}: {e}")
         return []
 
 
-async def check_hibp_pastes(email: str) -> list[dict]:
+async def check_hibp_pastes(email: str) -> List[Dict]:
+    """Check HIBP v3 for paste appearances of an email.
+
+    Handles rate limits (1 req/1.5s), 404 = no pastes.
+    """
+    settings = get_settings()
     if not settings.HIBP_API_KEY:
+        logger.warning("HIBP_API_KEY not configured, skipping paste check")
         return []
 
-    await rate_limiter.wait("hibp", min_interval=1.5)
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(
-            f"https://haveibeenpwned.com/api/v3/pasteaccount/{email}",
-            headers={
-                "hibp-api-key": settings.HIBP_API_KEY,
-                "user-agent": "TAI-AEGIS-ThreatIntel",
-            },
-            timeout=30,
-        )
-        if resp.status_code == 200:
-            return resp.json()
+    rl = _get_rate_limiter()
+    await rl.wait("hibp", min_interval=1.5)
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.get(
+                f"https://haveibeenpwned.com/api/v3/pasteaccount/{email}",
+                headers={
+                    "hibp-api-key": settings.HIBP_API_KEY,
+                    "user-agent": "TAI-AEGIS-ThreatIntel",
+                },
+            )
+            if resp.status_code == 200:
+                return resp.json()
+            elif resp.status_code == 404:
+                return []
+            elif resp.status_code == 429:
+                logger.warning(f"HIBP rate limited for paste check: {email}")
+                return []
+            else:
+                logger.warning(f"HIBP paste check returned {resp.status_code} for {email}")
+                return []
+    except httpx.TimeoutException:
+        logger.warning(f"HIBP paste check timed out for {email}")
+        return []
+    except Exception as e:
+        logger.error(f"HIBP paste check failed for {email}: {e}")
         return []
 
 
-async def run_credential_scan(org_id: str):
+async def run_credential_scan(org_id: str) -> int:
+    """Main credential scan orchestrator.
+
+    Checks email assets and common email patterns for domains against HIBP.
+    """
     logger.info(f"Starting credential scan for org {org_id}")
     client = get_client()
 
@@ -61,18 +115,24 @@ async def run_credential_scan(org_id: str):
         "org_id": org_id,
         "module": "credential",
         "status": "running",
-        "started_at": datetime.utcnow().isoformat(),
+        "started_at": datetime.now(timezone.utc).isoformat(),
     }).execute()
     job_id = job.data[0]["id"]
 
     findings_count = 0
 
     try:
-        assets = client.table("assets").select("*").eq("org_id", org_id).eq("status", "active").execute()
+        assets = (
+            client.table("assets")
+            .select("*")
+            .eq("org_id", org_id)
+            .eq("status", "active")
+            .execute()
+        )
         email_assets = [a for a in assets.data if a["type"] == "email"]
         domain_assets = [a for a in assets.data if a["type"] == "domain"]
 
-        # Check individual email assets
+        # --- Check individual email assets ---
         for asset in email_assets:
             email = asset["value"]
 
@@ -80,9 +140,11 @@ async def run_credential_scan(org_id: str):
             try:
                 breaches = await check_hibp_breaches(email)
                 if breaches:
-                    # Check for new breaches since last scan
-                    known_breaches = set(asset.get("metadata", {}).get("known_breaches", []))
-                    new_breaches = [b for b in breaches if b.get("Name") not in known_breaches]
+                    metadata = asset.get("metadata") or {}
+                    known_breaches = set(metadata.get("known_breaches", []))
+                    new_breaches = [
+                        b for b in breaches if b.get("Name") not in known_breaches
+                    ]
 
                     if new_breaches:
                         for breach in new_breaches:
@@ -98,14 +160,20 @@ async def run_credential_scan(org_id: str):
                                 "asset_id": asset["id"],
                                 "module": "credential",
                                 "severity": severity,
-                                "title": f"Credential exposure: {email} in {breach.get('Name')} breach",
+                                "title": (
+                                    f"Credential exposure: {email} in "
+                                    f"{breach.get('Name')} breach"
+                                ),
                                 "description": (
                                     f"Email {email} found in {breach.get('Name')} breach "
                                     f"(date: {breach.get('BreachDate', 'unknown')}). "
-                                    f"Compromised data types: {', '.join(data_classes)}. "
-                                    f"{'⚠️ Passwords were exposed!' if has_passwords else ''}"
+                                    f"Compromised data types: {', '.join(data_classes)}."
+                                    f"{' Passwords were exposed!' if has_passwords else ''}"
                                 ),
-                                "source_url": f"https://haveibeenpwned.com/api/v3/breach/{breach.get('Name')}",
+                                "source_url": (
+                                    f"https://haveibeenpwned.com/api/v3/breach/"
+                                    f"{breach.get('Name')}"
+                                ),
                                 "raw_data": {"breach": breach},
                                 "risk_score": score,
                                 "status": "open",
@@ -114,17 +182,28 @@ async def run_credential_scan(org_id: str):
                             findings_count += 1
 
                             try:
-                                ns = client.table("notification_settings").select("*").eq("org_id", org_id).execute()
+                                ns = (
+                                    client.table("notification_settings")
+                                    .select("*")
+                                    .eq("org_id", org_id)
+                                    .execute()
+                                )
                                 if ns.data:
                                     await dispatch_alert(alert_data, ns.data[0])
                             except Exception:
                                 pass
 
-                    # Update known breaches
+                    # Update known breaches in metadata
                     all_breach_names = [b.get("Name") for b in breaches]
-                    client.table("assets").update({
-                        "metadata": {**asset.get("metadata", {}), "known_breaches": all_breach_names},
-                    }).eq("id", asset["id"]).execute()
+                    try:
+                        client.table("assets").update({
+                            "metadata": {
+                                **(asset.get("metadata") or {}),
+                                "known_breaches": all_breach_names,
+                            },
+                        }).eq("id", asset["id"]).execute()
+                    except Exception as e:
+                        logger.warning(f"Failed to update breach metadata for {email}: {e}")
 
             except Exception as e:
                 logger.error(f"Breach check failed for {email}: {e}")
@@ -153,29 +232,40 @@ async def run_credential_scan(org_id: str):
             except Exception as e:
                 logger.error(f"Paste check failed for {email}: {e}")
 
-        # Domain-wide email pattern checks
+        # --- Domain-wide email pattern checks ---
+        common_prefixes = [
+            "info", "admin", "contact", "support", "security", "hr", "sales",
+        ]
         for domain_asset in domain_assets:
             domain = domain_asset["value"]
-            common_prefixes = ["info", "admin", "contact", "support", "security", "hr", "sales"]
             for prefix in common_prefixes:
                 email = f"{prefix}@{domain}"
                 try:
                     breaches = await check_hibp_breaches(email)
                     if breaches:
-                        score = calculate_risk_score({"in_breach_db": True, "exposed_credentials": True})
+                        score = calculate_risk_score({
+                            "in_breach_db": True,
+                            "exposed_credentials": True,
+                        })
                         severity = severity_from_score(score)
                         alert_data = {
                             "org_id": org_id,
                             "asset_id": domain_asset["id"],
                             "module": "credential",
                             "severity": severity,
-                            "title": f"Common email {email} found in {len(breaches)} breach(es)",
+                            "title": (
+                                f"Common email {email} found in "
+                                f"{len(breaches)} breach(es)"
+                            ),
                             "description": (
                                 f"Standard email pattern {email} appears in breaches: "
                                 f"{', '.join(b.get('Name', '') for b in breaches[:5])}"
                             ),
                             "source_url": "",
-                            "raw_data": {"email": email, "breach_count": len(breaches)},
+                            "raw_data": {
+                                "email": email,
+                                "breach_count": len(breaches),
+                            },
                             "risk_score": score,
                             "status": "open",
                         }
@@ -184,14 +274,17 @@ async def run_credential_scan(org_id: str):
                 except Exception as e:
                     logger.warning(f"Email pattern check failed for {email}: {e}")
 
-        # Update assets
-        client.table("assets").update({
-            "last_scan_at": datetime.utcnow().isoformat(),
-        }).eq("org_id", org_id).in_("type", ["email"]).execute()
+        # Update last_scan_at on scanned assets
+        try:
+            client.table("assets").update({
+                "last_scan_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("org_id", org_id).in_("type", ["email", "domain"]).execute()
+        except Exception as e:
+            logger.warning(f"Failed to update asset last_scan_at: {e}")
 
         client.table("scan_jobs").update({
             "status": "completed",
-            "completed_at": datetime.utcnow().isoformat(),
+            "completed_at": datetime.now(timezone.utc).isoformat(),
             "findings_count": findings_count,
         }).eq("id", job_id).execute()
 
@@ -199,8 +292,8 @@ async def run_credential_scan(org_id: str):
         logger.error(f"Credential scan failed: {e}")
         client.table("scan_jobs").update({
             "status": "failed",
-            "completed_at": datetime.utcnow().isoformat(),
-            "error": str(e),
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "error": str(e)[:500],
         }).eq("id", job_id).execute()
 
     logger.info(f"Credential scan complete for org {org_id}: {findings_count} findings")

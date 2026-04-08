@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
 import type { Alert } from "@/lib/api";
 
 export function useAlerts(orgId: string) {
@@ -11,28 +10,53 @@ export function useAlerts(orgId: string) {
   useEffect(() => {
     if (!orgId) return;
 
-    const supabase = createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let channel: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let supabaseInstance: any = null;
 
-    const channel = supabase
-      .channel("alerts-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "alerts",
-          filter: `org_id=eq.${orgId}`,
-        },
-        (payload) => {
-          const newAlert = payload.new as Alert;
-          setAlerts((prev) => [newAlert, ...prev].slice(0, 50));
-          setUnreadCount((prev) => prev + 1);
-        }
-      )
-      .subscribe();
+    const setupRealtime = async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        supabaseInstance = createClient();
+
+        channel = supabaseInstance
+          .channel("alerts-realtime")
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "alerts",
+              filter: `org_id=eq.${orgId}`,
+            },
+            (payload: { new: Alert }) => {
+              const newAlert = payload.new;
+              setAlerts((prev) => [newAlert, ...prev].slice(0, 50));
+              setUnreadCount((prev) => prev + 1);
+            }
+          )
+          .subscribe((status: string) => {
+            if (status === "CHANNEL_ERROR") {
+              console.warn("Realtime subscription failed - alerts will not update in real-time");
+            }
+          });
+      } catch {
+        // Supabase not configured or network error - gracefully degrade
+        console.warn("Unable to connect to realtime alerts.");
+      }
+    };
+
+    setupRealtime();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel && supabaseInstance) {
+        try {
+          supabaseInstance.removeChannel(channel);
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
     };
   }, [orgId]);
 

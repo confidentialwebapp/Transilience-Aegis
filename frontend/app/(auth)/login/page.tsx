@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { setOrgId } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Shield, Mail, Lock, Loader2 } from "lucide-react";
+
+const DEMO_ORG_ID = "00000000-0000-0000-0000-000000000001";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -18,17 +21,51 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const supabase = createClient();
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (authError) {
-      setError(authError.message);
+      if (authError) {
+        setError(authError.message);
+        setLoading(false);
+        return;
+      }
+
+      // Try to fetch user's org membership
+      if (data.user) {
+        try {
+          const { data: membership } = await supabase
+            .from("org_members")
+            .select("org_id")
+            .eq("user_id", data.user.id)
+            .single();
+
+          if (membership?.org_id) {
+            setOrgId(membership.org_id);
+          } else {
+            // No org membership found, use demo org
+            setOrgId(DEMO_ORG_ID);
+          }
+        } catch {
+          // If org_members lookup fails, use demo org
+          setOrgId(DEMO_ORG_ID);
+        }
+      }
+
+      router.push("/");
+      router.refresh();
+    } catch {
+      setError("An unexpected error occurred. Please try again.");
       setLoading(false);
-      return;
     }
+  };
 
+  const handleDemoAccess = () => {
+    setOrgId(DEMO_ORG_ID);
     router.push("/");
-    router.refresh();
   };
 
   return (
@@ -91,6 +128,22 @@ export default function LoginPage() {
               {loading ? "Signing in..." : "Sign in"}
             </button>
           </form>
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-700/50" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-slate-900 px-2 text-slate-500">or</span>
+            </div>
+          </div>
+
+          <button
+            onClick={handleDemoAccess}
+            className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium transition-colors border border-slate-700/50"
+          >
+            Continue as Demo User
+          </button>
 
           <p className="text-center text-slate-400 text-sm mt-6">
             Don&apos;t have an account?{" "}

@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { api } from "@/lib/api";
+import { useState, useEffect } from "react";
+import { api, getOrgId } from "@/lib/api";
 import { toast } from "sonner";
 import { Search, Loader2, Globe, Server, Hash, Mail, Link } from "lucide-react";
-
-const ORG_ID = "00000000-0000-0000-0000-000000000001";
 
 const IOC_TYPES = [
   { value: "ip", label: "IP Address", icon: Server },
@@ -16,10 +14,15 @@ const IOC_TYPES = [
 ];
 
 export default function IntelPage() {
+  const [orgId, setOrgIdLocal] = useState("");
   const [type, setType] = useState("ip");
   const [value, setValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<Record<string, unknown> | null>(null);
+
+  useEffect(() => {
+    setOrgIdLocal(getOrgId());
+  }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,10 +31,10 @@ export default function IntelPage() {
     setLoading(true);
     setResults(null);
     try {
-      const data = await api.lookupIOC(ORG_ID, type, value.trim());
-      setResults(data.results);
-    } catch {
-      toast.error("IOC lookup failed");
+      const data = await api.lookupIOC(orgId, type, value.trim());
+      setResults(data.results || {});
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "IOC lookup failed. The server may be starting up.");
     } finally {
       setLoading(false);
     }
@@ -46,7 +49,7 @@ export default function IntelPage() {
 
       {/* Search form */}
       <form onSubmit={handleSearch} className="bg-slate-900 rounded-xl border border-slate-700/50 p-6">
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
@@ -70,7 +73,7 @@ export default function IntelPage() {
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-800 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center justify-center gap-2 px-6 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-800 text-white rounded-lg text-sm font-medium transition-colors"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             Search
@@ -95,6 +98,16 @@ export default function IntelPage() {
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {/* No search yet */}
+      {!results && !loading && (
+        <div className="bg-slate-900 rounded-xl border border-slate-700/50 p-12 text-center">
+          <Globe className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+          <p className="text-slate-400 text-sm">
+            Enter an indicator of compromise (IOC) above to search across threat intelligence sources.
+          </p>
         </div>
       )}
     </div>

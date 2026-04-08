@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { api, type DashboardSummary } from "@/lib/api";
 
 export function useDashboardStats(orgId: string) {
@@ -8,26 +8,40 @@ export function useDashboardStats(orgId: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchStats = useCallback(async () => {
     if (!orgId) return;
 
-    const fetchStats = async () => {
-      setLoading(true);
-      try {
-        const data = await api.getDashboardSummary(orgId);
-        setStats(data);
-        setError(null);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to fetch dashboard stats");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
-    const interval = setInterval(fetchStats, 60000);
-    return () => clearInterval(interval);
+    setLoading(true);
+    try {
+      const data = await api.getDashboardSummary(orgId);
+      setStats(data);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to fetch dashboard stats");
+    } finally {
+      setLoading(false);
+    }
   }, [orgId]);
+
+  useEffect(() => {
+    fetchStats();
+
+    // Auto-refresh every 60s, but only if initial fetch succeeded
+    const interval = setInterval(() => {
+      if (!error) {
+        api.getDashboardSummary(orgId)
+          .then((data) => {
+            setStats(data);
+            setError(null);
+          })
+          .catch(() => {
+            // Silently fail on background refresh - don't overwrite existing data
+          });
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [orgId, fetchStats, error]);
 
   return { stats, loading, error };
 }

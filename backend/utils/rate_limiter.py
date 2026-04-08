@@ -1,11 +1,12 @@
 import asyncio
 import time
 from collections import defaultdict
+from typing import Dict
 
 
 class RateLimiter:
     def __init__(self):
-        self._last_request: dict[str, float] = defaultdict(float)
+        self._last_request: Dict[str, float] = defaultdict(float)
         self._lock = asyncio.Lock()
 
     async def wait(self, source: str, min_interval: float = 1.0):

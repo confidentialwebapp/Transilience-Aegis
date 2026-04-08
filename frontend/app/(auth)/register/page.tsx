@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { setOrgId } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Shield, Mail, Lock, Building2, Loader2 } from "lucide-react";
+import { Shield, Mail, Lock, Building2, Loader2, CheckCircle } from "lucide-react";
+
+const DEMO_ORG_ID = "00000000-0000-0000-0000-000000000001";
 
 export default function RegisterPage() {
   const [orgName, setOrgName] = useState("");
@@ -12,6 +15,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [emailConfirmationSent, setEmailConfirmationSent] = useState(false);
   const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -19,46 +23,129 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
 
-    const supabase = createClient();
-    const { data, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { org_name: orgName } },
-    });
+    try {
+      const supabase = createClient();
+      const { data, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { org_name: orgName } },
+      });
 
-    if (authError) {
-      setError(authError.message);
-      setLoading(false);
-      return;
-    }
-
-    if (data.user) {
-      // Create org and membership
-      const { data: org } = await supabase
-        .from("orgs")
-        .insert({ name: orgName, domain: email.split("@")[1] })
-        .select()
-        .single();
-
-      if (org) {
-        await supabase.from("org_members").insert({
-          org_id: org.id,
-          user_id: data.user.id,
-          role: "admin",
-        });
-
-        // Create default notification settings
-        await supabase.from("notification_settings").insert({
-          org_id: org.id,
-          email_enabled: true,
-          email_recipients: [email],
-        });
+      if (authError) {
+        setError(authError.message);
+        setLoading(false);
+        return;
       }
-    }
 
-    router.push("/");
-    router.refresh();
+      // Supabase may require email confirmation
+      // If identities is empty, it means the user needs to confirm their email
+      if (
+        data.user &&
+        data.user.identities &&
+        data.user.identities.length === 0
+      ) {
+        setEmailConfirmationSent(true);
+        setLoading(false);
+        return;
+      }
+
+      // If we got a session, the user is confirmed (e.g. email confirmation disabled)
+      if (data.user && data.session) {
+        try {
+          // Create org and membership
+          const { data: org, error: orgError } = await supabase
+            .from("orgs")
+            .insert({ name: orgName, domain: email.split("@")[1] })
+            .select()
+            .single();
+
+          if (orgError) {
+            console.error("Failed to create org:", orgError);
+            // Use demo org as fallback
+            setOrgId(DEMO_ORG_ID);
+          } else if (org) {
+            const { error: memberError } = await supabase
+              .from("org_members")
+              .insert({
+                org_id: org.id,
+                user_id: data.user.id,
+                role: "admin",
+              });
+
+            if (memberError) {
+              console.error("Failed to create org membership:", memberError);
+            }
+
+            // Create default notification settings - non-critical, ignore errors
+            await supabase
+              .from("notification_settings")
+              .insert({
+                org_id: org.id,
+                email_enabled: true,
+                email_recipients: [email],
+              })
+              .catch(() => {});
+
+            setOrgId(org.id);
+          }
+        } catch {
+          // Non-critical: org creation failed, use demo org
+          setOrgId(DEMO_ORG_ID);
+        }
+
+        router.push("/");
+        router.refresh();
+        return;
+      }
+
+      // If no session but user exists, email confirmation is likely required
+      if (data.user && !data.session) {
+        setEmailConfirmationSent(true);
+        setLoading(false);
+        return;
+      }
+
+      // Fallback: just go to dashboard
+      setOrgId(DEMO_ORG_ID);
+      router.push("/");
+      router.refresh();
+    } catch {
+      setError("An unexpected error occurred. Please try again.");
+      setLoading(false);
+    }
   };
+
+  // Show email confirmation UI
+  if (emailConfirmationSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
+              <CheckCircle className="w-8 h-8 text-emerald-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-100">Check Your Email</h1>
+            <p className="text-slate-400 mt-2 leading-relaxed">
+              We&apos;ve sent a confirmation link to <strong className="text-slate-200">{email}</strong>.
+              Please check your inbox and click the link to activate your account.
+            </p>
+          </div>
+
+          <div className="bg-slate-900 rounded-xl border border-slate-700/50 p-6 text-center">
+            <p className="text-sm text-slate-400 mb-4">
+              After confirming your email, you can sign in to your account.
+            </p>
+            <Link
+              href="/login"
+              className="inline-block px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium transition-colors"
+            >
+              Go to Sign In
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">

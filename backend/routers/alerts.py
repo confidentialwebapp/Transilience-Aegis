@@ -35,78 +35,106 @@ async def list_alerts(
     page: int = Query(1, ge=1),
     per_page: int = Query(25, ge=1, le=100),
 ):
-    client = get_client()
-    query = client.table("alerts").select("*, assets(value, type)", count="exact").eq("org_id", x_org_id)
+    try:
+        client = get_client()
+        # Use foreign key join for asset info; fall back to plain select if it fails
+        try:
+            query = client.table("alerts").select("*, assets(value, type)", count="exact").eq("org_id", x_org_id)
+        except Exception:
+            query = client.table("alerts").select("*", count="exact").eq("org_id", x_org_id)
 
-    if severity:
-        query = query.eq("severity", severity)
-    if module:
-        query = query.eq("module", module)
-    if status:
-        query = query.eq("status", status)
-    if asset_id:
-        query = query.eq("asset_id", asset_id)
-    if date_from:
-        query = query.gte("created_at", date_from)
-    if date_to:
-        query = query.lte("created_at", date_to)
+        if severity:
+            query = query.eq("severity", severity)
+        if module:
+            query = query.eq("module", module)
+        if status:
+            query = query.eq("status", status)
+        if asset_id:
+            query = query.eq("asset_id", asset_id)
+        if date_from:
+            query = query.gte("created_at", date_from)
+        if date_to:
+            query = query.lte("created_at", date_to)
 
-    offset = (page - 1) * per_page
-    query = query.order("created_at", desc=True).range(offset, offset + per_page - 1)
-    result = query.execute()
+        offset = (page - 1) * per_page
+        query = query.order("created_at", desc=True).range(offset, offset + per_page - 1)
+        result = query.execute()
 
-    return {
-        "data": result.data,
-        "total": result.count,
-        "page": page,
-        "per_page": per_page,
-    }
+        return {
+            "data": result.data if result.data else [],
+            "total": getattr(result, "count", None) or 0,
+            "page": page,
+            "per_page": per_page,
+        }
+    except Exception as e:
+        logger.error("Failed to list alerts: %s", e)
+        raise HTTPException(500, f"Failed to list alerts: {str(e)}")
 
 
 @router.get("/stats")
 async def alert_stats(x_org_id: str = Header(...)):
-    client = get_client()
+    try:
+        client = get_client()
 
-    all_alerts = (
-        client.table("alerts")
-        .select("severity, module, status")
-        .eq("org_id", x_org_id)
-        .execute()
-    )
+        all_alerts = (
+            client.table("alerts")
+            .select("severity, module, status")
+            .eq("org_id", x_org_id)
+            .execute()
+        )
 
-    by_severity = {}
-    by_module = {}
-    by_status = {}
+        by_severity = {}
+        by_module = {}
+        by_status = {}
 
-    for alert in all_alerts.data:
-        sev = alert["severity"]
-        mod = alert["module"]
-        sta = alert["status"]
-        by_severity[sev] = by_severity.get(sev, 0) + 1
-        by_module[mod] = by_module.get(mod, 0) + 1
-        by_status[sta] = by_status.get(sta, 0) + 1
+        data = all_alerts.data if all_alerts.data else []
+        for alert in data:
+            sev = alert.get("severity", "unknown")
+            mod = alert.get("module", "unknown")
+            sta = alert.get("status", "unknown")
+            by_severity[sev] = by_severity.get(sev, 0) + 1
+            by_module[mod] = by_module.get(mod, 0) + 1
+            by_status[sta] = by_status.get(sta, 0) + 1
 
-    return {
-        "total": len(all_alerts.data),
-        "by_severity": by_severity,
-        "by_module": by_module,
-        "by_status": by_status,
-    }
+        return {
+            "total": len(data),
+            "by_severity": by_severity,
+            "by_module": by_module,
+            "by_status": by_status,
+        }
+    except Exception as e:
+        logger.error("Failed to get alert stats: %s", e)
+        raise HTTPException(500, f"Failed to get alert stats: {str(e)}")
 
 
 @router.get("/{alert_id}")
 async def get_alert(alert_id: str, x_org_id: str = Header(...)):
-    client = get_client()
-    result = (
-        client.table("alerts")
-        .select("*, assets(value, type)")
-        .eq("id", alert_id)
-        .eq("org_id", x_org_id)
-        .execute()
-    )
-    if not result.data:
-        raise HTTPException(404, "Alert not found")
-    return result.data[0]
+    try:
+        client = get_client()
+        try:
+            result = (
+                client.table("alerts")
+                .select("*, assets(value, type)")
+                .eq("id", alert_id)
+                .eq("org_id", x_org_id)
+                .execute()
+            )
+        except Exception:
+            result = (
+                client.table("alerts")
+                .select("*")
+                .eq("id", alert_id)
+                .eq("org_id", x_org_id)
+                .execute()
+            )
+        if not result.data:
+            raise HTTPException(404, "Alert not found")
+        return result.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to get alert %s: %s", alert_id, e)
+        raise HTTPException(500, f"Failed to get alert: {str(e)}")
 
 
 @router.patch("/{alert_id}/status")
@@ -114,38 +142,54 @@ async def update_alert_status(alert_id: str, body: StatusUpdate, x_org_id: str =
     if body.status not in VALID_STATUSES:
         raise HTTPException(400, f"Invalid status. Must be one of: {VALID_STATUSES}")
 
-    client = get_client()
-    result = (
-        client.table("alerts")
-        .update({"status": body.status, "updated_at": datetime.utcnow().isoformat()})
-        .eq("id", alert_id)
-        .eq("org_id", x_org_id)
-        .execute()
-    )
-    if not result.data:
-        raise HTTPException(404, "Alert not found")
+    try:
+        client = get_client()
+        result = (
+            client.table("alerts")
+            .update({"status": body.status, "updated_at": datetime.utcnow().isoformat()})
+            .eq("id", alert_id)
+            .eq("org_id", x_org_id)
+            .execute()
+        )
+        if not result.data:
+            raise HTTPException(404, "Alert not found")
 
-    client.table("audit_log").insert({
-        "org_id": x_org_id,
-        "action": "alert_status_change",
-        "entity_type": "alert",
-        "entity_id": alert_id,
-        "details": {"new_status": body.status},
-    }).execute()
+        # Audit log - best effort
+        try:
+            client.table("audit_log").insert({
+                "org_id": x_org_id,
+                "action": "alert_status_change",
+                "entity_type": "alert",
+                "entity_id": alert_id,
+                "details": {"new_status": body.status},
+            }).execute()
+        except Exception as e:
+            logger.warning("Failed to write audit log: %s", e)
 
-    return result.data[0]
+        return result.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to update alert status %s: %s", alert_id, e)
+        raise HTTPException(500, f"Failed to update alert status: {str(e)}")
 
 
 @router.patch("/{alert_id}/assign")
 async def assign_alert(alert_id: str, body: AssignUpdate, x_org_id: str = Header(...)):
-    client = get_client()
-    result = (
-        client.table("alerts")
-        .update({"assignee_id": body.assignee_id, "updated_at": datetime.utcnow().isoformat()})
-        .eq("id", alert_id)
-        .eq("org_id", x_org_id)
-        .execute()
-    )
-    if not result.data:
-        raise HTTPException(404, "Alert not found")
-    return result.data[0]
+    try:
+        client = get_client()
+        result = (
+            client.table("alerts")
+            .update({"assignee_id": body.assignee_id, "updated_at": datetime.utcnow().isoformat()})
+            .eq("id", alert_id)
+            .eq("org_id", x_org_id)
+            .execute()
+        )
+        if not result.data:
+            raise HTTPException(404, "Alert not found")
+        return result.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to assign alert %s: %s", alert_id, e)
+        raise HTTPException(500, f"Failed to assign alert: {str(e)}")

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getOrgId } from "@/lib/api";
 import { useAssets } from "@/hooks/useAssets";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
@@ -14,11 +15,10 @@ import {
   Github,
   Users,
   ShieldCheck,
-  Upload,
   Loader2,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
-
-const ORG_ID = "00000000-0000-0000-0000-000000000001";
 
 const ASSET_TYPES = [
   { value: "domain", label: "Domain", icon: Globe },
@@ -36,13 +36,20 @@ const TYPE_ICONS: Record<string, typeof Globe> = {
 };
 
 export default function AssetsPage() {
-  const { assets, total, loading, createAsset, deleteAsset, fetchAssets } = useAssets(ORG_ID);
+  const [orgId, setOrgIdLocal] = useState("");
+
+  useEffect(() => {
+    setOrgIdLocal(getOrgId());
+  }, []);
+
+  const { assets, total, loading, error, createAsset, deleteAsset, fetchAssets } = useAssets(orgId);
   const [showForm, setShowForm] = useState(false);
   const [newType, setNewType] = useState("domain");
   const [newValue, setNewValue] = useState("");
   const [newLabel, setNewLabel] = useState("");
   const [adding, setAdding] = useState(false);
   const [filterType, setFilterType] = useState("");
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,20 +60,23 @@ export default function AssetsPage() {
       setNewValue("");
       setNewLabel("");
       setShowForm(false);
-      toast.success("Asset added");
+      toast.success("Asset added successfully");
     } catch (err) {
-      toast.error("Failed to add asset");
+      toast.error(err instanceof Error ? err.message : "Failed to add asset");
     } finally {
       setAdding(false);
     }
   };
 
   const handleDelete = async (id: string) => {
+    setDeleting(id);
     try {
       await deleteAsset(id);
       toast.success("Asset deleted");
     } catch {
       toast.error("Failed to delete asset");
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -77,7 +87,7 @@ export default function AssetsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Monitored Assets</h1>
-          <p className="text-sm text-slate-400 mt-1">{total} assets being monitored</p>
+          <p className="text-sm text-slate-400 mt-1">{total} asset{total !== 1 ? "s" : ""} being monitored</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -131,7 +141,7 @@ export default function AssetsPage() {
       )}
 
       {/* Filter bar */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilterType("")}
           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
@@ -153,21 +163,36 @@ export default function AssetsPage() {
         ))}
       </div>
 
+      {/* Error state */}
+      {error && !loading && (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <AlertTriangle className="w-8 h-8 text-orange-400 mb-3" />
+          <p className="text-sm text-slate-400 mb-3">{error}</p>
+          <button
+            onClick={() => fetchAssets()}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Assets table */}
       {loading ? (
         <div className="flex justify-center py-20">
           <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
         </div>
-      ) : (
+      ) : !error && (
         <div className="bg-slate-900 rounded-xl border border-slate-700/50 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-700/50">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Type</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Value</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Label</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Status</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Last Scan</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase hidden md:table-cell">Label</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase hidden sm:table-cell">Status</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase hidden lg:table-cell">Last Scan</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Actions</th>
               </tr>
             </thead>
@@ -183,8 +208,8 @@ export default function AssetsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 font-medium">{asset.value}</td>
-                    <td className="px-4 py-3 text-slate-400">{asset.label || "-"}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-slate-400 hidden md:table-cell">{asset.label || "-"}</td>
+                    <td className="px-4 py-3 hidden sm:table-cell">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         asset.status === "active" ? "bg-emerald-500/10 text-emerald-400" :
                         asset.status === "compromised" ? "bg-red-500/10 text-red-400" :
@@ -193,7 +218,7 @@ export default function AssetsPage() {
                         {asset.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-400 text-xs">
+                    <td className="px-4 py-3 text-slate-400 text-xs hidden lg:table-cell">
                       {asset.last_scan_at
                         ? formatDistanceToNow(new Date(asset.last_scan_at), { addSuffix: true })
                         : "Never"}
@@ -201,9 +226,14 @@ export default function AssetsPage() {
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleDelete(asset.id)}
-                        className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
+                        disabled={deleting === asset.id}
+                        className="p-1.5 text-slate-500 hover:text-red-400 disabled:opacity-50 transition-colors"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        {deleting === asset.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
                       </button>
                     </td>
                   </tr>
@@ -212,7 +242,9 @@ export default function AssetsPage() {
               {filteredAssets.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
-                    No assets found. Add your first asset to start monitoring.
+                    {filterType
+                      ? `No ${filterType} assets found. Try a different filter or add a new asset.`
+                      : "No assets found. Click \"Add Asset\" above to start monitoring."}
                   </td>
                 </tr>
               )}

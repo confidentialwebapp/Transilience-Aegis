@@ -1,58 +1,100 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Dict, List, Optional, Set
 
 import httpx
 
+from config import get_settings
 from db import get_client
 from utils.rate_limiter import RateLimiter
 from utils.notify import dispatch_alert
 
 logger = logging.getLogger(__name__)
-rate_limiter = RateLimiter()
+
+_rate_limiter: Optional[RateLimiter] = None
 
 
-async def query_crtsh(domain: str) -> list[dict]:
-    await rate_limiter.wait("crtsh", min_interval=2.0)
+def _get_rate_limiter() -> RateLimiter:
+    global _rate_limiter
+    if _rate_limiter is None:
+        _rate_limiter = RateLimiter()
+    return _rate_limiter
+
+
+async def query_crtsh(domain: str) -> List[Dict]:
+    """Query crt.sh JSON API for certificate transparency logs.
+
+    Handles large responses and enforces a 60s timeout.
+    """
+    rl = _get_rate_limiter()
+    await rl.wait("crtsh", min_interval=2.0)
     certs = []
-    async with httpx.AsyncClient() as client:
-        try:
+
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
             resp = await client.get(
                 "https://crt.sh/",
                 params={"q": f"%.{domain}", "output": "json"},
-                timeout=60,
             )
-            if resp.status_code == 200:
+            if resp.status_code != 200:
+                logger.warning(f"crt.sh returned {resp.status_code} for {domain}")
+                return []
+
+            try:
                 data = resp.json()
-                for entry in data:
-                    certs.append({
-                        "id": entry.get("id"),
-                        "issuer_name": entry.get("issuer_name", ""),
-                        "common_name": entry.get("common_name", ""),
-                        "name_value": entry.get("name_value", ""),
-                        "not_before": entry.get("not_before", ""),
-                        "not_after": entry.get("not_after", ""),
-                        "serial_number": entry.get("serial_number", ""),
-                    })
-        except Exception as e:
-            logger.warning(f"crt.sh query failed for {domain}: {e}")
+            except Exception:
+                logger.warning(f"crt.sh response was not valid JSON for {domain}")
+                return []
+
+            # Cap at 5000 entries to prevent memory issues on large domains
+            for entry in data[:5000]:
+                certs.append({
+                    "id": entry.get("id"),
+                    "issuer_name": entry.get("issuer_name", ""),
+                    "common_name": entry.get("common_name", ""),
+                    "name_value": entry.get("name_value", ""),
+                    "not_before": entry.get("not_before", ""),
+                    "not_after": entry.get("not_after", ""),
+                    "serial_number": entry.get("serial_number", ""),
+                })
+
+    except httpx.TimeoutException:
+        logger.warning(f"crt.sh request timed out for {domain}")
+    except Exception as e:
+        logger.warning(f"crt.sh query failed for {domain}: {e}")
+
     return certs
 
 
-def extract_subdomains(certs: list[dict], base_domain: str) -> set[str]:
-    subdomains = set()
+def extract_subdomains(certs: List[Dict], base_domain: str) -> Set[str]:
+    """Extract unique subdomains from certificate name_value fields.
+
+    Handles wildcard certificates and multi-line name_value entries.
+    """
+    subdomains = set()  # type: Set[str]
+    base_lower = base_domain.lower()
+
     for cert in certs:
         name_value = cert.get("name_value", "")
         for name in name_value.split("\n"):
             name = name.strip().lower()
-            if name.endswith(base_domain) and name != base_domain:
-                # Remove wildcard prefix
-                name = name.lstrip("*.")
-                if name and name != base_domain:
+            # Remove wildcard prefix
+            if name.startswith("*."):
+                name = name[2:]
+            # Must be a subdomain of the base domain
+            if name.endswith(base_lower) and name != base_lower:
+                if name:
                     subdomains.add(name)
+
     return subdomains
 
 
-async def run_cert_monitor(org_id: str):
+async def run_cert_monitor(org_id: str) -> int:
+    """Main certificate monitor orchestrator.
+
+    Queries crt.sh for each domain asset, compares found subdomains
+    against known ones, and alerts on new discoveries and recent certs.
+    """
     logger.info(f"Starting certificate monitor for org {org_id}")
     client = get_client()
 
@@ -60,29 +102,42 @@ async def run_cert_monitor(org_id: str):
         "org_id": org_id,
         "module": "cert_monitor",
         "status": "running",
-        "started_at": datetime.utcnow().isoformat(),
+        "started_at": datetime.now(timezone.utc).isoformat(),
     }).execute()
     job_id = job.data[0]["id"]
 
     findings_count = 0
 
     try:
-        assets = client.table("assets").select("*").eq("org_id", org_id).eq("type", "domain").eq("status", "active").execute()
+        assets = (
+            client.table("assets")
+            .select("*")
+            .eq("org_id", org_id)
+            .eq("type", "domain")
+            .eq("status", "active")
+            .execute()
+        )
 
-        for asset in assets.data:
+        for asset in (assets.data or []):
             domain = asset["value"]
-            certs = await query_crtsh(domain)
+
+            try:
+                certs = await query_crtsh(domain)
+            except Exception as e:
+                logger.error(f"crt.sh query failed for {domain}: {e}")
+                continue
+
             if not certs:
                 continue
 
             subdomains = extract_subdomains(certs, domain)
 
             # Get previously known subdomains from metadata
-            known_subs = set(asset.get("metadata", {}).get("known_subdomains", []))
+            metadata = asset.get("metadata") or {}
+            known_subs = set(metadata.get("known_subdomains", []))
             new_subs = subdomains - known_subs
 
             if new_subs:
-                # Alert on new subdomains
                 alert_data = {
                     "org_id": org_id,
                     "asset_id": asset["id"],
@@ -90,12 +145,12 @@ async def run_cert_monitor(org_id: str):
                     "severity": "medium" if len(new_subs) > 5 else "low",
                     "title": f"{len(new_subs)} new subdomain(s) discovered for {domain}",
                     "description": (
-                        f"Certificate Transparency logs revealed new subdomains:\n"
+                        "Certificate Transparency logs revealed new subdomains:\n"
                         + "\n".join(f"  - {s}" for s in sorted(new_subs)[:20])
                     ),
                     "source_url": f"https://crt.sh/?q=%.{domain}",
                     "raw_data": {
-                        "new_subdomains": list(new_subs),
+                        "new_subdomains": list(new_subs)[:100],
                         "total_subdomains": len(subdomains),
                         "cert_count": len(certs),
                     },
@@ -106,20 +161,31 @@ async def run_cert_monitor(org_id: str):
                 findings_count += 1
 
                 try:
-                    ns = client.table("notification_settings").select("*").eq("org_id", org_id).execute()
+                    ns = (
+                        client.table("notification_settings")
+                        .select("*")
+                        .eq("org_id", org_id)
+                        .execute()
+                    )
                     if ns.data:
                         await dispatch_alert(alert_data, ns.data[0])
                 except Exception:
                     pass
 
             # Check for recently issued certificates (< 7 days)
+            now = datetime.now(timezone.utc)
             recent_certs = []
             for cert in certs:
                 try:
-                    not_before = datetime.fromisoformat(cert["not_before"].replace("T", " ").split("+")[0])
-                    if (datetime.utcnow() - not_before).days <= 7:
+                    not_before_str = cert.get("not_before", "")
+                    if not not_before_str:
+                        continue
+                    # Handle various date formats from crt.sh
+                    cleaned = not_before_str.replace("T", " ").split("+")[0].split("Z")[0].strip()
+                    not_before = datetime.fromisoformat(cleaned).replace(tzinfo=timezone.utc)
+                    if (now - not_before).days <= 7:
                         recent_certs.append(cert)
-                except Exception:
+                except (ValueError, TypeError):
                     pass
 
             if recent_certs:
@@ -130,7 +196,7 @@ async def run_cert_monitor(org_id: str):
                     "severity": "info",
                     "title": f"{len(recent_certs)} new certificate(s) issued for {domain}",
                     "description": (
-                        f"Recently issued certificates:\n"
+                        "Recently issued certificates:\n"
                         + "\n".join(
                             f"  - {c['common_name']} (Issuer: {c['issuer_name'][:50]})"
                             for c in recent_certs[:10]
@@ -145,15 +211,18 @@ async def run_cert_monitor(org_id: str):
                 findings_count += 1
 
             # Update known subdomains in asset metadata
-            all_subs = list(known_subs | subdomains)
-            client.table("assets").update({
-                "metadata": {**asset.get("metadata", {}), "known_subdomains": all_subs},
-                "last_scan_at": datetime.utcnow().isoformat(),
-            }).eq("id", asset["id"]).execute()
+            all_subs = list(known_subs | subdomains)[:500]
+            try:
+                client.table("assets").update({
+                    "metadata": {**metadata, "known_subdomains": all_subs},
+                    "last_scan_at": datetime.now(timezone.utc).isoformat(),
+                }).eq("id", asset["id"]).execute()
+            except Exception as e:
+                logger.warning(f"Failed to update asset metadata for {domain}: {e}")
 
         client.table("scan_jobs").update({
             "status": "completed",
-            "completed_at": datetime.utcnow().isoformat(),
+            "completed_at": datetime.now(timezone.utc).isoformat(),
             "findings_count": findings_count,
         }).eq("id", job_id).execute()
 
@@ -161,8 +230,8 @@ async def run_cert_monitor(org_id: str):
         logger.error(f"Certificate monitor failed: {e}")
         client.table("scan_jobs").update({
             "status": "failed",
-            "completed_at": datetime.utcnow().isoformat(),
-            "error": str(e),
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "error": str(e)[:500],
         }).eq("id", job_id).execute()
 
     logger.info(f"Certificate monitor complete for org {org_id}: {findings_count} findings")

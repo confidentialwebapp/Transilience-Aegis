@@ -57,3 +57,17 @@ body {
 .glow-red {
   box-shadow: 0 0 15px rgba(239, 68, 68, 0.15);
 }
+
+/* Slide-in animation for alert detail sheet */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.25s ease-out;
+}

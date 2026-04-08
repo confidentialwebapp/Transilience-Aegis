@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { createClient } from "@/lib/supabase/client";
 import type { RecentAlert } from "@/lib/api";
 
 const SEVERITY_DOTS: Record<string, string> = {
@@ -20,6 +19,7 @@ interface Props {
 
 export function ThreatLiveFeed({ orgId, initialAlerts }: Props) {
   const [alerts, setAlerts] = useState<RecentAlert[]>(initialAlerts);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
 
   useEffect(() => {
     setAlerts(initialAlerts);
@@ -27,27 +27,46 @@ export function ThreatLiveFeed({ orgId, initialAlerts }: Props) {
 
   useEffect(() => {
     if (!orgId) return;
-    const supabase = createClient();
 
-    const channel = supabase
-      .channel("live-feed")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "alerts",
-          filter: `org_id=eq.${orgId}`,
-        },
-        (payload) => {
-          const newAlert = payload.new as RecentAlert;
-          setAlerts((prev) => [newAlert, ...prev].slice(0, 30));
-        }
-      )
-      .subscribe();
+    let cleanup: (() => void) | undefined;
+
+    const setupRealtime = async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+
+        const channel = supabase
+          .channel("live-feed")
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "alerts",
+              filter: `org_id=eq.${orgId}`,
+            },
+            (payload) => {
+              const newAlert = payload.new as RecentAlert;
+              setAlerts((prev) => [newAlert, ...prev].slice(0, 30));
+            }
+          )
+          .subscribe((status) => {
+            setRealtimeConnected(status === "SUBSCRIBED");
+          });
+
+        cleanup = () => {
+          supabase.removeChannel(channel);
+        };
+      } catch {
+        // Supabase not configured - degrade gracefully
+        setRealtimeConnected(false);
+      }
+    };
+
+    setupRealtime();
 
     return () => {
-      supabase.removeChannel(channel);
+      cleanup?.();
     };
   }, [orgId]);
 
@@ -58,8 +77,10 @@ export function ThreatLiveFeed({ orgId, initialAlerts }: Props) {
           Threat Live Feed
         </h2>
         <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs text-emerald-400">Live</span>
+          <div className={`w-2 h-2 rounded-full ${realtimeConnected ? "bg-emerald-500 animate-pulse" : "bg-slate-500"}`} />
+          <span className={`text-xs ${realtimeConnected ? "text-emerald-400" : "text-slate-500"}`}>
+            {realtimeConnected ? "Live" : "Offline"}
+          </span>
         </div>
       </div>
 
@@ -69,17 +90,17 @@ export function ThreatLiveFeed({ orgId, initialAlerts }: Props) {
             No threats detected yet. Scans will populate this feed.
           </div>
         ) : (
-          alerts.map((alert) => (
+          alerts.map((alert, idx) => (
             <div
-              key={alert.id}
-              className="flex items-start gap-3 p-3 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors cursor-pointer animate-slide-in"
+              key={alert.id || `alert-${idx}`}
+              className="flex items-start gap-3 p-3 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${SEVERITY_DOTS[alert.severity] || "bg-slate-500"}`} />
               <div className="flex-1 min-w-0">
                 <div className="text-sm leading-tight truncate">{alert.title}</div>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-xs text-slate-500">
-                    {alert.module?.replace("_", " ")}
+                    {alert.module?.replace(/_/g, " ")}
                   </span>
                   <span className="text-xs text-slate-600">|</span>
                   <span className="text-xs text-slate-500">
@@ -91,7 +112,7 @@ export function ThreatLiveFeed({ orgId, initialAlerts }: Props) {
               </div>
               {alert.risk_score > 0 && (
                 <span
-                  className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                  className={`text-xs font-bold px-1.5 py-0.5 rounded flex-shrink-0 ${
                     alert.risk_score >= 75
                       ? "text-red-400 bg-red-500/10"
                       : alert.risk_score >= 50

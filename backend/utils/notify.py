@@ -1,13 +1,17 @@
 import logging
+
 import httpx
 
-from config import get_settings
-
 logger = logging.getLogger(__name__)
-settings = get_settings()
+
+
+def _get_settings():
+    from config import get_settings
+    return get_settings()
 
 
 async def send_email_alert(to: str, subject: str, body: str):
+    settings = _get_settings()
     if not settings.RESEND_API_KEY:
         logger.debug("Resend API key not configured, skipping email")
         return
@@ -25,17 +29,18 @@ async def send_email_alert(to: str, subject: str, body: str):
             timeout=30,
         )
         if resp.status_code not in (200, 201):
-            logger.error(f"Failed to send email: {resp.text}")
+            logger.error("Failed to send email: %s", resp.text)
 
 
 async def send_webhook(url: str, payload: dict):
     async with httpx.AsyncClient() as client:
         resp = await client.post(url, json=payload, timeout=30)
         if resp.status_code >= 400:
-            logger.error(f"Webhook delivery failed ({resp.status_code}): {resp.text}")
+            logger.error("Webhook delivery failed (%d): %s", resp.status_code, resp.text)
 
 
 async def send_telegram(message: str):
+    settings = _get_settings()
     if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_CHAT_ID:
         logger.debug("Telegram not configured, skipping")
         return
@@ -51,7 +56,7 @@ async def send_telegram(message: str):
             timeout=30,
         )
         if resp.status_code != 200:
-            logger.error(f"Telegram send failed: {resp.text}")
+            logger.error("Telegram send failed: %s", resp.text)
 
 
 async def dispatch_alert(alert: dict, notification_settings: dict):
@@ -79,7 +84,7 @@ async def dispatch_alert(alert: dict, notification_settings: dict):
             try:
                 await send_email_alert(recipient, subject, html_body)
             except Exception as e:
-                logger.error(f"Email notification failed: {e}")
+                logger.error("Email notification failed: %s", e)
 
     if notification_settings.get("webhook_enabled") and notification_settings.get("webhook_url"):
         try:
@@ -91,10 +96,10 @@ async def dispatch_alert(alert: dict, notification_settings: dict):
                 "description": description,
             })
         except Exception as e:
-            logger.error(f"Webhook notification failed: {e}")
+            logger.error("Webhook notification failed: %s", e)
 
     if notification_settings.get("telegram_enabled"):
         try:
             await send_telegram(telegram_text)
         except Exception as e:
-            logger.error(f"Telegram notification failed: {e}")
+            logger.error("Telegram notification failed: %s", e)

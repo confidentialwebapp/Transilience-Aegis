@@ -13,13 +13,14 @@ export function useAssets(orgId: string) {
     async (params?: { type?: string; search?: string }) => {
       if (!orgId) return;
       setLoading(true);
+      setError(null);
       try {
         const result = await api.getAssets(orgId, params);
-        setAssets(result.data);
-        setTotal(result.total);
-        setError(null);
+        setAssets(result.data || []);
+        setTotal(result.total || 0);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to fetch assets");
+        // Don't clear existing data on error - keep stale data visible
       } finally {
         setLoading(false);
       }
@@ -41,7 +42,7 @@ export function useAssets(orgId: string) {
   const deleteAsset = async (assetId: string) => {
     await api.deleteAsset(orgId, assetId);
     setAssets((prev) => prev.filter((a) => a.id !== assetId));
-    setTotal((prev) => prev - 1);
+    setTotal((prev) => Math.max(0, prev - 1));
   };
 
   return { assets, total, loading, error, fetchAssets, createAsset, deleteAsset };

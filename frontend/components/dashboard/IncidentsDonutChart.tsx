@@ -26,15 +26,32 @@ interface Props {
 }
 
 export function IncidentsDonutChart({ data, total }: Props) {
-  const chartData = Object.entries(data).map(([key, value]) => ({
-    name: MODULE_LABELS[key] || key,
-    value,
-    color: MODULE_COLORS[key] || "#6b7280",
-  }));
+  const chartData = Object.entries(data || {})
+    .filter(([, value]) => value > 0)
+    .map(([key, value]) => ({
+      name: MODULE_LABELS[key] || key,
+      value,
+      color: MODULE_COLORS[key] || "#6b7280",
+    }));
 
-  // Add placeholder if no data
-  if (chartData.length === 0) {
-    chartData.push({ name: "No data", value: 1, color: "#334155" });
+  const hasData = chartData.length > 0;
+
+  // Show a proper empty state instead of crashing recharts
+  if (!hasData) {
+    return (
+      <div className="bg-slate-900 rounded-xl border border-slate-700/50 p-6">
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
+          Incidents by Module
+        </h2>
+        <div className="flex flex-col items-center justify-center h-48 text-center">
+          <div className="text-2xl font-bold text-slate-500 mb-1">0</div>
+          <div className="text-xs text-slate-500">No incidents detected</div>
+          <p className="text-xs text-slate-600 mt-3 max-w-[200px]">
+            Run scans to start detecting threats across your monitored assets.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -82,15 +99,13 @@ export function IncidentsDonutChart({ data, total }: Props) {
 
       {/* Legend */}
       <div className="grid grid-cols-2 gap-2 mt-4">
-        {chartData
-          .filter((d) => d.name !== "No data")
-          .map((entry) => (
-            <div key={entry.name} className="flex items-center gap-2 text-xs">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-              <span className="text-slate-400">{entry.name}</span>
-              <span className="ml-auto font-medium">{entry.value}</span>
-            </div>
-          ))}
+        {chartData.map((entry) => (
+          <div key={entry.name} className="flex items-center gap-2 text-xs">
+            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+            <span className="text-slate-400 truncate">{entry.name}</span>
+            <span className="ml-auto font-medium">{entry.value}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

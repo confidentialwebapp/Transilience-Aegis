@@ -6,6 +6,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
+
 def create_app():
     """Create app with imports inside function to control load order."""
     logger.info("Importing FastAPI...")
@@ -42,6 +43,9 @@ def create_app():
                 results[mod] = str(e)
         return results
 
+    app_env = os.environ.get("APP_ENV", "development")
+    is_production = app_env == "production"
+
     logger.info("Loading routers...")
     try:
         from routers import assets, alerts, scans, intel, dashboard
@@ -50,10 +54,13 @@ def create_app():
         app.include_router(alerts.router, prefix="/api/v1/alerts", tags=["Alerts"])
         app.include_router(scans.router, prefix="/api/v1/scans", tags=["Scans"])
         app.include_router(intel.router, prefix="/api/v1/intel", tags=["Intel"])
-        logger.info("Routers loaded.")
+        logger.info("All routers loaded successfully.")
     except Exception as e:
         import traceback
-        logger.error(f"Failed to load routers: {e}\n{traceback.format_exc()}")
+        logger.error("Failed to load routers: %s\n%s", e, traceback.format_exc())
+        if not is_production:
+            # In development, fail loudly so the developer sees the error
+            raise
 
     @app.on_event("startup")
     async def startup():
@@ -64,15 +71,17 @@ def create_app():
                 from db import get_client
                 get_client()
                 logger.info("Supabase connected.")
+            else:
+                logger.warning("SUPABASE_URL not set, database operations will fail.")
         except Exception as e:
-            logger.warning(f"Supabase deferred: {e}")
+            logger.warning("Supabase deferred: %s", e)
 
         try:
             from scheduler import start_scheduler
             start_scheduler()
             logger.info("Scheduler started.")
         except Exception as e:
-            logger.warning(f"Scheduler deferred: {e}")
+            logger.warning("Scheduler deferred: %s", e)
 
     @app.on_event("shutdown")
     async def shutdown():
@@ -84,10 +93,11 @@ def create_app():
 
     return app
 
+
 app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
-    logger.info(f"Starting on port {port}")
+    logger.info("Starting on port %d", port)
     uvicorn.run(app, host="0.0.0.0", port=port)

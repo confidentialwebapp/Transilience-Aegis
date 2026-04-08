@@ -1,17 +1,17 @@
 <div align="center">
    <img src="logo.png" alt="Transillience Aegis Logo" width="300">
-   <br><a href="https://github.com/confidentialwebapp/transilience.ai/actions/workflows/release.yml"><img alt="Release" src="https://github.com/confidentialwebapp/transilience.ai/actions/workflows/release.yml/badge.svg"></a> <a href="https://github.com/confidentialwebapp/transilience.ai/releases"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/confidentialwebapp/transilience.ai"></a> <a href="https://hub.docker.com/r/transilience/transilience.ai"><img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/transilience/transilience.ai"></a>
-   <h1>transilience.ai: Dark Web OSINT Platform</h1>
+   <br>
+   <a href="https://github.com/confidentialwebapp/Transillience-Aegis/actions/workflows/docker-release.yml"><img alt="Release" src="https://github.com/confidentialwebapp/Transillience-Aegis/actions/workflows/docker-release.yml/badge.svg"></a>
+   <a href="https://github.com/confidentialwebapp/Transillience-Aegis/releases"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/confidentialwebapp/Transillience-Aegis"></a>
+   <h1>Transillience Aegis: Dark Web OSINT Platform</h1>
 
-   <p>transilience.ai is an AI-powered platform for conducting dark web OSINT investigations. It leverages LLMs to refine queries, filter search results from dark web search engines, and provide an investigation summary.</p>
+   <p>Transillience Aegis is an AI-powered platform for conducting dark web OSINT investigations. It leverages LLMs to refine queries, filter search results from dark web search engines, and provide an investigation summary.</p>
    <a href="#installation">Installation</a> &bull; <a href="#usage">Usage</a> &bull; <a href="#contributing">Contributing</a> &bull; <a href="#acknowledgements">Acknowledgements</a><br><br>
 </div>
 
-![Demo]
-
-
 ## Architecture
-![Workflow]
+
+```mermaid
 
 flowchart TD
 
@@ -62,6 +62,7 @@ flowchart TD
     HM -. monitors .-> E
     HM -. monitors .-> G
     HM -. monitors .-> H
+```
 
 ---
 
@@ -81,7 +82,7 @@ flowchart TD
 >
 > Use responsibly and at your own risk. Ensure you comply with all relevant laws and institutional policies before conducting OSINT investigations.
 >
-> Additionally, transilience.ai leverages third-party APIs (including LLMs). Be cautious when sending potentially sensitive queries, and review the terms of service for any API or model provider you use.
+> Additionally, Transillience Aegis leverages third-party APIs (including LLMs). Be cautious when sending potentially sensitive queries, and review the terms of service for any API or model provider you use.
 
 ## Installation
 > [!NOTE]
@@ -94,9 +95,9 @@ flowchart TD
 
 ### Docker [Recommended]
 
-- Pull the latest transilience.ai docker image
+- Pull the latest Transillience Aegis docker image
 ```bash
-docker pull transilience/transilience.ai:latest
+docker pull transillience-aegis:latest
 ```
 
 - Run the docker image as:
@@ -105,7 +106,7 @@ docker run --rm \
    -v "$(pwd)/.env:/app/.env" \
    --add-host=host.docker.internal:host-gateway \
    -p 8501:8501 \
-   transilience/transilience.ai:latest
+   transillience-aegis:latest
 ```
 
 > [!TIP]
@@ -116,7 +117,7 @@ docker run --rm \
 >    -v "$(pwd)/investigations:/app/investigations" \
 >    --add-host=host.docker.internal:host-gateway \
 >    -p 8501:8501 \
->    transilience/transilience.ai:latest
+>    transillience-aegis:latest
 > ```
 > Investigations are saved to the `investigations/` folder in your working directory and can be loaded from the **Past Investigations** panel in the sidebar.
 
@@ -132,6 +133,18 @@ streamlit run ui.py
 ```
 
 - Open your browser and navigate to `http://localhost:8501`
+
+---
+
+## Usage
+
+1. Ensure Tor is running in the background (`tor &` or `service tor start`)
+2. Launch the application using Docker or Python (see Installation)
+3. Enter your dark web search query in the search box
+4. The LLM will refine your query for optimal dark web searching
+5. Results are scraped from multiple dark web search engines
+6. Filtered and summarized results are displayed in the UI
+7. Save investigations for future reference using the sidebar
 
 ---
 
@@ -156,8 +169,7 @@ Open an Issue for any of these situations:
 ## Acknowledgements
 
 - Idea inspiration from [Thomas Roccia](https://x.com/fr0gger_) and his demo of [Perplexity of the Dark Web](https://x.com/fr0gger_/status/1908051083068645558).
-- Made by [transilience.ai](https://transilience.ai)
+- Made by Transillience Aegis
 - LLM Prompt inspiration from [OSINT-Assistant](https://github.com/AXRoux/OSINT-Assistant) repository.
-- Logo Design by transilience.ai
 
 

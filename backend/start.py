@@ -1,22 +1,77 @@
-"""Startup wrapper that catches import errors and provides diagnostics."""
-import sys
+"""Minimal startup that works on Render free tier (512MB)."""
 import os
+import sys
+import logging
 
-try:
-    import uvicorn
-except ImportError as e:
-    print(f"FATAL: Cannot import uvicorn: {e}", file=sys.stderr)
-    sys.exit(1)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
 
-try:
-    from main import app
-except Exception as e:
-    print(f"FATAL: Cannot import main app: {e}", file=sys.stderr)
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
+def create_app():
+    """Create app with imports inside function to control load order."""
+    logger.info("Importing FastAPI...")
+    from fastapi import FastAPI
+    from fastapi.middleware.cors import CORSMiddleware
+
+    app = FastAPI(title="TAI-AEGIS API", version="1.0.0")
+
+    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[frontend_url, "http://localhost:3000", "https://*.vercel.app"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    @app.get("/health")
+    async def health():
+        return {"status": "healthy", "service": "tai-aegis-api"}
+
+    logger.info("Loading routers...")
+    try:
+        from routers import assets, alerts, scans, intel, dashboard
+        app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
+        app.include_router(assets.router, prefix="/api/v1/assets", tags=["Assets"])
+        app.include_router(alerts.router, prefix="/api/v1/alerts", tags=["Alerts"])
+        app.include_router(scans.router, prefix="/api/v1/scans", tags=["Scans"])
+        app.include_router(intel.router, prefix="/api/v1/intel", tags=["Intel"])
+        logger.info("Routers loaded.")
+    except Exception as e:
+        logger.error(f"Failed to load routers: {e}")
+
+    @app.on_event("startup")
+    async def startup():
+        logger.info("App startup...")
+        try:
+            supabase_url = os.environ.get("SUPABASE_URL", "")
+            if supabase_url:
+                from db import get_client
+                get_client()
+                logger.info("Supabase connected.")
+        except Exception as e:
+            logger.warning(f"Supabase deferred: {e}")
+
+        try:
+            from scheduler import start_scheduler
+            start_scheduler()
+            logger.info("Scheduler started.")
+        except Exception as e:
+            logger.warning(f"Scheduler deferred: {e}")
+
+    @app.on_event("shutdown")
+    async def shutdown():
+        try:
+            from scheduler import stop_scheduler
+            stop_scheduler()
+        except Exception:
+            pass
+
+    return app
+
+app = create_app()
 
 if __name__ == "__main__":
+    import uvicorn
     port = int(os.environ.get("PORT", 8000))
-    print(f"Starting TAI-AEGIS API on port {port}")
+    logger.info(f"Starting on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)

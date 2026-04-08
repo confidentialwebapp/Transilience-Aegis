@@ -12,56 +12,42 @@
 ## Architecture
 
 ```mermaid
-
 flowchart TD
+    A[User] -->|query| B["Streamlit Web UI (ui.py:8501)"]
+    B -->|raw query| C["LLM Query Refinement (llm.py)"]
 
-    A[User] -->|query| B[Streamlit Web UI<br/>ui.py : port 8501]
+    subgraph LLM["LLM Providers"]
+        L1[OpenAI]
+        L2[Claude]
+        L3[Gemini]
+        L4[OpenRouter]
+        L5[Ollama]
+        L6[LlamaCPP]
+    end
 
-    B -->|raw query| C[LLM Query Refinement<br/>llm.py : refine_query()]
+    C -.-> LLM
+    C -->|refined query| D["Tor Proxy (socks5://127.0.0.1:9050)"]
+    D -->|parallel queries| E["Dark Web Search Engines (search.py)"]
 
-    %% LLM Providers
-    C -. API calls .-> LLM[LLM Providers<br/>OpenAI<br/>Anthropic Claude<br/>Google Gemini<br/>OpenRouter<br/>Ollama (local)<br/>LlamaCPP (local)]
+    subgraph SE["Search Engines"]
+        S1[Ahmia]
+        S2[OnionLand]
+        S3[Torgle]
+        S4[Amnesia]
+        S5[Kaizer]
+        S6[Tor66]
+        S7[DeepSearches]
+    end
 
-    %% Tor Layer
-    C -->|refined query| D[Tor Proxy Network<br/>socks5://127.0.0.1:9050]
+    E --> SE
+    SE -->|onion URLs| F["Parallel Scraping (scrape.py)"]
+    F -->|content| G["LLM Filtering (llm.py)"]
+    G --> H["Summary (llm.py)"]
+    H --> I["Investigation Report"]
 
-    %% Dark Web Search
-    D -->|parallel queries x16| E[Dark Web Search Engines<br/>search.py : ThreadPoolExecutor]
-
-    E --> Ahmia
-    E --> OnionLand
-    E --> Torgle
-    E --> Amnesia
-    E --> Kaizer
-    E --> Anima
-    E --> Tornado
-    E --> TorNet
-    E --> Torland
-    E --> FindTor
-    E --> Excavator
-    E --> Onionway
-    E --> Tor66
-    E --> OSS
-    E --> Torgol
-    E --> DeepSearches
-
-    %% Scraping
-    E -->|onion URLs| F[Parallel Onion Scraping<br/>scrape.py : scrape_multiple()<br/>ThreadPoolExecutor]
-
-    %% Filtering
-    F -->|scraped content| G[LLM Result Filtering<br/>llm.py : filter_results()]
-
-    %% Summary
-    G --> H[LLM Investigation Summary<br/>llm.py : generate_summary()]
-
-    %% Report
-    H --> I[Investigation Report<br/>display in UI + save to file]
-
-    %% Health Monitor
-    HM[Health Monitor<br/>health.py]
-    HM -. monitors .-> E
-    HM -. monitors .-> G
-    HM -. monitors .-> H
+    HM["Health Monitor (health.py)"] -.-> E
+    HM -.-> G
+    HM -.-> H
 ```
 
 ---

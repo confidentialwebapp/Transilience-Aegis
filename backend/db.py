@@ -1,13 +1,13 @@
 from typing import Optional
-from supabase import create_client, Client
 from config import get_settings
 
-_client: Optional[Client] = None
+_client = None
 
 
-def get_client() -> Client:
+def get_client():
     global _client
     if _client is None:
+        from supabase import create_client
         settings = get_settings()
         _client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
     return _client

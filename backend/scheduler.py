@@ -6,7 +6,9 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 logger = logging.getLogger(__name__)
 
-_scheduler: AsyncIOScheduler | None = None
+from typing import Optional
+
+_scheduler: Optional[AsyncIOScheduler] = None
 
 
 async def _run_module_for_all_orgs(module_func, module_name: str):
@@ -58,12 +60,12 @@ def start_scheduler():
     global _scheduler
     _scheduler = AsyncIOScheduler()
 
-    _scheduler.add_job(_cert_monitor_job, IntervalTrigger(hours=1), id="cert_monitor", replace_existing=True)
-    _scheduler.add_job(_dark_web_job, IntervalTrigger(hours=6), id="dark_web", replace_existing=True)
-    _scheduler.add_job(_brand_monitor_job, IntervalTrigger(hours=4), id="brand_monitor", replace_existing=True)
-    _scheduler.add_job(_data_leak_job, IntervalTrigger(hours=12), id="data_leak", replace_existing=True)
-    _scheduler.add_job(_surface_scan_job, IntervalTrigger(hours=24), id="surface_web", replace_existing=True)
-    _scheduler.add_job(_credential_scan_job, IntervalTrigger(hours=8), id="credential", replace_existing=True)
+    _scheduler.add_job(_cert_monitor_job, IntervalTrigger(hours=1), id="cert_monitor", replace_existing=True, misfire_grace_time=300)
+    _scheduler.add_job(_dark_web_job, IntervalTrigger(hours=6), id="dark_web", replace_existing=True, misfire_grace_time=300)
+    _scheduler.add_job(_brand_monitor_job, IntervalTrigger(hours=4), id="brand_monitor", replace_existing=True, misfire_grace_time=300)
+    _scheduler.add_job(_data_leak_job, IntervalTrigger(hours=12), id="data_leak", replace_existing=True, misfire_grace_time=300)
+    _scheduler.add_job(_surface_scan_job, IntervalTrigger(hours=24), id="surface_web", replace_existing=True, misfire_grace_time=300)
+    _scheduler.add_job(_credential_scan_job, IntervalTrigger(hours=8), id="credential", replace_existing=True, misfire_grace_time=300)
 
     _scheduler.start()
     logger.info("APScheduler started with 6 scan jobs")
@@ -77,5 +79,5 @@ def stop_scheduler():
         _scheduler = None
 
 
-def get_scheduler() -> AsyncIOScheduler | None:
+def get_scheduler() -> Optional[AsyncIOScheduler]:
     return _scheduler

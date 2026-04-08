@@ -309,8 +309,6 @@ git push origin feature/amazing-feature
 <tr>
 <td>
 
-**Inspiration**
-- 💡 [Thomas Roccia](https://x.com/fr0gger_) – *Perplexity of the Dark Web* concept
 
 **Resources**
 - 📚 [OSINT-Assistant](https://github.com/AXRoux/OSINT-Assistant) – LLM prompts

@@ -12,6 +12,7 @@ from config import (
     OPENAI_API_KEY,
     ANTHROPIC_API_KEY,
     GOOGLE_API_KEY,
+    GROK_API_KEY,
     OPENROUTER_API_KEY,
     OPENROUTER_BASE_URL,
     OLLAMA_BASE_URL,
@@ -39,6 +40,8 @@ def _render_pipeline_error(stage: str, err: Exception) -> None:
         hints.insert(0, "- OpenAI models require `OPENAI_API_KEY` with access to the chosen model.")
     elif "google" in lower_msg or "gemini" in lower_msg:
         hints.insert(0, "- Google Gemini models need `GOOGLE_API_KEY` or Application Default Credentials.")
+    elif "grok" in lower_msg or "x.ai" in lower_msg:
+        hints.insert(0, "- Grok/xAI models require `GROK_API_KEY` from https://x.ai/api")
 
     st.error(
         "❌ Failed to {}.\n\nError: {}\n\n{}".format(
@@ -102,7 +105,7 @@ def cached_scrape_multiple(filtered: list, threads: int):
 
 # Streamlit page configuration
 st.set_page_config(
-    page_title="Robin: AI-Powered Dark Web OSINT Tool",
+    page_title="Transilience AI: Dark Web OSINT Platform",
     page_icon="🕵️‍♂️",
     initial_sidebar_state="expanded",
 )
@@ -124,10 +127,10 @@ st.markdown(
 
 
 # Sidebar
-st.sidebar.title("Robin")
-st.sidebar.text("AI-Powered Dark Web OSINT Tool")
+st.sidebar.title("Transilience AI")
+st.sidebar.text("Dark Web OSINT Platform")
 st.sidebar.markdown(
-    """Made by [Apurv Singh Gautam](https://www.linkedin.com/in/apurvsinghgautam/)"""
+    """Made by [Transillience Aegis AI](https://transillience-aegis.ai)"""
 )
 st.sidebar.subheader("Settings")
 def _env_is_set(value) -> bool:
@@ -143,23 +146,62 @@ default_model_index = (
     else 0
 )
 
+model = None
+selected_preset = "threat_intel"
+selected_preset_label = "🔍 Dark Web Threat Intel"
+custom_instructions = ""
+
 if not model_options:
-    st.sidebar.error(
+    st.error(
         "⛔ **No LLM models available.**\n\n"
         "No API keys or local providers are configured. "
-        "Set at least one in your `.env` file and restart Robin.\n\n"
-        "See **Provider Configuration** below for details."
+        "Set at least one in your `.env` file and restart Transilience AI.\n\n"
+        "See **Provider Configuration** in the sidebar for details."
     )
-    st.stop()
+    st.warning("To configure:\n1. Create a `.env` file with your API keys\n2. Restart the Docker container")
+else:
+    model = st.sidebar.selectbox(
+        "Select LLM Model",
+        model_options,
+        index=default_model_index,
+        key="model_select",
+    )
+    if any(name not in {"gpt4o", "gpt-4.1", "claude-3-5-sonnet-latest", "llama3.1", "gemini-2.5-flash"} for name in model_options):
+        st.sidebar.caption("Locally detected Ollama models are automatically added to this list.")
 
-model = st.sidebar.selectbox(
-    "Select LLM Model",
-    model_options,
-    index=default_model_index,
-    key="model_select",
-)
-if any(name not in {"gpt4o", "gpt-4.1", "claude-3-5-sonnet-latest", "llama3.1", "gemini-2.5-flash"} for name in model_options):
-    st.sidebar.caption("Locally detected Ollama models are automatically added to this list.")
+    with st.sidebar.expander("⚙️ Prompt Settings"):
+        preset_options = {
+            "🔍 Dark Web Threat Intel": "threat_intel",
+            "🦠 Ransomware / Malware Focus": "ransomware_malware",
+            "👤 Personal / Identity Investigation": "personal_identity",
+            "🏢 Corporate Espionage / Data Leaks": "corporate_espionage",
+        }
+        preset_placeholders = {
+            "threat_intel": "e.g. Pay extra attention to cryptocurrency wallet addresses and exchange names.",
+            "ransomware_malware": "e.g. Highlight any references to double-extortion tactics or known ransomware-as-a-service affiliates.",
+            "personal_identity": "e.g. Flag any passport or government ID numbers and note which country they appear to be from.",
+            "corporate_espionage": "e.g. Prioritize any mentions of source code repositories, API keys, or internal Slack/email dumps.",
+        }
+        selected_preset_label = st.selectbox(
+            "Research Domain",
+            list(preset_options.keys()),
+            key="preset_select",
+        )
+        selected_preset = preset_options[selected_preset_label]
+        st.text_area(
+            "System Prompt",
+            value=PRESET_PROMPTS[selected_preset].strip(),
+            height=200,
+            disabled=True,
+            key="system_prompt_display",
+        )
+        custom_instructions = st.text_area(
+            "Custom Instructions (optional)",
+            placeholder=preset_placeholders[selected_preset],
+            height=100,
+            key="custom_instructions",
+        )
+
 threads = st.sidebar.slider("Scraping Threads", 1, 16, 4, key="thread_slider")
 max_results = st.sidebar.slider(
     "Max Results to Filter", 10, 100, 50, key="max_results_slider",
@@ -176,6 +218,7 @@ _providers = [
     ("OpenAI",      OPENAI_API_KEY,     True),
     ("Anthropic",   ANTHROPIC_API_KEY,  True),
     ("Google",      GOOGLE_API_KEY,     True),
+    ("Grok/xAI",    GROK_API_KEY,       True),
     ("OpenRouter",  OPENROUTER_API_KEY, True),
     ("Ollama",      OLLAMA_BASE_URL,    False),
     ("llama.cpp",   LLAMA_CPP_BASE_URL, False),
@@ -188,45 +231,12 @@ for name, value, is_cloud in _providers:
     else:
         st.sidebar.markdown(f"&ensp;🔵 **{name}** — not configured *(optional)*")
 
-with st.sidebar.expander("⚙️ Prompt Settings"):
-    preset_options = {
-        "🔍 Dark Web Threat Intel": "threat_intel",
-        "🦠 Ransomware / Malware Focus": "ransomware_malware",
-        "👤 Personal / Identity Investigation": "personal_identity",
-        "🏢 Corporate Espionage / Data Leaks": "corporate_espionage",
-    }
-    preset_placeholders = {
-        "threat_intel": "e.g. Pay extra attention to cryptocurrency wallet addresses and exchange names.",
-        "ransomware_malware": "e.g. Highlight any references to double-extortion tactics or known ransomware-as-a-service affiliates.",
-        "personal_identity": "e.g. Flag any passport or government ID numbers and note which country they appear to be from.",
-        "corporate_espionage": "e.g. Prioritize any mentions of source code repositories, API keys, or internal Slack/email dumps.",
-    }
-    selected_preset_label = st.selectbox(
-        "Research Domain",
-        list(preset_options.keys()),
-        key="preset_select",
-    )
-    selected_preset = preset_options[selected_preset_label]
-    st.text_area(
-        "System Prompt",
-        value=PRESET_PROMPTS[selected_preset].strip(),
-        height=200,
-        disabled=True,
-        key="system_prompt_display",
-    )
-    custom_instructions = st.text_area(
-        "Custom Instructions (optional)",
-        placeholder=preset_placeholders[selected_preset],
-        height=100,
-        key="custom_instructions",
-    )
-
 # --- Health Checks ---
 st.sidebar.divider()
 st.sidebar.subheader("Health Checks")
 
 # LLM Health Check
-if st.sidebar.button("🔌 Check LLM Connection", use_container_width=True):
+if model and st.sidebar.button("🔌 Check LLM Connection", use_container_width=True):
     with st.sidebar:
         with st.spinner(f"Testing {model}..."):
             result = check_llm_health(model)
@@ -298,7 +308,7 @@ else:
 # Main UI - logo and input
 _, logo_col, _ = st.columns(3)
 with logo_col:
-    st.image(".github/assets/robin_logo.png", width=200)
+    st.image(".github/assets/logo.png", width=200)
 
 # Display text box and button
 with st.form("search_form", clear_on_submit=True):
@@ -339,109 +349,112 @@ findings_placeholder = st.empty()
 
 # Process the query
 if run_button and query:
-    # Clear any loaded investigation and old pipeline state
-    st.session_state.pop("loaded_investigation", None)
-    for k in ["refined", "results", "filtered", "scraped", "streamed_summary"]:
-        st.session_state.pop(k, None)
+    if not model:
+        st.error("⛔ Cannot run investigation: No LLM model configured. Please set up your API keys in the `.env` file.")
+    else:
+        # Clear any loaded investigation and old pipeline state
+        st.session_state.pop("loaded_investigation", None)
+        for k in ["refined", "results", "filtered", "scraped", "streamed_summary"]:
+            st.session_state.pop(k, None)
 
-    # Stage 1 - Load LLM
-    with status_slot.container():
-        with st.spinner("🔄 Loading LLM..."):
-            try:
-                llm = get_llm(model)
-            except Exception as e:
-                _render_pipeline_error("load the selected LLM", e)
+        # Stage 1 - Load LLM
+        with status_slot.container():
+            with st.spinner("🔄 Loading LLM..."):
+                try:
+                    llm = get_llm(model)
+                except Exception as e:
+                    _render_pipeline_error("load the selected LLM", e)
 
-    # Stage 2 - Refine query
-    with status_slot.container():
-        with st.spinner("🔄 Refining query..."):
-            try:
-                st.session_state.refined = refine_query(llm, query)
-            except Exception as e:
-                _render_pipeline_error("refine the query", e)
+        # Stage 2 - Refine query
+        with status_slot.container():
+            with st.spinner("🔄 Refining query..."):
+                try:
+                    st.session_state.refined = refine_query(llm, query)
+                except Exception as e:
+                    _render_pipeline_error("refine the query", e)
 
-    # Stage 3 - Search dark web
-    with status_slot.container():
-        with st.spinner("🔍 Searching dark web..."):
-            st.session_state.results = cached_search_results(
-                st.session_state.refined, threads
-            )
-    # Cap results before LLM filter step
-    if len(st.session_state.results) > max_results:
-        st.session_state.results = st.session_state.results[:max_results]
+        # Stage 3 - Search dark web
+        with status_slot.container():
+            with st.spinner("🔍 Searching dark web..."):
+                st.session_state.results = cached_search_results(
+                    st.session_state.refined, threads
+                )
+        # Cap results before LLM filter step
+        if len(st.session_state.results) > max_results:
+            st.session_state.results = st.session_state.results[:max_results]
 
-    # Stage 4 - Filter results
-    with status_slot.container():
-        with st.spinner("🗂️ Filtering results..."):
-            st.session_state.filtered = filter_results(
-                llm, st.session_state.refined, st.session_state.results
-            )
-    # Cap filtered results before scraping
-    if len(st.session_state.filtered) > max_scrape:
-        st.session_state.filtered = st.session_state.filtered[:max_scrape]
+        # Stage 4 - Filter results
+        with status_slot.container():
+            with st.spinner("🗂️ Filtering results..."):
+                st.session_state.filtered = filter_results(
+                    llm, st.session_state.refined, st.session_state.results
+                )
+        # Cap filtered results before scraping
+        if len(st.session_state.filtered) > max_scrape:
+            st.session_state.filtered = st.session_state.filtered[:max_scrape]
 
-    # Stage 5 - Scrape content
-    with status_slot.container():
-        with st.spinner("📜 Scraping content..."):
-            st.session_state.scraped = cached_scrape_multiple(
-                st.session_state.filtered, threads
-            )
+        # Stage 5 - Scrape content
+        with status_slot.container():
+            with st.spinner("📜 Scraping content..."):
+                st.session_state.scraped = cached_scrape_multiple(
+                    st.session_state.filtered, threads
+                )
 
-    # Stage 6 - Summarize (streaming)
-    st.session_state.streamed_summary = ""
+        # Stage 6 - Summarize (streaming)
+        st.session_state.streamed_summary = ""
 
-    with findings_placeholder.container():
-        st.subheader(":red[🔎 Findings]", anchor=None, divider="gray")
-        summary_slot = st.empty()
+        with findings_placeholder.container():
+            st.subheader(":red[🔎 Findings]", anchor=None, divider="gray")
+            summary_slot = st.empty()
 
-    def ui_emit(chunk: str):
-        st.session_state.streamed_summary += chunk
-        summary_slot.markdown(st.session_state.streamed_summary)
+        def ui_emit(chunk: str):
+            st.session_state.streamed_summary += chunk
+            summary_slot.markdown(st.session_state.streamed_summary)
 
-    with status_slot.container():
-        with st.spinner("✍️ Generating summary..."):
-            stream_handler = BufferedStreamingHandler(ui_callback=ui_emit)
-            llm.callbacks = [stream_handler]
-            _ = generate_summary(
-                llm, query, st.session_state.scraped,
-                preset=selected_preset, custom_instructions=custom_instructions,
-            )
+        with status_slot.container():
+            with st.spinner("✍️ Generating summary..."):
+                stream_handler = BufferedStreamingHandler(ui_callback=ui_emit)
+                llm.callbacks = [stream_handler]
+                _ = generate_summary(
+                    llm, query, st.session_state.scraped,
+                    preset=selected_preset, custom_instructions=custom_instructions,
+                )
 
-    # Save investigation
-    _fname = save_investigation(
-        query=query,
-        refined_query=st.session_state.refined,
-        model=model,
-        preset_label=selected_preset_label,
-        sources=st.session_state.filtered,
-        summary=st.session_state.streamed_summary,
-    )
+        # Save investigation
+        _fname = save_investigation(
+            query=query,
+            refined_query=st.session_state.refined,
+            model=model,
+            preset_label=selected_preset_label,
+            sources=st.session_state.filtered,
+            summary=st.session_state.streamed_summary,
+        )
 
-    # Render organized sections
-    with notes_placeholder.container():
-        with st.expander("📋 Notes", expanded=False):
-            st.markdown(f"**Refined Query:** `{st.session_state.refined}`")
-            st.markdown(f"**Model:** `{model}` &nbsp;&nbsp; **Domain:** {selected_preset_label}")
-            st.markdown(
-                f"**Results found:** {len(st.session_state.results)} &nbsp;&nbsp; "
-                f"**Filtered to:** {len(st.session_state.filtered)} &nbsp;&nbsp; "
-                f"**Scraped:** {len(st.session_state.scraped)}"
-            )
+        # Render organized sections
+        with notes_placeholder.container():
+            with st.expander("📋 Notes", expanded=False):
+                st.markdown(f"**Refined Query:** `{st.session_state.refined}`")
+                st.markdown(f"**Model:** `{model}` &nbsp;&nbsp; **Domain:** {selected_preset_label}")
+                st.markdown(
+                    f"**Results found:** {len(st.session_state.results)} &nbsp;&nbsp; "
+                    f"**Filtered to:** {len(st.session_state.filtered)} &nbsp;&nbsp; "
+                    f"**Scraped:** {len(st.session_state.scraped)}"
+                )
 
-    with sources_placeholder.container():
-        with st.expander(f"🔗 Sources ({len(st.session_state.filtered)} results)", expanded=False):
-            for i, item in enumerate(st.session_state.filtered, 1):
-                title = item.get("title", "Untitled")
-                link = item.get("link", "")
-                st.markdown(f"{i}. [{title}]({link})")
+        with sources_placeholder.container():
+            with st.expander(f"🔗 Sources ({len(st.session_state.filtered)} results)", expanded=False):
+                for i, item in enumerate(st.session_state.filtered, 1):
+                    title = item.get("title", "Untitled")
+                    link = item.get("link", "")
+                    st.markdown(f"{i}. [{title}]({link})")
 
-    with findings_placeholder.container():
-        st.subheader(":red[🔎 Findings]", anchor=None, divider="gray")
-        st.markdown(st.session_state.streamed_summary)
-        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        fname = f"summary_{now}.md"
-        b64 = base64.b64encode(st.session_state.streamed_summary.encode()).decode()
-        href = f'<div class="aStyle">📥 <a href="data:file/markdown;base64,{b64}" download="{fname}">Download</a></div>'
-        st.markdown(href, unsafe_allow_html=True)
+        with findings_placeholder.container():
+            st.subheader(":red[🔎 Findings]", anchor=None, divider="gray")
+            st.markdown(st.session_state.streamed_summary)
+            now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            fname = f"summary_{now}.md"
+            b64 = base64.b64encode(st.session_state.streamed_summary.encode()).decode()
+            href = f'<div class="aStyle">📥 <a href="data:file/markdown;base64,{b64}" download="{fname}">Download</a></div>'
+            st.markdown(href, unsafe_allow_html=True)
 
-    status_slot.success(f"✔️ Pipeline completed successfully! Investigation saved as `{_fname}`")
+        status_slot.success(f"✔️ Pipeline completed successfully! Investigation saved as `{_fname}`")

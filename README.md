@@ -1,9 +1,9 @@
 <div align="center">
    <img src=".github/assets/logo.png" alt="Logo" width="300">
-   <br><a href="https://github.com/apurvsinghgautam/robin/actions/workflows/release.yml"><img alt="Release" src="https://github.com/apurvsinghgautam/robin/actions/workflows/release.yml/badge.svg"></a> <a href="https://github.com/apurvsinghgautam/robin/releases"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/apurvsinghgautam/robin"></a> <a href="https://hub.docker.com/r/apurvsg/robin"><img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/apurvsg/robin"></a>
-   <h1>Robin: AI-Powered Dark Web OSINT Tool</h1>
+   <br><a href="https://github.com/confidentialwebapp/Transillience-Aegis/actions/workflows/release.yml"><img alt="Release" src="https://github.com/confidentialwebapp/Transillience-Aegis/actions/workflows/release.yml/badge.svg"></a> <a href="https://github.com/confidentialwebapp/Transillience-Aegis/releases"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/confidentialwebapp/Transillience-Aegis"></a> <a href="https://hub.docker.com/r/apurvsg/transilience-ai"><img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/apurvsg/transilience-ai"></a>
+   <h1>Transilience AI: Dark Web OSINT Platform</h1>
 
-   <p>Robin is an AI-powered tool for conducting dark web OSINT investigations. It leverages LLMs to refine queries, filter search results from dark web search engines, and provide an investigation summary.</p>
+   <p>Transilience AI is an AI-powered platform for conducting dark web OSINT investigations. It leverages LLMs to refine queries, filter search results from dark web search engines, and provide an investigation summary.</p>
    <a href="#installation">Installation</a> &bull; <a href="#usage">Usage</a> &bull; <a href="#contributing">Contributing</a> &bull; <a href="#acknowledgements">Acknowledgements</a><br><br>
 </div>
 
@@ -11,7 +11,7 @@
 
 
 ## Architecture
-![Workflow](.github/assets/robin-workflow.png)
+![Workflow](.github/assets/transilience-workflow.png)
 
 ---
 
@@ -31,7 +31,7 @@
 >
 > Use responsibly and at your own risk. Ensure you comply with all relevant laws and institutional policies before conducting OSINT investigations.
 >
-> Additionally, Robin leverages third-party APIs (including LLMs). Be cautious when sending potentially sensitive queries, and review the terms of service for any API or model provider you use.
+> Additionally, Transilience AI leverages third-party APIs (including LLMs). Be cautious when sending potentially sensitive queries, and review the terms of service for any API or model provider you use.
 
 ## Installation
 > [!NOTE]
@@ -44,9 +44,9 @@
 
 ### Docker [Recommended]
 
-- Pull the latest Robin docker image
+- Pull the latest Transilience AI docker image
 ```bash
-docker pull apurvsg/robin:latest
+docker pull apurvsg/transilience-ai:latest
 ```
 
 - Run the docker image as:
@@ -55,7 +55,7 @@ docker run --rm \
    -v "$(pwd)/.env:/app/.env" \
    --add-host=host.docker.internal:host-gateway \
    -p 8501:8501 \
-   apurvsg/robin:latest
+   apurvsg/transilience-ai:latest
 ```
 
 > [!TIP]
@@ -66,7 +66,7 @@ docker run --rm \
 >    -v "$(pwd)/investigations:/app/investigations" \
 >    --add-host=host.docker.internal:host-gateway \
 >    -p 8501:8501 \
->    apurvsg/robin:latest
+>    apurvsg/transilience-ai:latest
 > ```
 > Investigations are saved to the `investigations/` folder in your working directory and can be loaded from the **Past Investigations** panel in the sidebar.
 
@@ -106,9 +106,9 @@ Open an Issue for any of these situations:
 ## Acknowledgements
 
 - Idea inspiration from [Thomas Roccia](https://x.com/fr0gger_) and his demo of [Perplexity of the Dark Web](https://x.com/fr0gger_/status/1908051083068645558).
-- Tools inspiration from my [OSINT Tools for the Dark Web](https://github.com/apurvsinghgautam/dark-web-osint-tools) repository.
+- Built by [Transillience Aegis AI](https://transillience-aegis.ai)
 - LLM Prompt inspiration from [OSINT-Assistant](https://github.com/AXRoux/OSINT-Assistant) repository.
-- Logo Design by my friend [Tanishq Rupaal](https://github.com/Tanq16/)
+- Logo Design by Transillience Aegis AI
 
 
 

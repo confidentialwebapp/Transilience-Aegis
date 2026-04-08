@@ -1,7 +1,12 @@
 [server]
 runOnSave = true
+headless = true
+enableCORS = true
+enableXsrfProtection = false
 
 [theme]
 base="dark"
-backgroundColor="#000000"
-secondaryBackgroundColor="#222222"
+primaryColor="#ff4b4b"
+backgroundColor="#0e1117"
+secondaryBackgroundColor="#262730"
+textColor="#fafafa"

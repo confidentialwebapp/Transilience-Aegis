@@ -7,6 +7,7 @@ from config import (
     OPENAI_API_KEY,
     ANTHROPIC_API_KEY,
     GOOGLE_API_KEY,
+    GROK_API_KEY,
     OPENROUTER_API_KEY,
 )
 import logging
@@ -64,7 +65,9 @@ def _ensure_credentials(model_choice: str, llm_class, model_params: dict) -> Non
         _require(GOOGLE_API_KEY, "GOOGLE_API_KEY", "Google Gemini")
     elif "ChatOpenAI" in class_name:
         base_url = (model_params or {}).get("base_url", "").lower()
-        if "openrouter" in base_url:
+        if "api.x.ai" in base_url:
+            _require(GROK_API_KEY, "GROK_API_KEY", "Grok/xAI")
+        elif "openrouter" in base_url:
             _require(OPENROUTER_API_KEY, "OPENROUTER_API_KEY", "OpenRouter")
         else:
             _require(OPENAI_API_KEY, "OPENAI_API_KEY", "OpenAI")

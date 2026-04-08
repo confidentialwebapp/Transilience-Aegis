@@ -18,5 +18,5 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Tor is ready."
-echo "Starting Robin: AI-Powered Dark Web OSINT Tool..."
+echo "Starting Transilience AI: Dark Web OSINT Platform..."
 exec streamlit run ui.py --server.port=8501 --server.address=0.0.0.0

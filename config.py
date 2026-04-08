@@ -20,6 +20,7 @@ def _clean_env(name, default=None):
 OPENAI_API_KEY = _clean_env("OPENAI_API_KEY")
 GOOGLE_API_KEY = _clean_env("GOOGLE_API_KEY")
 ANTHROPIC_API_KEY = _clean_env("ANTHROPIC_API_KEY")
+GROK_API_KEY = _clean_env("GROK_API_KEY")
 OLLAMA_BASE_URL = _clean_env("OLLAMA_BASE_URL")
 OPENROUTER_BASE_URL = _clean_env("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 OPENROUTER_API_KEY = _clean_env("OPENROUTER_API_KEY")

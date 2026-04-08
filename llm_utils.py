@@ -14,6 +14,7 @@ from config import (
     GOOGLE_API_KEY,
     OPENAI_API_KEY,
     ANTHROPIC_API_KEY,
+    GROK_API_KEY,
     LLAMA_CPP_BASE_URL,
 )
 
@@ -150,6 +151,30 @@ _llm_config_map = {
             'api_key': OPENROUTER_API_KEY  # Use OpenRouter API key
         }
     },
+    'grok-3-fast': {
+        'class': ChatOpenAI,
+        'constructor_params': {
+            'model_name': 'grok-3-fast-beta',
+            'base_url': 'https://api.x.ai/v1',
+            'api_key': GROK_API_KEY
+        }
+    },
+    'grok-3': {
+        'class': ChatOpenAI,
+        'constructor_params': {
+            'model_name': 'grok-3-beta',
+            'base_url': 'https://api.x.ai/v1',
+            'api_key': GROK_API_KEY
+        }
+    },
+    'grok-2': {
+        'class': ChatOpenAI,
+        'constructor_params': {
+            'model_name': 'grok-2-1212',
+            'base_url': 'https://api.x.ai/v1',
+            'api_key': GROK_API_KEY
+        }
+    },
     # 'llama3.2': {
     #     'class': ChatOllama,
     #     'constructor_params': {'model': 'llama3.2:latest', 'base_url': OLLAMA_BASE_URL}
@@ -247,11 +272,18 @@ def get_model_choices() -> List[str]:
     openai_ok = _is_set(OPENAI_API_KEY)
     anthropic_ok = _is_set(ANTHROPIC_API_KEY)
     google_ok = _is_set(GOOGLE_API_KEY)
+    grok_ok = _is_set(GROK_API_KEY)
     openrouter_ok = _is_set(OPENROUTER_API_KEY) and _is_set(OPENROUTER_BASE_URL)
 
     for k, cfg in _llm_config_map.items():
         cls = cfg.get("class")
         ctor = cfg.get("constructor_params", {}) or {}
+
+        # Grok/xAI models (native API)
+        if cls is ChatOpenAI and ctor.get("base_url") == "https://api.x.ai/v1":
+            if grok_ok:
+                gated_base_models.append(k)
+            continue
 
         # OpenRouter models (ChatOpenAI with base_url set to OpenRouter)
         if cls is ChatOpenAI and (ctor.get("base_url") == OPENROUTER_BASE_URL or "openrouter" in k):

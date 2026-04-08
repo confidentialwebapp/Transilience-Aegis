@@ -1,5 +1,5 @@
 <div align="center">
-   <img src=".github/assets/transilience.png" alt="transilience.ai Logo" width="300">
+   <img src="logo.png" alt="Transillience Aegis Logo" width="300">
    <br><a href="https://github.com/confidentialwebapp/transilience.ai/actions/workflows/release.yml"><img alt="Release" src="https://github.com/confidentialwebapp/transilience.ai/actions/workflows/release.yml/badge.svg"></a> <a href="https://github.com/confidentialwebapp/transilience.ai/releases"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/confidentialwebapp/transilience.ai"></a> <a href="https://hub.docker.com/r/transilience/transilience.ai"><img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/transilience/transilience.ai"></a>
    <h1>transilience.ai: Dark Web OSINT Platform</h1>
 

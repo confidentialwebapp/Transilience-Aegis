@@ -27,6 +27,10 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Exposure Dashboard</h1>
+        <div className="flex items-center gap-2 text-sm text-slate-400 mb-2">
+          <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+          Connecting to threat intelligence backend... This may take up to 30s on first load.
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <Skeleton className="h-40 w-full" />

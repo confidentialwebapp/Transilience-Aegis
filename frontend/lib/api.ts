@@ -23,10 +23,30 @@ interface FetchOptions {
   orgId?: string;
 }
 
+const MAX_RETRIES = 3;
+const TIMEOUT_MS = 60000; // 60s to handle Render cold starts
+
+let _backendAwake = false;
+
+/** Pre-flight health check to wake up Render backend before first real request */
+async function ensureBackendAwake(): Promise<void> {
+  if (_backendAwake) return;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
+    await fetch(`${API_BASE}/health`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    _backendAwake = true;
+  } catch {
+    // If health check fails, still try the real request
+  }
+}
+
 /**
  * Core fetch wrapper with retry logic for Render cold starts.
- * - 45s timeout per attempt
- * - Up to 2 attempts (one automatic retry on network/timeout errors)
+ * - 60s timeout per attempt
+ * - Up to 3 attempts (auto-retry on network/timeout errors)
+ * - Exponential backoff: 0s, 2s, 4s between retries
  */
 async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T> {
   const { method = "GET", body, orgId } = options;
@@ -40,10 +60,17 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
 
   const url = `${API_BASE}${path}`;
 
-  for (let attempt = 0; attempt < 2; attempt++) {
+  await ensureBackendAwake();
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
+      if (attempt > 0) {
+        // Exponential backoff between retries
+        await new Promise((r) => setTimeout(r, attempt * 2000));
+      }
+
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45000);
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
       const res = await fetch(url, {
         method,
@@ -70,19 +97,21 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
       if (e instanceof ApiError) {
         throw e;
       }
-      // On first attempt, retry once for network failures / cold start timeouts
-      if (attempt === 0) {
+      // On non-final attempt, retry for network failures / cold start timeouts
+      if (attempt < MAX_RETRIES - 1) {
         continue;
       }
-      // On second failure, wrap and throw
+      // On final failure, throw user-friendly error
+      const isTimeout = e instanceof DOMException && e.name === "AbortError";
       throw new ApiError(
-        e instanceof Error ? e.message : "Network request failed",
+        isTimeout
+          ? "The backend server is waking up from sleep. Please wait 30 seconds and try again."
+          : "Unable to connect to the server. Please check your connection and try again.",
         0
       );
     }
   }
 
-  // Should never reach here, but TypeScript needs it
   throw new ApiError("Request failed after retries", 0);
 }
 

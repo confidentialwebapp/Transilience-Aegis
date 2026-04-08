@@ -1,223 +1,338 @@
 <div align="center">
-   <img src="logo.png" alt="Transillience Aegis" width="200">
    
-   <h1>Transillience Aegis</h1>
-   <p><strong>Managed Dark Web Intelligence & OSINT Platform</strong></p>
+   <!-- Animated Logo Effect -->
+   <img src="logo.png" alt="Transillience Aegis Logo" width="280" style="filter: drop-shadow(0 0 10px rgba(0,255,255,0.5));">
    
-   <p>
-      <a href="https://github.com/confidentialwebapp/Transillience-Aegis/actions/workflows/docker-release.yml">
-         <img alt="Build" src="https://img.shields.io/github/actions/workflow/status/confidentialwebapp/Transillience-Aegis/docker-release.yml?style=flat-square&logo=github&color=2563eb">
-      </a>
-      <a href="https://github.com/confidentialwebapp/Transillience-Aegis/releases">
-         <img alt="Release" src="https://img.shields.io/github/v/release/confidentialwebapp/Transillience-Aegis?style=flat-square&logo=github&color=2563eb">
-      </a>
-      <a href="#">
-         <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-2563eb?style=flat-square&logo=python&logoColor=white">
-      </a>
+   <br><br>
+   
+   <!-- Epic Badges Row -->
+   <a href="https://github.com/confidentialwebapp/Transillience-Aegis/actions/workflows/docker-release.yml">
+      <img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/confidentialwebapp/Transillience-Aegis/docker-release.yml?style=for-the-badge&logo=github-actions&logoColor=white&color=00ff88">
+   </a>
+   <a href="https://github.com/confidentialwebapp/Transillience-Aegis/releases">
+      <img alt="Latest Release" src="https://img.shields.io/github/v/release/confidentialwebapp/Transillience-Aegis?style=for-the-badge&logo=github&logoColor=white&color=ff6b6b">
+   </a>
+   <a href="#">
+      <img alt="License" src="https://img.shields.io/badge/License-MIT-ff00ff?style=for-the-badge&logo=open-source-initiative&logoColor=white">
+   </a>
+   <a href="#">
+      <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white">
+   </a>
+   
+   <br><br>
+   
+   <!-- Cool Title with Neon Effect -->
+   <h1>
+      <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=700&size=30&pause=1000&color=00FF88&center=true&vCenter=true&width=600&height=60&lines=Transillience+Aegis;Dark+Web+OSINT+Platform;AI-Powered+Investigations" alt="Typing SVG" />
+   </h1>
+   
+   <!-- Tagline -->
+   <p align="center">
+      <em>🔍 Illuminate the shadows. AI-powered dark web intelligence at your fingertips.</em>
    </p>
    
-   <p>
-      <a href="#overview">Overview</a> ·
-      <a href="#capabilities">Capabilities</a> ·
-      <a href="#getting-started">Getting Started</a> ·
-      <a href="#documentation">Documentation</a>
-   </p>
+   <!-- Quick Navigation -->
+   <a href="#features"><img src="https://img.shields.io/badge/Features-00d4ff?style=flat-square"></a>
+   <a href="#architecture"><img src="https://img.shields.io/badge/Architecture-ff00ff?style=flat-square"></a>
+   <a href="#quick-start"><img src="https://img.shields.io/badge/Quick_Start-00ff88?style=flat-square"></a>
+   <a href="#installation"><img src="https://img.shields.io/badge/Installation-ff6b6b?style=flat-square"></a>
+   
+   <br><br>
+   
+   <!-- Star Count (Visual) -->
+   <img src="https://img.shields.io/github/stars/confidentialwebapp/Transillience-Aegis?style=social&color=ffd700">
+   
 </div>
 
----
+<br>
 
-## Overview
+<!-- Cool Divider -->
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&height=2&section=header" width="100%">
 
-Transillience Aegis is an enterprise-grade OSINT platform that leverages AI agents to autonomously conduct dark web investigations. The platform combines large language models with anonymized Tor routing to deliver actionable intelligence from hidden services.
+<br>
 
-**One platform across:**
-- Dark Web Search & Discovery
-- Automated Content Analysis
-- LLM-Powered Intelligence Summaries
-- Continuous Investigation Monitoring
+## 🌟 Features
 
----
+<table>
+<tr>
+<td width="50%">
 
-## Capabilities
+### 🤖 AI-Powered Intelligence
+- **Smart Query Refinement** – LLMs optimize your search queries
+- **Intelligent Filtering** – AI filters relevant results automatically  
+- **Multi-Model Support** – OpenAI, Claude, Gemini, Ollama, LlamaCPP
 
-### AI-Powered Investigation Agents
-| Agent | Function |
-|-------|----------|
-| **Query Refinement Agent** | Optimizes natural language queries for dark web search engines |
-| **Content Filtering Agent** | LLM-based relevance scoring and noise reduction |
-| **Intelligence Summary Agent** | Generates actionable investigation reports |
-| **Health Monitor Agent** | Continuous system and search engine availability monitoring |
+</td>
+<td width="50%">
 
-### Supported LLM Providers
-- OpenAI GPT-4
-- Anthropic Claude
-- Google Gemini
-- OpenRouter
-- Ollama (Local)
-- LlamaCPP (Local)
+### 🔒 Privacy & Security
+- **Tor Integration** – Anonymous routing via SOCKS5 proxy
+- **Local Processing** – Use Ollama/LlamaCPP for on-premise AI
+- **Docker Isolation** – Clean, sandboxed deployment
 
-### Dark Web Coverage
-16+ integrated search engines including Ahmia, OnionLand, Torgle, Amnesia, Kaizer, and Tor66.
+</td>
+</tr>
+<tr>
+<td width="50%">
 
----
+### 🌐 Dark Web Coverage
+- **16+ Search Engines** – Ahmia, OnionLand, Torgle, and more
+- **Parallel Scraping** – High-speed onion site crawling
+- **Real-time Results** – Live investigation dashboard
 
-## System Architecture
+</td>
+<td width="50%">
+
+### 📝 Investigation Tools
+- **Custom Reports** – Save investigations to file
+- **History Tracking** – Revisit past searches anytime
+- **Streamlit UI** – Modern, responsive web interface
+
+</td>
+</tr>
+</table>
+
+<br>
+
+<!-- Cool Divider -->
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&height=2&section=header" width="100%">
+
+<br>
+
+## 🏗️ Architecture
+
+<details>
+<summary><b>🔥 Click to Expand System Architecture</b></summary>
+<br>
 
 ```mermaid
 flowchart TD
-    A[User Query] --> B[Streamlit Web Interface]
-    B --> C[Query Refinement Agent]
+    A[🔍 User Query] -->|Input| B["🌐 Streamlit Web UI<br/>Port 8501"]
+    B -->|Raw Query| C["🤖 LLM Refinement Engine"]
     
-    subgraph LLM["LLM Provider Layer"]
-        L1[OpenAI]
-        L2[Claude]
-        L3[Gemini]
-        L4[Ollama]
+    subgraph LLM["🧠 LLM Providers"]
+        L1[OpenAI GPT]
+        L2[Anthropic Claude]
+        L3[Google Gemini]
+        L4[OpenRouter]
+        L5[🦙 Ollama Local]
+        L6[🦙 LlamaCPP Local]
     end
     
-    C -.-> LLM
-    C --> D[Tor Proxy Network]
-    D --> E[Dark Web Search Matrix]
+    C -.->|API Call| LLM
+    C -->|Optimized Query| D["🔒 Tor Proxy<br/>SOCKS5://127.0.0.1:9050"]
+    D -->|Route| E["🕸️ Search Engine Matrix"]
     
-    subgraph SE["Search Engine Grid"]
+    subgraph SE["🔍 16+ Dark Web Engines"]
         S1[Ahmia]
         S2[OnionLand]
         S3[Torgle]
         S4[Amnesia]
         S5[Kaizer]
         S6[Tor66]
+        S7[DeepSearches]
     end
     
     E --> SE
-    SE --> F[Parallel Content Scraper]
-    F --> G[Filtering Agent]
-    G --> H[Summary Agent]
-    H --> I[Investigation Report]
+    SE -->|.onion URLs| F["⚡ Parallel Scraper"]
+    F -->|Raw Content| G["🎯 LLM Result Filter"]
+    G -->|Ranked Data| H["📊 AI Summary Engine"]
+    H -->|Final Report| I["📄 Investigation Report"]
     
-    HM[Health Monitor] -.-> E
-    HM -.-> G
-    HM -.-> H
+    HM["💓 Health Monitor"] -.->|Watch| E
+    HM -.->|Watch| G
+    HM -.->|Watch| H
 ```
 
----
+</details>
 
-## Getting Started
+<br>
+
+<!-- Cool Divider -->
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&height=2&section=header" width="100%">
+
+<br>
+
+## � Quick Start
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/confidentialwebapp/Transillience-Aegis.git
+cd Transillience-Aegis
+
+# 2. Start Tor service
+tor &
+
+# 3. Launch with Docker (Recommended)
+docker-compose up
+
+# 4. Open browser → http://localhost:8501
+```
+
+<br>
+
+<!-- Cool Divider -->
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&height=2&section=header" width="100%">
+
+<br>
+
+## 📦 Installation
 
 ### Prerequisites
 
-**Tor Service Required**
+> 🧅 **Tor Required**
+> ```bash
+> # Linux/WSL
+> sudo apt install tor && sudo service tor start
+> 
+> # macOS
+> brew install tor && brew services start tor
+> ```
+
+### 🐳 Docker (Recommended)
+
 ```bash
-# Ubuntu/Debian/WSL
-sudo apt install tor
-sudo service tor start
-
-# macOS
-brew install tor
-brew services start tor
-```
-
-### Deployment Options
-
-**Docker (Recommended)**
-```bash
-# Pull and run
+# Pull latest image
 docker pull transillience-aegis:latest
 
+# Run container
 docker run --rm \
    -v "$(pwd)/.env:/app/.env" \
+   --add-host=host.docker.internal:host-gateway \
    -p 8501:8501 \
    transillience-aegis:latest
 ```
 
-**With Persistent Storage**
+<details>
+<summary>💡 <b>Persistence Tip</b> (Click to expand)</summary>
+
 ```bash
+# Save investigations across restarts
 docker run --rm \
    -v "$(pwd)/.env:/app/.env" \
    -v "$(pwd)/investigations:/app/investigations" \
+   --add-host=host.docker.internal:host-gateway \
    -p 8501:8501 \
    transillience-aegis:latest
 ```
+</details>
 
-**Python Development**
+### 🐍 Python Development
+
 ```bash
+# Requirements: Python 3.10+
 pip install -r requirements.txt
+
+# Launch UI
 streamlit run ui.py
 ```
 
-Access the interface at: `http://localhost:8501`
+<br>
 
----
+<!-- Cool Divider -->
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&height=2&section=header" width="100%">
 
-## Configuration
+<br>
 
-Create a `.env` file with your LLM API keys:
+## 🎯 Usage Guide
 
-```env
-OPENAI_API_KEY=your_key_here
-ANTHROPIC_API_KEY=your_key_here
-GEMINI_API_KEY=your_key_here
+| Step | Action | Result |
+|------|--------|--------|
+| 1 | 🔌 Ensure Tor is running | `service tor start` |
+| 2 | 🚀 Launch application | Docker or `streamlit run ui.py` |
+| 3 | 📝 Enter search query | Natural language input |
+| 4 | 🤖 AI refines query | Optimized for dark web |
+| 5 | 🕸️ Parallel search | 16+ engines queried |
+| 6 | 📊 View filtered results | AI-ranked relevance |
+| 7 | 💾 Save investigation | To `investigations/` folder |
 
-# For local models
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-```
+<br>
 
----
+<!-- Cool Divider -->
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&height=2&section=header" width="100%">
 
-## Usage Workflow
+<br>
 
-1. **Initialize** – Ensure Tor service is active
-2. **Query** – Enter investigation target in natural language
-3. **Refinement** – AI agent optimizes query for dark web context
-4. **Discovery** – Parallel search across 16+ engines
-5. **Analysis** – Content scraped and filtered by relevance
-6. **Reporting** – Intelligence summary generated automatically
-7. **Persistence** – Investigation saved for audit trail
+## ⚠️ Legal Disclaimer
 
----
-
-## Legal Notice
-
-> **Authorized Use Only**
+> **🔒 For Educational & Lawful Use Only**
 > 
-> This platform is intended for lawful OSINT investigations, cybersecurity research, and authorized security assessments. Users are responsible for compliance with all applicable laws and institutional policies.
+> This tool is intended for **authorized OSINT investigations** and **cybersecurity research**. 
 > 
-> - Verify authorization before conducting investigations
-> - Adhere to local jurisdiction regulations
-> - Review API provider terms of service for LLM queries
+> - ✅ Compliance with local laws is **your responsibility**
+> - ✅ Institutional policies must be followed
+> - ✅ API terms of service apply to LLM queries
 > 
-> By using Transillience Aegis, you acknowledge full responsibility for lawful use.
+> <sub>By using this tool, you accept full responsibility for your actions. The authors assume no liability for misuse.</sub>
 
----
+<br>
 
-## Documentation
+<!-- Cool Divider -->
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&height=2&section=header" width="100%">
 
-- [Installation Guide](#getting-started)
-- [Configuration Reference](#configuration)
-- [Architecture Overview](#system-architecture)
+<br>
 
----
+## 🤝 Contributing
 
-## Contributing
-
-Contributions are welcome for platform enhancement:
+We welcome contributions! Follow these steps:
 
 ```bash
-# Fork repository
-git checkout -b feature/description
-git commit -m "Add feature description"
-git push origin feature/description
-# Open Pull Request
+# 1. Fork the repo
+# 2. Create feature branch
+git checkout -b feature/amazing-feature
+
+# 3. Commit changes
+git commit -m "✨ Add amazing feature"
+
+# 4. Push to branch
+git push origin feature/amazing-feature
+
+# 5. Open Pull Request 🎉
 ```
 
----
+**Issues welcome for:**
+- 🐛 Bug reports
+- 💡 Feature requests  
+- ❓ Usage questions
+- 🔧 Minor improvements
 
-## Resources
+<br>
 
-- **Inspiration**: [Thomas Roccia](https://x.com/fr0gger_) – Perplexity of the Dark Web
-- **Acknowledgements**: [OSINT-Assistant](https://github.com/AXRoux/OSINT-Assistant) – LLM prompt methodology
+<!-- Cool Divider -->
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&height=2&section=header" width="100%">
 
----
+<br>
+
+## 🙏 Acknowledgements
+
+<table>
+<tr>
+<td>
+
+
+**Resources**
+- 📚 [OSINT-Assistant](https://github.com/AXRoux/OSINT-Assistant) – LLM prompts
+
+</td>
+<td align="right">
+
+**Built by**
+<br><br>
+<img src="logo.png" width="80">
+<br>
+<b>Transillience Aegis</b>
+
+</td>
+</tr>
+</table>
+
+<br>
 
 <div align="center">
-   <sub>Transillience Aegis – Enterprise Dark Web Intelligence</sub>
+   
+   <!-- Footer -->
+   <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&height=100&section=footer">
+   
+   <sub>🛡️ Illuminating the dark web, one query at a time.</sub>
+   
 </div>

@@ -7,24 +7,29 @@ from fastapi import APIRouter, HTTPException, Header, Query, BackgroundTasks
 from pydantic import BaseModel
 
 from db import get_client
-from modules.dark_web import run_dark_web_scan
-from modules.brand_monitor import run_brand_monitor
-from modules.data_leak import run_data_leak_scan
-from modules.surface_web import run_surface_scan
-from modules.cert_monitor import run_cert_monitor
-from modules.credential_scan import run_credential_scan
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-SCAN_MODULES = {
-    "dark_web": run_dark_web_scan,
-    "brand": run_brand_monitor,
-    "data_leak": run_data_leak_scan,
-    "surface_web": run_surface_scan,
-    "cert_monitor": run_cert_monitor,
-    "credential": run_credential_scan,
-}
+
+def _get_scan_modules():
+    from modules.dark_web import run_dark_web_scan
+    from modules.brand_monitor import run_brand_monitor
+    from modules.data_leak import run_data_leak_scan
+    from modules.surface_web import run_surface_scan
+    from modules.cert_monitor import run_cert_monitor
+    from modules.credential_scan import run_credential_scan
+    return {
+        "dark_web": run_dark_web_scan,
+        "brand": run_brand_monitor,
+        "data_leak": run_data_leak_scan,
+        "surface_web": run_surface_scan,
+        "cert_monitor": run_cert_monitor,
+        "credential": run_credential_scan,
+    }
+
+
+SCAN_MODULE_NAMES = {"dark_web", "brand", "data_leak", "surface_web", "cert_monitor", "credential"}
 
 
 class ScanTrigger(BaseModel):
@@ -34,7 +39,8 @@ class ScanTrigger(BaseModel):
 
 async def _run_scan_background(module_name: str, org_id: str):
     try:
-        scan_func = SCAN_MODULES[module_name]
+        modules = _get_scan_modules()
+        scan_func = modules[module_name]
         await scan_func(org_id)
     except Exception as e:
         logger.error(f"Background scan {module_name} failed for org {org_id}: {e}")
@@ -46,7 +52,7 @@ async def trigger_scan(
     background_tasks: BackgroundTasks,
     x_org_id: str = Header(...),
 ):
-    if body.module not in SCAN_MODULES:
+    if body.module not in SCAN_MODULE_NAMES:
         raise HTTPException(400, f"Invalid module. Must be one of: {list(SCAN_MODULES.keys())}")
 
     client = get_client()

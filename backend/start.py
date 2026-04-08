@@ -37,7 +37,8 @@ def create_app():
         app.include_router(intel.router, prefix="/api/v1/intel", tags=["Intel"])
         logger.info("Routers loaded.")
     except Exception as e:
-        logger.error(f"Failed to load routers: {e}")
+        import traceback
+        logger.error(f"Failed to load routers: {e}\n{traceback.format_exc()}")
 
     @app.on_event("startup")
     async def startup():

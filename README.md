@@ -55,36 +55,43 @@ Transillience Aegis is an OSINT (Open Source Intelligence) platform designed for
 
 ## Architecture
 
-```
-User Query
-    │
-    ▼
-Streamlit Web UI (port 8501)
-    │
-    ▼
-LLM Refinement Engine ──────► [OpenAI / Claude / Gemini / Ollama / LlamaCPP]
-    │
-    ▼
-Tor Proxy (SOCKS5://127.0.0.1:9050)
-    │
-    ▼
-Search Engine Matrix
-    ├── Ahmia          ├── Amnesia
-    ├── OnionLand      ├── Kaizer
-    ├── Torgle         ├── Tor66
-    └── DeepSearches   └── (+ 9 more)
-    │
-    ▼
-Parallel Scraper
-    │
-    ▼
-LLM Result Filter
-    │
-    ▼
-AI Summary Engine
-    │
-    ▼
-Investigation Report
+```mermaid
+flowchart TD
+    A[🔍 User Query] -->|Input| B["🌐 Streamlit Web UI<br/>Port 8501"]
+    B -->|Raw Query| C["🤖 LLM Refinement Engine"]
+    
+    subgraph LLM["🧠 LLM Providers"]
+        L1[OpenAI GPT]
+        L2[Anthropic Claude]
+        L3[Google Gemini]
+        L4[OpenRouter]
+        L5[🦙 Ollama Local]
+        L6[🦙 LlamaCPP Local]
+    end
+    
+    C -.->|API Call| LLM
+    C -->|Optimized Query| D["🔒 Tor Proxy<br/>SOCKS5://127.0.0.1:9050"]
+    D -->|Route| E["🕸️ Search Engine Matrix"]
+    
+    subgraph SE["🔍 16+ Dark Web Engines"]
+        S1[Ahmia]
+        S2[OnionLand]
+        S3[Torgle]
+        S4[Amnesia]
+        S5[Kaizer]
+        S6[Tor66]
+        S7[DeepSearches]
+    end
+    
+    E --> SE
+    SE -->|.onion URLs| F["⚡ Parallel Scraper"]
+    F -->|Raw Content| G["🎯 LLM Result Filter"]
+    G -->|Ranked Data| H["📊 AI Summary Engine"]
+    H -->|Final Report| I["📄 Investigation Report"]
+    
+    HM["💓 Health Monitor"] -.->|Watch| E
+    HM -.->|Watch| G
+    HM -.->|Watch| H
 ```
 
 A health monitor runs alongside the pipeline, watching each stage (search, filter, summary) and surfacing failures in real time.

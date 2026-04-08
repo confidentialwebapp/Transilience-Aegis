@@ -181,6 +181,28 @@ export const api = {
 
   getIntelFeed: (orgId: string) =>
     apiFetch<PaginatedResponse<ThreatIntel>>("/api/v1/intel/feed", { orgId }),
+
+  // Investigate
+  investigate: (orgId: string, targetType: string, targetValue: string) =>
+    apiFetch<Investigation>("/api/v1/investigate/", {
+      method: "POST",
+      body: { target_type: targetType, target_value: targetValue },
+      orgId,
+    }),
+
+  getInvestigationHistory: (orgId: string, params?: { target_type?: string; page?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.target_type) sp.set("target_type", params.target_type);
+    if (params?.page) sp.set("page", params.page.toString());
+    const qs = sp.toString();
+    return apiFetch<PaginatedResponse<Investigation>>(
+      `/api/v1/investigate/history${qs ? `?${qs}` : ""}`,
+      { orgId }
+    );
+  },
+
+  getInvestigation: (orgId: string, id: string) =>
+    apiFetch<Investigation>(`/api/v1/investigate/${id}`, { orgId }),
 };
 
 // Types
@@ -278,6 +300,21 @@ export interface ThreatIntel {
   source: string;
   threat_type: string;
   confidence: number;
+  created_at: string;
+}
+
+export interface Investigation {
+  id: string;
+  org_id: string;
+  target_type: string;
+  target_value: string;
+  status: string;
+  results: Record<string, any>;
+  sources_checked: string[];
+  risk_score: number;
+  severity?: string;
+  started_at: string;
+  completed_at: string | null;
   created_at: string;
 }
 

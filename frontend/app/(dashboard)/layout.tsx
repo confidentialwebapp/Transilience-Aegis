@@ -19,13 +19,17 @@ import {
   Crosshair,
   Database,
   Menu,
+  Scan,
+  ClipboardList,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/investigate", label: "Investigate", icon: Scan },
   { href: "/threats", label: "Threats", icon: Crosshair },
   { href: "/assets", label: "Assets", icon: Box },
   { href: "/alerts", label: "Alerts", icon: AlertTriangle },
+  { href: "/scan-review", label: "Scan Review", icon: ClipboardList },
   { href: "/intel", label: "Intel", icon: Database },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

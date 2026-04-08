@@ -48,12 +48,13 @@ def create_app():
 
     logger.info("Loading routers...")
     try:
-        from routers import assets, alerts, scans, intel, dashboard
+        from routers import assets, alerts, scans, intel, dashboard, investigate
         app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
         app.include_router(assets.router, prefix="/api/v1/assets", tags=["Assets"])
         app.include_router(alerts.router, prefix="/api/v1/alerts", tags=["Alerts"])
         app.include_router(scans.router, prefix="/api/v1/scans", tags=["Scans"])
         app.include_router(intel.router, prefix="/api/v1/intel", tags=["Intel"])
+        app.include_router(investigate.router, prefix="/api/v1/investigate", tags=["Investigate"])
         logger.info("All routers loaded successfully.")
     except Exception as e:
         import traceback

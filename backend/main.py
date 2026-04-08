@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -9,9 +10,6 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from config import get_settings
-from db import get_client
-from scheduler import start_scheduler, stop_scheduler
-from routers import assets, alerts, scans, intel, dashboard
 
 settings = get_settings()
 
@@ -29,19 +27,23 @@ async def lifespan(app: FastAPI):
     logger.info("Starting TAI-AEGIS API...")
     if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_KEY:
         try:
+            from db import get_client
             get_client()
             logger.info("Supabase client initialized.")
         except Exception as e:
-            logger.warning(f"Supabase init failed (will retry on first request): {e}")
-    else:
-        logger.warning("Supabase credentials not configured.")
+            logger.warning(f"Supabase init deferred: {e}")
     try:
+        from scheduler import start_scheduler
         start_scheduler()
     except Exception as e:
-        logger.warning(f"Scheduler start failed: {e}")
+        logger.warning(f"Scheduler start deferred: {e}")
     logger.info("TAI-AEGIS API ready.")
     yield
-    stop_scheduler()
+    try:
+        from scheduler import stop_scheduler
+        stop_scheduler()
+    except Exception:
+        pass
     logger.info("TAI-AEGIS API shutdown.")
 
 
@@ -67,6 +69,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from routers import assets, alerts, scans, intel, dashboard
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
 app.include_router(assets.router, prefix="/api/v1/assets", tags=["Assets"])
 app.include_router(alerts.router, prefix="/api/v1/alerts", tags=["Alerts"])

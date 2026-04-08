@@ -1,13 +1,10 @@
-# Transillience Aegis
+<div align="center">
+   
+   <!-- Animated Logo Effect -->
+   <img src="logo.png" alt="Transillience Aegis Logo" width="280" style="filter: drop-shadow(0 0 10px rgba(0,255,255,0.5));">
+     
+</div>
 
-> AI-powered dark web OSINT platform for authorized intelligence investigations.
-
-[![Build Status](https://img.shields.io/github/actions/workflow/status/confidentialwebapp/Transillience-Aegis/docker-release.yml?style=flat-square&label=build)](https://github.com/confidentialwebapp/Transillience-Aegis/actions/workflows/docker-release.yml)
-[![Latest Release](https://img.shields.io/github/v/release/confidentialwebapp/Transillience-Aegis?style=flat-square)](https://github.com/confidentialwebapp/Transillience-Aegis/releases)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-
----
 
 ## Overview
 

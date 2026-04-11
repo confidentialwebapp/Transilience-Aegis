@@ -100,7 +100,8 @@ export default function ScanReviewPage() {
         </div>
         <button
           onClick={() => loadScans(orgId)}
-          className="flex items-center gap-2 px-3 py-2 bg-slate-800 text-slate-300 rounded-lg text-sm hover:bg-slate-700 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 text-slate-300 rounded-lg text-sm transition-colors hover:text-white"
+          style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
         >
           <RefreshCw className="w-4 h-4" />
           Refresh
@@ -108,7 +109,7 @@ export default function ScanReviewPage() {
       </div>
 
       {/* Quick Scan Triggers */}
-      <div className="bg-slate-900 rounded-xl border border-slate-700/50 p-6">
+      <div className="card-enterprise p-6">
         <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
           Run Scans
         </h2>
@@ -117,7 +118,8 @@ export default function ScanReviewPage() {
             <button
               key={mod}
               onClick={() => triggerScan(mod)}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-purple-500/30 hover:bg-slate-800 transition-colors"
+              className="flex flex-col items-center gap-2 p-3 rounded-lg transition-colors hover:border-purple-500/30 hover:bg-white/[0.02]"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
             >
               <Play className="w-4 h-4 text-purple-400" />
               <span className="text-xs text-slate-300 capitalize text-center">
@@ -130,7 +132,7 @@ export default function ScanReviewPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Scan History List */}
-        <div className="lg:col-span-1 bg-slate-900 rounded-xl border border-slate-700/50 p-6">
+        <div className="lg:col-span-1 card-enterprise p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
               Scan History
@@ -138,7 +140,8 @@ export default function ScanReviewPage() {
             <select
               value={filterModule}
               onChange={(e) => setFilterModule(e.target.value)}
-              className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-300"
+              className="rounded px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-purple-500/50"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
             >
               <option value="">All</option>
               {modules.map((m) => (
@@ -165,9 +168,10 @@ export default function ScanReviewPage() {
                   onClick={() => loadScanAlerts(scan)}
                   className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
                     selectedScan?.id === scan.id
-                      ? "bg-purple-500/10 border border-purple-500/30"
-                      : "bg-slate-800/50 hover:bg-slate-800 border border-transparent"
+                      ? "bg-purple-500/10 border border-purple-500/20"
+                      : "hover:bg-white/[0.02] border border-transparent"
                   }`}
+                  style={selectedScan?.id !== scan.id ? { background: "rgba(255,255,255,0.02)" } : {}}
                 >
                   {statusIcon(scan.status)}
                   <div className="flex-1 min-w-0">
@@ -189,7 +193,7 @@ export default function ScanReviewPage() {
         </div>
 
         {/* Scan Detail / Findings */}
-        <div className="lg:col-span-2 bg-slate-900 rounded-xl border border-slate-700/50 p-6">
+        <div className="lg:col-span-2 card-enterprise p-6">
           {!selectedScan ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <Filter className="w-10 h-10 text-slate-600 mb-3" />
@@ -201,7 +205,7 @@ export default function ScanReviewPage() {
           ) : (
             <>
               {/* Scan header */}
-              <div className="border-b border-slate-700/50 pb-4 mb-4">
+              <div className="pb-4 mb-4" style={{ borderBottom: "1px solid rgba(139,92,246,0.08)" }}>
                 <div className="flex items-center gap-3">
                   {statusIcon(selectedScan.status)}
                   <h2 className="text-lg font-semibold capitalize">
@@ -244,7 +248,8 @@ export default function ScanReviewPage() {
                   {scanAlerts.map((alert) => (
                     <div
                       key={alert.id}
-                      className="flex items-start gap-3 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50"
+                      className="flex items-start gap-3 p-3 rounded-lg"
+                      style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.08)" }}
                     >
                       <RiskScoreMeter score={alert.risk_score} size={40} />
                       <div className="flex-1 min-w-0">

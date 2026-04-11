@@ -102,12 +102,13 @@ export default function AssetsPage() {
 
       {/* Add form */}
       {showForm && (
-        <form onSubmit={handleAdd} className="bg-slate-900 rounded-xl border border-slate-700/50 p-6">
+        <form onSubmit={handleAdd} className="card-enterprise p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <select
               value={newType}
               onChange={(e) => setNewType(e.target.value)}
-              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200"
+              className="rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500/50"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
             >
               {ASSET_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
@@ -118,7 +119,8 @@ export default function AssetsPage() {
               value={newValue}
               onChange={(e) => setNewValue(e.target.value)}
               placeholder="e.g., example.com"
-              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
+              className="rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
               required
             />
             <input
@@ -126,7 +128,8 @@ export default function AssetsPage() {
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               placeholder="Label (optional)"
-              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
+              className="rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
             />
             <button
               type="submit"
@@ -145,7 +148,7 @@ export default function AssetsPage() {
         <button
           onClick={() => setFilterType("")}
           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-            !filterType ? "bg-purple-500/10 text-purple-400 border border-purple-500/30" : "bg-slate-800 text-slate-400 hover:text-slate-200"
+            !filterType ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" : "text-slate-400 hover:text-slate-200"
           }`}
         >
           All
@@ -155,7 +158,7 @@ export default function AssetsPage() {
             key={t.value}
             onClick={() => setFilterType(t.value)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              filterType === t.value ? "bg-purple-500/10 text-purple-400 border border-purple-500/30" : "bg-slate-800 text-slate-400 hover:text-slate-200"
+              filterType === t.value ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" : "text-slate-400 hover:text-slate-200"
             }`}
           >
             {t.label}
@@ -170,7 +173,8 @@ export default function AssetsPage() {
           <p className="text-sm text-slate-400 mb-3">{error}</p>
           <button
             onClick={() => fetchAssets()}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-slate-300 rounded-lg text-sm transition-colors hover:text-white"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
           >
             <RefreshCw className="w-4 h-4" />
             Retry
@@ -184,10 +188,10 @@ export default function AssetsPage() {
           <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
         </div>
       ) : !error && (
-        <div className="bg-slate-900 rounded-xl border border-slate-700/50 overflow-hidden">
+        <div className="card-enterprise overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-700/50">
+              <tr style={{ borderBottom: "1px solid rgba(139,92,246,0.06)", background: "rgba(139,92,246,0.04)" }}>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Type</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Value</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase hidden md:table-cell">Label</th>
@@ -200,7 +204,7 @@ export default function AssetsPage() {
               {filteredAssets.map((asset) => {
                 const Icon = TYPE_ICONS[asset.type] || Globe;
                 return (
-                  <tr key={asset.id} className="border-b border-slate-800 hover:bg-slate-800/50 transition-colors">
+                  <tr key={asset.id} className="transition-colors hover:bg-white/[0.02]" style={{ borderBottom: "1px solid rgba(139,92,246,0.04)" }}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Icon className="w-4 h-4 text-slate-400" />

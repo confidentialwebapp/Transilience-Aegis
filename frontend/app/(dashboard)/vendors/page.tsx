@@ -176,10 +176,12 @@ export default function VendorsPage() {
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Search vendors..." className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500" />
+            placeholder="Search vendors..." className="w-full pl-10 pr-4 py-2 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }} />
         </div>
         <select value={riskTier} onChange={(e) => { setRiskTier(e.target.value); setPage(1); }}
-          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200">
+          className="rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500/50"
+          style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}>
           <option value="">All Risk Tiers</option>
           <option value="critical">Critical</option>
           <option value="high">High</option>
@@ -199,7 +201,7 @@ export default function VendorsPage() {
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-slate-800/50">
+            <thead style={{ background: "rgba(139,92,246,0.04)" }}>
               <tr className="text-left text-xs text-slate-500 uppercase">
                 <th className="p-4">Vendor</th>
                 <th className="p-4">Type</th>
@@ -209,9 +211,9 @@ export default function VendorsPage() {
                 <th className="p-4">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700/50">
+            <tbody className="divide-y" style={{ borderColor: "rgba(139,92,246,0.06)" }}>
               {vendors.map((v) => (
-                <tr key={v.id} className="hover:bg-slate-800/50 cursor-pointer transition-colors" onClick={() => openDetail(v)}>
+                <tr key={v.id} className="cursor-pointer transition-colors hover:bg-white/[0.02]" onClick={() => openDetail(v)}>
                   <td className="p-4">
                     <div className="font-medium text-slate-200">{v.name}</div>
                     {v.domain && <div className="text-xs text-slate-500">{v.domain}</div>}
@@ -232,11 +234,11 @@ export default function VendorsPage() {
                   <td className="p-4">
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => triggerScan(v.id)} disabled={scanning === v.id}
-                        className="p-2 bg-slate-800 hover:bg-purple-600/20 rounded-lg text-slate-400 hover:text-purple-400 transition-colors">
+                        className="p-2 rounded-lg text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 transition-colors" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.08)" }}>
                         {scanning === v.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scan className="w-4 h-4" />}
                       </button>
                       <button onClick={() => deleteVendor(v.id)}
-                        className="p-2 bg-slate-800 hover:bg-red-600/20 rounded-lg text-slate-400 hover:text-red-400 transition-colors">
+                        className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.08)" }}>
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -254,18 +256,18 @@ export default function VendorsPage() {
           <p className="text-sm text-slate-500">{total} vendors total</p>
           <div className="flex items-center gap-2">
             <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
-              className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white disabled:opacity-50"><ChevronLeft className="w-4 h-4" /></button>
+              className="p-2 rounded-lg text-slate-400 hover:text-white disabled:opacity-50 transition-colors" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}><ChevronLeft className="w-4 h-4" /></button>
             <span className="text-sm text-slate-400">Page {page} of {totalPages}</span>
             <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
-              className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white disabled:opacity-50"><ChevronRight className="w-4 h-4" /></button>
+              className="p-2 rounded-lg text-slate-400 hover:text-white disabled:opacity-50 transition-colors" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}><ChevronRight className="w-4 h-4" /></button>
           </div>
         </div>
       )}
 
       {/* Add Vendor Modal */}
       {showAdd && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowAdd(false)}>
-          <div className="bg-slate-900 rounded-xl border border-slate-700 max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowAdd(false)}>
+          <div className="rounded-xl max-w-lg w-full p-6" style={{ background: "#110d1a", border: "1px solid rgba(139,92,246,0.12)" }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold">Add Vendor</h2>
               <button onClick={() => setShowAdd(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
@@ -274,18 +276,21 @@ export default function VendorsPage() {
               <div>
                 <label className="text-xs text-slate-400 uppercase">Name *</label>
                 <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500" />
+                  className="w-full mt-1 px-3 py-2 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20"
+                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }} />
               </div>
               <div>
                 <label className="text-xs text-slate-400 uppercase">Domain</label>
                 <input value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })} placeholder="example.com"
-                  className="w-full mt-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500" />
+                  className="w-full mt-1 px-3 py-2 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20"
+                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-slate-400 uppercase">Type</label>
                   <select value={form.vendor_type} onChange={(e) => setForm({ ...form, vendor_type: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200">
+                    className="w-full mt-1 px-3 py-2 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500/50"
+                    style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}>
                     <option value="saas">SaaS</option>
                     <option value="cloud">Cloud</option>
                     <option value="open_source">Open Source</option>
@@ -297,7 +302,8 @@ export default function VendorsPage() {
                 <div>
                   <label className="text-xs text-slate-400 uppercase">Risk Tier</label>
                   <select value={form.risk_tier} onChange={(e) => setForm({ ...form, risk_tier: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200">
+                    className="w-full mt-1 px-3 py-2 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500/50"
+                    style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}>
                     <option value="critical">Critical</option>
                     <option value="high">High</option>
                     <option value="medium">Medium</option>
@@ -309,12 +315,14 @@ export default function VendorsPage() {
                 <div>
                   <label className="text-xs text-slate-400 uppercase">Contact Name</label>
                   <input value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500" />
+                    className="w-full mt-1 px-3 py-2 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20"
+                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }} />
                 </div>
                 <div>
                   <label className="text-xs text-slate-400 uppercase">Contact Email</label>
                   <input value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} type="email"
-                    className="w-full mt-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500" />
+                    className="w-full mt-1 px-3 py-2 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20"
+                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }} />
                 </div>
               </div>
               <button onClick={createVendor} className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium">Add Vendor</button>
@@ -325,8 +333,8 @@ export default function VendorsPage() {
 
       {/* Vendor Detail Modal */}
       {showDetail && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowDetail(null)}>
-          <div className="bg-slate-900 rounded-xl border border-slate-700 max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowDetail(null)}>
+          <div className="rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" style={{ background: "#110d1a", border: "1px solid rgba(139,92,246,0.12)" }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold">{showDetail.name}</h2>
@@ -335,15 +343,15 @@ export default function VendorsPage() {
               <button onClick={() => setShowDetail(null)} className="p-2 text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="bg-slate-800 rounded-lg p-3">
+              <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(139,92,246,0.08)" }}>
                 <p className="text-xs text-slate-500">Risk Score</p>
                 <p className={`text-2xl font-bold ${SCORE_COLOR(showDetail.risk_score)}`}>{showDetail.risk_score}<span className="text-sm text-slate-500">/100</span></p>
               </div>
-              <div className="bg-slate-800 rounded-lg p-3">
+              <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(139,92,246,0.08)" }}>
                 <p className="text-xs text-slate-500">Risk Tier</p>
                 <span className={`inline-block mt-1 px-2 py-1 rounded text-xs font-medium border ${TIER_COLORS[showDetail.risk_tier]}`}>{showDetail.risk_tier?.toUpperCase()}</span>
               </div>
-              <div className="bg-slate-800 rounded-lg p-3">
+              <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(139,92,246,0.08)" }}>
                 <p className="text-xs text-slate-500">Type</p>
                 <p className="text-sm text-slate-300 mt-1 capitalize">{showDetail.vendor_type?.replace("_", " ")}</p>
               </div>
@@ -356,7 +364,7 @@ export default function VendorsPage() {
             ) : (
               <div className="space-y-3 mb-4">
                 {scans.map((scan) => (
-                  <div key={scan.id} className="bg-slate-800 rounded-lg p-4">
+                  <div key={scan.id} className="rounded-lg p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(139,92,246,0.08)" }}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${scan.status === "completed" ? "bg-green-500/10 text-green-400" : scan.status === "failed" ? "bg-red-500/10 text-red-400" : "bg-yellow-500/10 text-yellow-400"}`}>
@@ -372,7 +380,7 @@ export default function VendorsPage() {
                     {scan.results && Object.keys(scan.results).length > 0 && (
                       <details className="mt-2">
                         <summary className="text-xs text-purple-400 cursor-pointer">View Results ({scan.findings_count} findings)</summary>
-                        <pre className="mt-2 text-xs bg-slate-900 rounded p-3 overflow-x-auto max-h-60 text-slate-400">
+                        <pre className="mt-2 text-xs rounded p-3 overflow-x-auto max-h-60 text-slate-400" style={{ background: "rgba(139,92,246,0.04)", border: "1px solid rgba(139,92,246,0.08)" }}>
                           {JSON.stringify(scan.results, null, 2)}
                         </pre>
                       </details>

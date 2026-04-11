@@ -75,7 +75,8 @@ export default function AlertsPage() {
           <p className="text-sm text-slate-400 mb-3">{error}</p>
           <button
             onClick={fetchAlerts}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-slate-300 rounded-lg text-sm transition-colors hover:text-white"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
           >
             <RefreshCw className="w-4 h-4" />
             Retry
@@ -83,7 +84,7 @@ export default function AlertsPage() {
         </div>
       ) : alerts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center mb-3">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-3" style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.12)" }}>
             <AlertTriangle className="w-6 h-6 text-slate-500" />
           </div>
           <p className="text-slate-400 text-sm">
@@ -105,7 +106,8 @@ export default function AlertsPage() {
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="px-3 py-1.5 text-sm rounded-lg bg-slate-800 text-slate-300 disabled:opacity-50 hover:bg-slate-700"
+            className="px-3 py-1.5 text-sm rounded-lg text-slate-300 disabled:opacity-50 transition-colors hover:text-white"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
           >
             Previous
           </button>
@@ -113,7 +115,8 @@ export default function AlertsPage() {
           <button
             onClick={() => setPage((p) => p + 1)}
             disabled={alerts.length < 25}
-            className="px-3 py-1.5 text-sm rounded-lg bg-slate-800 text-slate-300 disabled:opacity-50 hover:bg-slate-700"
+            className="px-3 py-1.5 text-sm rounded-lg text-slate-300 disabled:opacity-50 transition-colors hover:text-white"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
           >
             Next
           </button>

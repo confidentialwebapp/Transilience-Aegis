@@ -58,10 +58,10 @@ function SourceResult({ name, data }: { name: string; data: any }) {
       : Shield;
 
   return (
-    <div className="bg-slate-800/50 rounded-lg border border-slate-700/50 overflow-hidden">
+    <div className="rounded-lg overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}>
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 p-4 hover:bg-slate-800 transition-colors"
+        className="w-full flex items-center gap-3 p-4 transition-colors hover:bg-white/[0.02]"
       >
         {expanded ? (
           <ChevronDown className="w-4 h-4 text-slate-400" />
@@ -85,7 +85,7 @@ function SourceResult({ name, data }: { name: string; data: any }) {
           {data.breaches && data.breaches.length > 0 && (
             <div className="space-y-1">
               {data.breaches.map((b: any, i: number) => (
-                <div key={i} className="text-xs bg-slate-900 rounded p-2">
+                <div key={i} className="text-xs rounded p-2" style={{ background: "rgba(139,92,246,0.04)", border: "1px solid rgba(139,92,246,0.08)" }}>
                   <span className="font-medium text-slate-200">{b.name}</span>
                   <span className="text-slate-500 ml-2">{b.date}</span>
                   {b.data_classes && (
@@ -121,7 +121,7 @@ function SourceResult({ name, data }: { name: string; data: any }) {
               <span className="text-slate-400">{data.subdomain_count} subdomains found:</span>
               <div className="mt-1 flex flex-wrap gap-1">
                 {data.subdomains.slice(0, 20).map((s: string) => (
-                  <span key={s} className="text-xs px-2 py-0.5 rounded bg-slate-900 text-purple-400">{s}</span>
+                  <span key={s} className="text-xs px-2 py-0.5 rounded text-purple-400" style={{ background: "rgba(139,92,246,0.08)" }}>{s}</span>
                 ))}
                 {data.subdomain_count > 20 && (
                   <span className="text-xs text-slate-500">+{data.subdomain_count - 20} more</span>
@@ -138,7 +138,7 @@ function SourceResult({ name, data }: { name: string; data: any }) {
           {data.results && data.results.length > 0 && (
             <div className="space-y-1">
               {data.results.slice(0, 5).map((r: any, i: number) => (
-                <div key={i} className="text-xs bg-slate-900 rounded p-2 flex items-start gap-2">
+                <div key={i} className="text-xs rounded p-2 flex items-start gap-2" style={{ background: "rgba(139,92,246,0.04)", border: "1px solid rgba(139,92,246,0.08)" }}>
                   <div className="flex-1 min-w-0">
                     <div className="truncate text-slate-200">{r.repo || r.url || r.domain}</div>
                     {r.path && <div className="text-slate-500">{r.path}</div>}
@@ -249,7 +249,7 @@ export default function InvestigatePage() {
       </div>
 
       {/* Search Form */}
-      <form onSubmit={handleScan} className="bg-slate-900 rounded-xl border border-slate-700/50 p-6">
+      <form onSubmit={handleScan} className="card-enterprise p-6">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex gap-2 flex-wrap">
             {TARGET_TYPES.map((t) => {
@@ -261,9 +261,10 @@ export default function InvestigatePage() {
                   onClick={() => setTargetType(t.value)}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                     targetType === t.value
-                      ? "bg-purple-500/10 text-purple-400 border border-purple-500/30"
-                      : "bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/50"
+                      ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                      : "text-slate-400 hover:text-slate-200"
                   }`}
+              style={targetType !== t.value ? { background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" } : {}}
                 >
                   <Icon className="w-3.5 h-3.5" />
                   {t.label}
@@ -280,7 +281,8 @@ export default function InvestigatePage() {
               value={targetValue}
               onChange={(e) => setTargetValue(e.target.value)}
               placeholder={currentType?.placeholder || "Enter target..."}
-              className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+              className="w-full pl-10 pr-4 py-3 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
               required
             />
           </div>
@@ -312,7 +314,7 @@ export default function InvestigatePage() {
 
       {/* Results */}
       {result && (
-        <div className="bg-slate-900 rounded-xl border border-slate-700/50 p-6 space-y-4">
+        <div className="card-enterprise p-6 space-y-4">
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-lg font-semibold">
@@ -339,7 +341,7 @@ export default function InvestigatePage() {
       )}
 
       {/* Investigation History */}
-      <div className="bg-slate-900 rounded-xl border border-slate-700/50 p-6">
+      <div className="card-enterprise p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
             Investigation History
@@ -364,7 +366,8 @@ export default function InvestigatePage() {
                 <button
                   key={inv.id}
                   onClick={() => loadPastResult(inv)}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors text-left"
+                  className="w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left hover:bg-white/[0.02]"
+                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.08)" }}
                 >
                   <TypeIcon className="w-4 h-4 text-slate-400 flex-shrink-0" />
                   <div className="flex-1 min-w-0">

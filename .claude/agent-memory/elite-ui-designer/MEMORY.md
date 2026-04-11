@@ -1,0 +1,1 @@
+- [Design System](design-system.md) — TAI-AEGIS enterprise dark theme: tokens, card/input/modal/table/tab patterns, custom CSS classes

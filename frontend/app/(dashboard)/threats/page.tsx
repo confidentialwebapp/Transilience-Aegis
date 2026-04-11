@@ -54,7 +54,8 @@ export default function ThreatsPage() {
         <select
           value={filterModule}
           onChange={(e) => setFilterModule(e.target.value)}
-          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200"
+          className="rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500/50"
+          style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
         >
           <option value="">All Modules</option>
           <option value="dark_web">Dark Web</option>
@@ -67,7 +68,8 @@ export default function ThreatsPage() {
         <select
           value={filterSeverity}
           onChange={(e) => setFilterSeverity(e.target.value)}
-          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200"
+          className="rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500/50"
+          style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
         >
           <option value="">All Severities</option>
           <option value="critical">Critical</option>
@@ -87,7 +89,8 @@ export default function ThreatsPage() {
           <p className="text-sm text-slate-400 mb-3">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-slate-300 rounded-lg text-sm transition-colors hover:text-white"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
           >
             <RefreshCw className="w-4 h-4" />
             Retry
@@ -96,21 +99,21 @@ export default function ThreatsPage() {
       ) : (
         <div className="relative">
           {alerts.length > 0 && (
-            <div className="absolute left-6 top-0 bottom-0 w-px bg-slate-700/50" />
+            <div className="absolute left-6 top-0 bottom-0 w-px" style={{ background: "rgba(139,92,246,0.12)" }} />
           )}
 
           <div className="space-y-4">
             {alerts.map((alert) => (
               <div key={alert.id} className="relative flex gap-4 pl-12">
                 {/* Timeline dot */}
-                <div className={`absolute left-[19px] top-4 w-3 h-3 rounded-full border-2 border-slate-900 ${
+                <div className={`absolute left-[19px] top-4 w-3 h-3 rounded-full border-2 border-[#07040B] ${
                   alert.severity === "critical" ? "bg-red-500" :
                   alert.severity === "high" ? "bg-orange-500" :
                   alert.severity === "medium" ? "bg-yellow-500" :
                   "bg-blue-500"
                 }`} />
 
-                <div className="flex-1 bg-slate-900 rounded-xl border border-slate-700/50 p-4 hover:bg-slate-800/80 transition-colors">
+                <div className="flex-1 card-enterprise p-4 hover:border-purple-500/15 transition-all">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -143,7 +146,7 @@ export default function ThreatsPage() {
 
             {alerts.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center mb-3">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-3" style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.12)" }}>
                   <AlertTriangle className="w-6 h-6 text-slate-500" />
                 </div>
                 <p className="text-slate-400 text-sm">

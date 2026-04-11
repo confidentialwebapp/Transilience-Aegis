@@ -153,7 +153,8 @@ export default function InfrastructurePage() {
             <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input value={scanDomain} onChange={(e) => setScanDomain(e.target.value)}
               placeholder="Enter domain to scan (e.g. example.com)"
-              className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
+              className="w-full pl-10 pr-4 py-2 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
               onKeyDown={(e) => e.key === "Enter" && triggerSubdomainEnum()} />
           </div>
           <button onClick={triggerSubdomainEnum} disabled={scanning}
@@ -200,11 +201,11 @@ export default function InfrastructurePage() {
         <div className="card-enterprise p-6">
           <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2"><Mail className="w-4 h-4 text-orange-400" />Email Security Check</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div className="bg-slate-800 rounded-lg p-3">
+            <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(139,92,246,0.08)" }}>
               <p className="text-xs text-slate-500 mb-1">SPF Record</p>
               <p className="text-xs text-slate-300 font-mono break-all">{emailSecurity.spf || "Not found"}</p>
             </div>
-            <div className="bg-slate-800 rounded-lg p-3">
+            <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(139,92,246,0.08)" }}>
               <p className="text-xs text-slate-500 mb-1">DMARC Record</p>
               <p className="text-xs text-slate-300 font-mono break-all">{emailSecurity.dmarc || "Not found"}</p>
             </div>
@@ -222,7 +223,7 @@ export default function InfrastructurePage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-900 rounded-lg p-1 border border-slate-700/50 w-fit">
+      <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: "rgba(139,92,246,0.04)", border: "1px solid rgba(139,92,246,0.1)" }}>
         {([
           { key: "overview", label: "Overview" },
           { key: "subdomains", label: "Subdomains" },
@@ -230,7 +231,7 @@ export default function InfrastructurePage() {
           { key: "dns", label: "DNS Records" },
         ] as const).map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${tab === t.key ? "bg-purple-600 text-white" : "text-slate-400 hover:text-white"}`}>
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${tab === t.key ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" : "text-slate-400 hover:text-white"}`}>
             {t.label}
           </button>
         ))}
@@ -242,14 +243,14 @@ export default function InfrastructurePage() {
           {loading ? <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div> :
           subdomains.length === 0 ? <div className="p-12 text-center text-slate-500"><Globe className="w-10 h-10 mx-auto mb-3 opacity-50" /><p>No subdomains found. Enter a domain above and click Subdomains.</p></div> : (
             <table className="w-full text-sm">
-              <thead className="bg-slate-800/50">
+              <thead style={{ background: "rgba(139,92,246,0.04)" }}>
                 <tr className="text-left text-xs text-slate-500 uppercase">
                   <th className="p-3">Subdomain</th><th className="p-3">IP</th><th className="p-3">Source</th><th className="p-3">Status</th><th className="p-3">First Seen</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700/50">
+              <tbody className="divide-y" style={{ borderColor: "rgba(139,92,246,0.06)" }}>
                 {subdomains.map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-800/50">
+                  <tr key={s.id} className="transition-colors hover:bg-white/[0.02]">
                     <td className="p-3 font-mono text-xs text-purple-400">
                       {s.subdomain}
                       {s.is_new && <span className="ml-2 px-1.5 py-0.5 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 rounded text-[10px] font-medium">NEW</span>}
@@ -273,13 +274,13 @@ export default function InfrastructurePage() {
         <div className="card-enterprise overflow-hidden">
           {loading ? <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div> :
           sslCerts.length === 0 ? <div className="p-12 text-center text-slate-500"><Lock className="w-10 h-10 mx-auto mb-3 opacity-50" /><p>No SSL certificates monitored. Enter a domain above and click SSL.</p></div> : (
-            <div className="divide-y divide-slate-700/50">
+            <div className="divide-y" style={{ borderColor: "rgba(139,92,246,0.06)" }}>
               {sslCerts.map((cert) => {
                 const days = daysRemaining(cert.valid_until);
                 const isExpired = days !== null && days < 0;
                 const isExpiring = days !== null && days <= 30 && days >= 0;
                 return (
-                  <div key={cert.id} className="p-4 hover:bg-slate-800/50">
+                  <div key={cert.id} className="p-4 transition-colors hover:bg-white/[0.02]">
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2">
@@ -316,16 +317,16 @@ export default function InfrastructurePage() {
           {loading ? <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div> :
           dnsRecords.length === 0 ? <div className="p-12 text-center text-slate-500"><Wifi className="w-10 h-10 mx-auto mb-3 opacity-50" /><p>No DNS records tracked. Enter a domain above and click DNS.</p></div> : (
             <table className="w-full text-sm">
-              <thead className="bg-slate-800/50">
+              <thead style={{ background: "rgba(139,92,246,0.04)" }}>
                 <tr className="text-left text-xs text-slate-500 uppercase">
                   <th className="p-3">Domain</th><th className="p-3">Type</th><th className="p-3">Value</th><th className="p-3">Changed</th><th className="p-3">Checked</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700/50">
+              <tbody className="divide-y" style={{ borderColor: "rgba(139,92,246,0.06)" }}>
                 {dnsRecords.map((r) => (
-                  <tr key={r.id} className={`hover:bg-slate-800/50 ${r.changed_at ? "bg-yellow-500/5" : ""}`}>
+                  <tr key={r.id} className={`transition-colors hover:bg-white/[0.02] ${r.changed_at ? "bg-yellow-500/5" : ""}`}>
                     <td className="p-3 text-xs text-slate-300 font-mono">{r.domain}</td>
-                    <td className="p-3"><span className="px-2 py-0.5 bg-slate-800 rounded text-xs text-slate-300 font-mono">{r.record_type}</span></td>
+                    <td className="p-3"><span className="px-2 py-0.5 rounded text-xs text-slate-300 font-mono" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(139,92,246,0.08)" }}>{r.record_type}</span></td>
                     <td className="p-3 text-xs text-slate-400 font-mono max-w-xs truncate">{r.record_value}</td>
                     <td className="p-3 text-xs">
                       {r.changed_at ? (
@@ -350,10 +351,10 @@ export default function InfrastructurePage() {
           <p className="text-sm text-slate-500">{total} records total</p>
           <div className="flex items-center gap-2">
             <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
-              className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white disabled:opacity-50"><ChevronLeft className="w-4 h-4" /></button>
+              className="p-2 rounded-lg text-slate-400 hover:text-white disabled:opacity-50 transition-colors" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}><ChevronLeft className="w-4 h-4" /></button>
             <span className="text-sm text-slate-400">Page {page} of {totalPages}</span>
             <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
-              className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white disabled:opacity-50"><ChevronRight className="w-4 h-4" /></button>
+              className="p-2 rounded-lg text-slate-400 hover:text-white disabled:opacity-50 transition-colors" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}><ChevronRight className="w-4 h-4" /></button>
           </div>
         </div>
       )}

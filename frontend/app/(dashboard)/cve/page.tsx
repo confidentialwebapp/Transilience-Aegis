@@ -184,13 +184,13 @@ export default function CVEPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-900 rounded-lg p-1 border border-slate-700/50 w-fit">
+      <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: "rgba(139,92,246,0.04)", border: "1px solid rgba(139,92,246,0.1)" }}>
         {(["feed", "kev", "watchlist"] as const).map((t) => (
           <button
             key={t}
             onClick={() => { setTab(t); setPage(1); if (t === "kev") setKevOnly(true); else setKevOnly(false); }}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              tab === t ? "bg-purple-600 text-white" : "text-slate-400 hover:text-white"
+              tab === t ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" : "text-slate-400 hover:text-white"
             }`}
           >
             {t === "feed" ? "All CVEs" : t === "kev" ? "CISA KEV" : "Watchlist"}
@@ -209,7 +209,8 @@ export default function CVEPage() {
               onChange={(e) => setNewKeyword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addKeyword()}
               placeholder="e.g. apache, nginx, react, postgresql..."
-              className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
+              className="flex-1 px-3 py-2 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
             />
             <button onClick={addKeyword} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium">
               <Plus className="w-4 h-4" />
@@ -217,7 +218,7 @@ export default function CVEPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             {watchlist.map((w) => (
-              <span key={w.id} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-full text-sm text-slate-300">
+              <span key={w.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-slate-300" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}>
                 {w.keyword}
                 <button onClick={() => removeKeyword(w.id)} className="text-slate-500 hover:text-red-400"><X className="w-3 h-3" /></button>
               </span>
@@ -238,13 +239,15 @@ export default function CVEPage() {
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 placeholder="Search CVE ID or description..."
-                className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                className="w-full pl-10 pr-4 py-2 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
               />
             </div>
             <select
               value={severity}
               onChange={(e) => { setSeverity(e.target.value); setPage(1); }}
-              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200"
+              className="rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500/50"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
             >
               <option value="">All Severities</option>
               <option value="critical">Critical</option>
@@ -266,11 +269,11 @@ export default function CVEPage() {
                 <p>No CVEs found. Click &quot;Sync NVD&quot; to fetch latest vulnerabilities.</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-700/50">
+              <div className="divide-y" style={{ borderColor: "rgba(139,92,246,0.06)" }}>
                 {cves.map((cve) => (
                   <div
                     key={cve.cve_id}
-                    className="p-4 hover:bg-slate-800/50 cursor-pointer transition-colors"
+                    className="p-4 cursor-pointer transition-colors hover:bg-white/[0.02]"
                     onClick={() => setSelectedCve(cve)}
                   >
                     <div className="flex items-start justify-between gap-4">
@@ -315,7 +318,8 @@ export default function CVEPage() {
                 <button
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page === 1}
-                  className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white disabled:opacity-50"
+                  className="p-2 rounded-lg text-slate-400 hover:text-white disabled:opacity-50 transition-colors"
+                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -323,7 +327,8 @@ export default function CVEPage() {
                 <button
                   onClick={() => setPage(Math.min(totalPages, page + 1))}
                   disabled={page === totalPages}
-                  className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white disabled:opacity-50"
+                  className="p-2 rounded-lg text-slate-400 hover:text-white disabled:opacity-50 transition-colors"
+                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -335,8 +340,8 @@ export default function CVEPage() {
 
       {/* CVE Detail Modal */}
       {selectedCve && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setSelectedCve(null)}>
-          <div className="bg-slate-900 rounded-xl border border-slate-700 max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedCve(null)}>
+          <div className="rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" style={{ background: "#110d1a", border: "1px solid rgba(139,92,246,0.12)" }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h2 className="text-xl font-bold font-mono text-purple-400">{selectedCve.cve_id}</h2>
@@ -356,12 +361,12 @@ export default function CVEPage() {
                 <p className="text-sm text-slate-400">{selectedCve.description}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-800 rounded-lg p-3">
+                <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(139,92,246,0.08)" }}>
                   <p className="text-xs text-slate-500">EPSS Score</p>
                   <p className="text-lg font-bold text-purple-400">{(selectedCve.epss_score * 100).toFixed(2)}%</p>
                   <p className="text-xs text-slate-500">Percentile: {(selectedCve.epss_percentile * 100).toFixed(1)}%</p>
                 </div>
-                <div className="bg-slate-800 rounded-lg p-3">
+                <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(139,92,246,0.08)" }}>
                   <p className="text-xs text-slate-500">Published</p>
                   <p className="text-sm font-medium text-slate-300">{new Date(selectedCve.published_at).toLocaleDateString()}</p>
                   {selectedCve.kev_due_date && (
@@ -374,7 +379,7 @@ export default function CVEPage() {
                   <h4 className="text-sm font-semibold text-slate-300 mb-2">Affected Products</h4>
                   <div className="flex flex-wrap gap-1">
                     {selectedCve.affected_products.slice(0, 10).map((p, i) => (
-                      <span key={i} className="px-2 py-1 bg-slate-800 rounded text-xs text-slate-400 font-mono">{p.split(":").slice(-2).join(":")}</span>
+                      <span key={i} className="px-2 py-1 rounded text-xs text-slate-400 font-mono" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(139,92,246,0.08)" }}>{p.split(":").slice(-2).join(":")}</span>
                     ))}
                   </div>
                 </div>

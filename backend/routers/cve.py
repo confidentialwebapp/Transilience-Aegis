@@ -39,8 +39,15 @@ async def fetch_nvd_cves(
         params["pubStartDate"] = pub_start
         params["pubEndDate"] = pub_end
 
+    # Use NVD API key if available (10x rate limit: 50 req/30s vs 5 req/30s)
+    from config import get_settings
+    settings = get_settings()
+    headers = {}
+    if settings.NVD_API_KEY:
+        headers["apiKey"] = settings.NVD_API_KEY
+
     async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.get(base_url, params=params)
+        resp = await client.get(base_url, params=params, headers=headers)
         if resp.status_code == 200:
             return resp.json()
         logger.warning("NVD API returned %s: %s", resp.status_code, resp.text[:200])

@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     SHODAN_API_KEY: str = ""
     OTX_API_KEY: str = ""
     INTELX_API_KEY: str = ""
+    NVD_API_KEY: str = ""
 
     # Notifications
     RESEND_API_KEY: str = ""

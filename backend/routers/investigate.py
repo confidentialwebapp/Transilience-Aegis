@@ -363,6 +363,51 @@ async def _check_urlscan(target: str) -> Dict[str, Any]:
         return {"source": "urlscan", "status": "error", "detail": str(e)[:200]}
 
 
+async def _check_intelx(query: str) -> Dict[str, Any]:
+    """IntelX dark web search — requires API key."""
+    settings = get_settings()
+    if not settings.INTELX_API_KEY:
+        return {"source": "intelx", "status": "skipped", "reason": "No API key"}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            # Start search
+            resp = await client.post(
+                "https://2.intelx.io/intelligent/search",
+                headers={"x-key": settings.INTELX_API_KEY},
+                json={"term": query, "maxresults": 10, "media": 0, "timeout": 10},
+            )
+            if resp.status_code == 200:
+                search_id = resp.json().get("id")
+                if search_id:
+                    # Fetch results
+                    import asyncio
+                    await asyncio.sleep(2)
+                    result_resp = await client.get(
+                        f"https://2.intelx.io/intelligent/search/result?id={search_id}",
+                        headers={"x-key": settings.INTELX_API_KEY},
+                    )
+                    if result_resp.status_code == 200:
+                        data = result_resp.json()
+                        records = data.get("records", [])
+                        return {
+                            "source": "intelx",
+                            "status": "found" if records else "clean",
+                            "total_results": len(records),
+                            "results": [
+                                {
+                                    "name": r.get("name", ""),
+                                    "date": r.get("date", ""),
+                                    "bucket": r.get("bucket", ""),
+                                    "media": r.get("mediah", ""),
+                                }
+                                for r in records[:10]
+                            ],
+                        }
+            return {"source": "intelx", "status": "clean", "detail": "No results"}
+    except Exception as e:
+        return {"source": "intelx", "status": "error", "detail": str(e)[:200]}
+
+
 async def _check_crtsh(domain: str) -> Dict[str, Any]:
     try:
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
@@ -543,6 +588,8 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
                 sources_checked.append("virustotal")
                 results["threatfox"] = await _check_threatfox(domain)
                 sources_checked.append("threatfox")
+            results["intelx"] = await _check_intelx(target)
+            sources_checked.append("intelx")
             if results["hibp"].get("status") == "breached":
                 scoring_factors["in_breach_db"] = True
                 scoring_factors["exposed_credentials"] = True
@@ -561,6 +608,8 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("urlhaus")
             results["github"] = await _check_github_leaks(target)
             sources_checked.append("github")
+            results["intelx"] = await _check_intelx(target)
+            sources_checked.append("intelx")
             # Keyed sources (optional)
             results["virustotal"] = await _check_virustotal("domain", target)
             sources_checked.append("virustotal")

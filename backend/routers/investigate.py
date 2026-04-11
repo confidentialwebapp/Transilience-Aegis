@@ -564,13 +564,13 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("virustotal")
             results["urlscan"] = await _check_urlscan(target)
             sources_checked.append("urlscan")
-            if results["virustotal"].get("malicious", 0) > 0:
+            if (results.get("virustotal") or {}).get("malicious", 0) > 0:
                 scoring_factors["virustotal_flagged"] = True
-            if results["urlscan"].get("malicious_count", 0) > 0:
+            if (results.get("urlscan") or {}).get("malicious_count", 0) > 0:
                 scoring_factors["urlscan_phishing"] = True
-            if results["threatfox"].get("status") == "found":
+            if (results.get("threatfox") or {}).get("status") == "found":
                 scoring_factors["virustotal_flagged"] = True
-            if results["urlhaus"].get("status") == "found":
+            if (results.get("urlhaus") or {}).get("status") == "found":
                 scoring_factors["urlscan_phishing"] = True
 
         elif body.target_type == "ip":
@@ -588,15 +588,14 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("shodan")
             results["greynoise"] = await _check_greynoise(target)
             sources_checked.append("greynoise")
-            if results["virustotal"].get("malicious", 0) > 0:
+            if (results.get("virustotal") or {}).get("malicious", 0) > 0:
                 scoring_factors["virustotal_flagged"] = True
-            if results["shodan"].get("open_ports_count", 0) > 10:
+            if (results.get("shodan") or {}).get("open_ports_count", 0) > 10:
                 scoring_factors["exposed_credentials"] = True
-            if results["threatfox"].get("status") == "found":
+            if (results.get("threatfox") or {}).get("status") == "found":
                 scoring_factors["virustotal_flagged"] = True
 
         elif body.target_type == "url":
-            # Extract domain for free checks
             from urllib.parse import urlparse
             parsed = urlparse(target)
             domain = parsed.hostname or target
@@ -610,11 +609,11 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("virustotal")
             results["urlscan"] = await _check_urlscan(target)
             sources_checked.append("urlscan")
-            if results["virustotal"].get("malicious", 0) > 0:
+            if (results.get("virustotal") or {}).get("malicious", 0) > 0:
                 scoring_factors["virustotal_flagged"] = True
-            if results["urlscan"].get("malicious_count", 0) > 0:
+            if (results.get("urlscan") or {}).get("malicious_count", 0) > 0:
                 scoring_factors["urlscan_phishing"] = True
-            if results["threatfox"].get("status") == "found":
+            if (results.get("threatfox") or {}).get("status") == "found":
                 scoring_factors["virustotal_flagged"] = True
 
         elif body.target_type == "username":
@@ -626,6 +625,9 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
         elif body.target_type == "phone":
             results["phone"] = await _check_phone(target)
             sources_checked.append("phone_check")
+
+        # Filter out None results
+        results = {k: v for k, v in results.items() if v is not None}
 
         risk_score = calculate_risk_score(scoring_factors)
 

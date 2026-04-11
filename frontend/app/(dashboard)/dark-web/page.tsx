@@ -153,7 +153,7 @@ export default function DarkWebPage() {
             <p className="text-sm text-slate-500">No dark web alerts found. Add assets to begin monitoring.</p>
           </div>
         ) : (
-          <div className="divide-y divide-cyan-500/[0.04]">
+          <div className="divide-y divide-purple-500/[0.04]">
             {alerts.map((alert) => (
               <div key={alert.id} className="p-4 hover:bg-white/[0.01] transition-colors">
                 <div className="flex items-start gap-3">

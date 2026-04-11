@@ -151,7 +151,7 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-cyan-500/10 border border-purple-500/20 mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 mb-4">
             <Shield className="w-8 h-8 text-purple-400" />
           </div>
           <h1 className="text-2xl font-bold text-slate-100">Transilience</h1>
@@ -176,7 +176,7 @@ export default function RegisterPage() {
                   type="text"
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors"
                   placeholder="Acme Corp"
                   required
                 />
@@ -191,7 +191,7 @@ export default function RegisterPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors"
                   placeholder="you@company.com"
                   required
                 />
@@ -206,7 +206,7 @@ export default function RegisterPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors"
                   placeholder="Min 8 characters"
                   minLength={8}
                   required
@@ -217,7 +217,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-cyan-800 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               {loading ? "Creating account..." : "Create account"}
@@ -226,7 +226,7 @@ export default function RegisterPage() {
 
           <p className="text-center text-slate-400 text-sm mt-6">
             Already have an account?{" "}
-            <Link href="/login" className="text-purple-400 hover:text-cyan-300">
+            <Link href="/login" className="text-purple-400 hover:text-purple-300">
               Sign in
             </Link>
           </p>

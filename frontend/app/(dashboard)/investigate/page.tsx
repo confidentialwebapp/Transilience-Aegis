@@ -280,7 +280,7 @@ export default function InvestigatePage() {
               value={targetValue}
               onChange={(e) => setTargetValue(e.target.value)}
               placeholder={currentType?.placeholder || "Enter target..."}
-              className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-cyan-500"
+              className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
               required
             />
           </div>

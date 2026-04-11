@@ -216,7 +216,7 @@ export default function DashboardPage() {
           <PipelineStage label="Ingest" icon={Database} status="9 Sources" color="#06b6d4" />
           <div className="flex-1 mx-2 h-px bg-gradient-to-r from-purple-500/20 to-blue-500/20 relative">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-              <ArrowRight className="w-3 h-3 text-cyan-500/30" />
+              <ArrowRight className="w-3 h-3 text-purple-500/30" />
             </div>
           </div>
           <PipelineStage label="Correlate" icon={Network} status="Graph Active" color="#3b82f6" />

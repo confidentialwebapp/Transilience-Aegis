@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 const ASSET_CONFIG: Record<string, { icon: typeof Globe; color: string; label: string }> = {
-  domain: { icon: Globe, color: "cyan", label: "Domains" },
+  domain: { icon: Globe, color: "purple", label: "Domains" },
   ip: { icon: Server, color: "blue", label: "IP Addresses" },
   email: { icon: Mail, color: "purple", label: "Emails" },
   keyword: { icon: Hash, color: "orange", label: "Keywords" },

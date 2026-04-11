@@ -131,7 +131,7 @@ export default function ThreatActorsPage() {
               <p className="text-sm text-slate-500">No threat actors loaded. Click &quot;Sync MITRE ATT&CK&quot; to fetch data.</p>
             </div>
           ) : (
-            <div className="divide-y divide-cyan-500/[0.04]">
+            <div className="divide-y divide-purple-500/[0.04]">
               {actors.map((actor) => (
                 <div key={actor.id} className="p-4 hover:bg-white/[0.01] cursor-pointer transition-colors" onClick={() => setSelectedActor(actor)}>
                   <div className="flex items-start justify-between">
@@ -181,7 +181,7 @@ export default function ThreatActorsPage() {
               <p className="text-sm text-slate-500">No ransomware data loaded. Sync to fetch latest data.</p>
             </div>
           ) : (
-            <div className="divide-y divide-cyan-500/[0.04]">
+            <div className="divide-y divide-purple-500/[0.04]">
               {ransomware.map((group, i) => (
                 <div key={i} className="p-4 hover:bg-white/[0.01] transition-colors">
                   <div className="flex items-center justify-between">

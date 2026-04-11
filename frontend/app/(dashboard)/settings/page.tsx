@@ -1,197 +1,222 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { api, getOrgId } from "@/lib/api";
+import { getOrgId } from "@/lib/api";
 import { toast } from "sonner";
-import { Save, Play, Loader2, CheckCircle } from "lucide-react";
+import {
+  Settings, Save, Loader2, Bell, Mail, Globe, Shield, Clock,
+  Webhook, Send, RefreshCw
+} from "lucide-react";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://tai-aegis-api.onrender.com";
+
+async function apiFetch(path: string, options: any = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: { "Content-Type": "application/json", "X-Org-Id": getOrgId(), ...options.headers },
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+}
 
 const SCAN_MODULES = [
-  { id: "dark_web", label: "Dark Web Scan", interval: "Every 6 hours" },
-  { id: "brand", label: "Brand Monitor", interval: "Every 4 hours" },
-  { id: "data_leak", label: "Data Leak Scan", interval: "Every 12 hours" },
-  { id: "surface_web", label: "Surface Web Scan", interval: "Every 24 hours" },
-  { id: "cert_monitor", label: "Certificate Monitor", interval: "Every 1 hour" },
-  { id: "credential", label: "Credential Scan", interval: "Every 8 hours" },
+  { key: "dark_web", label: "Dark Web Monitoring", icon: "🌑", defaultInterval: 6 },
+  { key: "brand", label: "Brand Protection", icon: "🛡️", defaultInterval: 4 },
+  { key: "data_leak", label: "Data Leak Detection", icon: "📄", defaultInterval: 12 },
+  { key: "surface_web", label: "Surface Web Scan", icon: "🌐", defaultInterval: 24 },
+  { key: "cert_monitor", label: "Certificate Monitor", icon: "🔒", defaultInterval: 1 },
+  { key: "credential", label: "Credential Scan", icon: "🔑", defaultInterval: 8 },
 ];
 
 export default function SettingsPage() {
-  const [orgId, setOrgIdLocal] = useState("");
-  const [triggeringModule, setTriggeringModule] = useState<string | null>(null);
-  const [triggeredModules, setTriggeredModules] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  // Settings state
-  const [orgName, setOrgName] = useState("My Organization");
+  const [tab, setTab] = useState<"general" | "notifications" | "scans">("general");
+  const [orgName, setOrgName] = useState("");
   const [primaryDomain, setPrimaryDomain] = useState("");
-  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [emailEnabled, setEmailEnabled] = useState(true);
+  const [emailRecipients, setEmailRecipients] = useState("");
+  const [webhookEnabled, setWebhookEnabled] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
+  const [telegramEnabled, setTelegramEnabled] = useState(false);
+  const [telegramChatId, setTelegramChatId] = useState("");
   const [minSeverity, setMinSeverity] = useState("medium");
+  const [schedules, setSchedules] = useState<Record<string, { enabled: boolean; interval_hours: number }>>({});
 
-  useEffect(() => {
-    setOrgIdLocal(getOrgId());
-  }, []);
+  useEffect(() => { loadSettings(); }, []);
 
-  const handleTriggerScan = async (module: string) => {
-    setTriggeringModule(module);
+  const loadSettings = async () => {
+    setLoading(true);
     try {
-      await api.triggerScan(orgId, module);
-      setTriggeredModules((prev) => new Set(prev).add(module));
-      toast.success(`${module.replace(/_/g, " ")} scan triggered successfully`);
-      // Clear the success indicator after 3 seconds
-      setTimeout(() => {
-        setTriggeredModules((prev) => {
-          const next = new Set(prev);
-          next.delete(module);
-          return next;
-        });
-      }, 3000);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to trigger scan. The server may be starting up.");
-    } finally {
-      setTriggeringModule(null);
-    }
+      const [org, notif, scanSched] = await Promise.all([
+        apiFetch("/api/v1/settings/org"),
+        apiFetch("/api/v1/settings/notifications"),
+        apiFetch("/api/v1/settings/scan-schedule"),
+      ]);
+      setOrgName(org.name || "");
+      setPrimaryDomain(org.domain || "");
+      setEmailEnabled(notif.email_enabled ?? true);
+      setEmailRecipients((notif.email_recipients || []).join(", "));
+      setWebhookEnabled(notif.webhook_enabled ?? false);
+      setWebhookUrl(notif.webhook_url || "");
+      setTelegramEnabled(notif.telegram_enabled ?? false);
+      setTelegramChatId(notif.telegram_chat_id || "");
+      setMinSeverity(notif.min_severity || "medium");
+      setSchedules(scanSched.schedules || {});
+    } catch { toast.error("Failed to load settings"); }
+    finally { setLoading(false); }
   };
 
-  const handleSaveSettings = async () => {
+  const saveGeneral = async () => {
     setSaving(true);
-    // Simulate save - in production this would call a settings API
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    toast.success("Settings saved successfully");
-    setSaving(false);
+    try {
+      await apiFetch("/api/v1/settings/org", { method: "PATCH", body: JSON.stringify({ name: orgName, domain: primaryDomain }) });
+      toast.success("Organization settings saved");
+    } catch { toast.error("Failed to save"); }
+    finally { setSaving(false); }
   };
+
+  const saveNotifications = async () => {
+    setSaving(true);
+    try {
+      await apiFetch("/api/v1/settings/notifications", {
+        method: "PATCH",
+        body: JSON.stringify({
+          email_enabled: emailEnabled,
+          email_recipients: emailRecipients.split(",").map((e: string) => e.trim()).filter(Boolean),
+          webhook_enabled: webhookEnabled, webhook_url: webhookUrl,
+          telegram_enabled: telegramEnabled, telegram_chat_id: telegramChatId,
+          min_severity: minSeverity,
+        }),
+      });
+      toast.success("Notification settings saved");
+    } catch { toast.error("Failed to save"); }
+    finally { setSaving(false); }
+  };
+
+  const saveSchedules = async () => {
+    setSaving(true);
+    try {
+      await apiFetch("/api/v1/settings/scan-schedule", { method: "PATCH", body: JSON.stringify({ schedules }) });
+      toast.success("Scan schedules saved");
+    } catch { toast.error("Failed to save"); }
+    finally { setSaving(false); }
+  };
+
+  const triggerScan = async (module: string) => {
+    try {
+      await apiFetch("/api/v1/scans/trigger", { method: "POST", body: JSON.stringify({ module }) });
+      toast.success(`${module.replace("_", " ")} scan triggered`);
+    } catch { toast.error("Scan trigger failed"); }
+  };
+
+  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div>;
+
+  const inputStyle = { background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" };
+  const Toggle = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
+    <button onClick={onToggle} className={`w-10 h-5 rounded-full transition-all relative ${on ? "bg-purple-500" : "bg-slate-700"}`}>
+      <div className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-all ${on ? "left-5" : "left-0.5"}`} />
+    </button>
+  );
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <button
-          onClick={handleSaveSettings}
-          disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white rounded-lg text-sm font-medium transition-colors"
-        >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          {saving ? "Saving..." : "Save Settings"}
-        </button>
-      </div>
-
-      {/* Organization */}
-      <div className="bg-slate-900 rounded-xl border border-slate-700/50 p-6">
-        <h2 className="text-lg font-semibold mb-4">Organization</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Organization Name</label>
-            <input
-              type="text"
-              value={orgName}
-              onChange={(e) => setOrgName(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Primary Domain</label>
-            <input
-              type="text"
-              value={primaryDomain}
-              onChange={(e) => setPrimaryDomain(e.target.value)}
-              placeholder="example.com"
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Organization ID</label>
-            <input
-              type="text"
-              value={orgId}
-              readOnly
-              className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-sm text-slate-500 cursor-not-allowed"
-            />
-          </div>
+    <div className="space-y-6 animate-fade-up max-w-4xl">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+          <Settings className="w-5 h-5 text-purple-400" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-white">Settings</h1>
+          <p className="text-[11px] text-slate-500">Organization, notifications & scan schedules</p>
         </div>
       </div>
 
-      {/* Notification Settings */}
-      <div className="bg-slate-900 rounded-xl border border-slate-700/50 p-6">
-        <h2 className="text-lg font-semibold mb-4">Notifications</h2>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
+      <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: "rgba(17,13,26,0.8)", border: "1px solid rgba(139,92,246,0.06)" }}>
+        {([{ key: "general" as const, label: "General", icon: Shield }, { key: "notifications" as const, label: "Notifications", icon: Bell }, { key: "scans" as const, label: "Scan Schedules", icon: Clock }]).map((t) => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-medium transition-all ${tab === t.key ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" : "text-slate-500 hover:text-white"}`}>
+            <t.icon className="w-3.5 h-3.5" />{t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "general" && (
+        <div className="card-enterprise p-6 space-y-5">
+          <h2 className="text-sm font-semibold text-slate-300">Organization Details</h2>
+          <div className="space-y-4">
             <div>
-              <div className="text-sm font-medium">Email Notifications</div>
-              <div className="text-xs text-slate-400">Receive alerts via email</div>
+              <label className="text-[11px] text-slate-500 uppercase tracking-wider font-medium">Organization Name</label>
+              <input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Your organization name"
+                className="w-full mt-1.5 px-3 py-2.5 rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none" style={inputStyle} />
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={emailNotifications}
-                onChange={(e) => setEmailNotifications(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-purple-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
-            </label>
+            <div>
+              <label className="text-[11px] text-slate-500 uppercase tracking-wider font-medium">Primary Domain</label>
+              <input value={primaryDomain} onChange={(e) => setPrimaryDomain(e.target.value)} placeholder="example.com"
+                className="w-full mt-1.5 px-3 py-2.5 rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none" style={inputStyle} />
+            </div>
           </div>
+          <button onClick={saveGeneral} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 btn-brand rounded-lg text-sm font-medium">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Settings
+          </button>
+        </div>
+      )}
 
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Webhook URL</label>
-            <input
-              type="url"
-              value={webhookUrl}
-              onChange={(e) => setWebhookUrl(e.target.value)}
-              placeholder="https://hooks.slack.com/services/..."
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Minimum Severity</label>
-            <select
-              value={minSeverity}
-              onChange={(e) => setMinSeverity(e.target.value)}
-              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200"
-            >
-              <option value="critical">Critical only</option>
-              <option value="high">High and above</option>
-              <option value="medium">Medium and above</option>
-              <option value="low">Low and above</option>
-              <option value="info">All</option>
+      {tab === "notifications" && (
+        <div className="space-y-4">
+          <div className="card-enterprise p-6 space-y-4">
+            <h2 className="text-sm font-semibold text-slate-300">Severity Threshold</h2>
+            <select value={minSeverity} onChange={(e) => setMinSeverity(e.target.value)} className="w-full px-3 py-2.5 rounded-lg text-sm text-slate-200 focus:outline-none" style={inputStyle}>
+              <option value="critical">Critical only</option><option value="high">High+</option><option value="medium">Medium+</option><option value="low">Low+</option><option value="info">All</option>
             </select>
           </div>
+          <div className="card-enterprise p-6 space-y-4">
+            <div className="flex items-center justify-between"><div className="flex items-center gap-2"><Mail className="w-4 h-4 text-purple-400" /><h2 className="text-sm font-semibold text-slate-300">Email</h2></div><Toggle on={emailEnabled} onToggle={() => setEmailEnabled(!emailEnabled)} /></div>
+            {emailEnabled && <input value={emailRecipients} onChange={(e) => setEmailRecipients(e.target.value)} placeholder="security@company.com, soc@company.com" className="w-full px-3 py-2.5 rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none" style={inputStyle} />}
+          </div>
+          <div className="card-enterprise p-6 space-y-4">
+            <div className="flex items-center justify-between"><div className="flex items-center gap-2"><Webhook className="w-4 h-4 text-blue-400" /><h2 className="text-sm font-semibold text-slate-300">Webhook</h2></div><Toggle on={webhookEnabled} onToggle={() => setWebhookEnabled(!webhookEnabled)} /></div>
+            {webhookEnabled && <input value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} placeholder="https://hooks.slack.com/services/..." className="w-full px-3 py-2.5 rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none" style={inputStyle} />}
+          </div>
+          <div className="card-enterprise p-6 space-y-4">
+            <div className="flex items-center justify-between"><div className="flex items-center gap-2"><Send className="w-4 h-4 text-blue-400" /><h2 className="text-sm font-semibold text-slate-300">Telegram</h2></div><Toggle on={telegramEnabled} onToggle={() => setTelegramEnabled(!telegramEnabled)} /></div>
+            {telegramEnabled && <input value={telegramChatId} onChange={(e) => setTelegramChatId(e.target.value)} placeholder="-1001234567890" className="w-full px-3 py-2.5 rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none" style={inputStyle} />}
+          </div>
+          <button onClick={saveNotifications} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 btn-brand rounded-lg text-sm font-medium">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Notifications
+          </button>
         </div>
-      </div>
+      )}
 
-      {/* Scan Schedules */}
-      <div className="bg-slate-900 rounded-xl border border-slate-700/50 p-6">
-        <h2 className="text-lg font-semibold mb-4">Scan Modules</h2>
-        <p className="text-sm text-slate-400 mb-4">
-          Trigger an on-demand scan or view the automated schedule for each module.
-        </p>
-        <div className="space-y-3">
-          {SCAN_MODULES.map((module) => (
-            <div key={module.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">
-              <div>
-                <div className="text-sm font-medium">{module.label}</div>
-                <div className="text-xs text-slate-400">{module.interval}</div>
+      {tab === "scans" && (
+        <div className="space-y-4">
+          {SCAN_MODULES.map((mod) => {
+            const sched = schedules[mod.key] || { enabled: true, interval_hours: mod.defaultInterval };
+            return (
+              <div key={mod.key} className="card-enterprise p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">{mod.icon}</span>
+                    <div><p className="text-sm font-medium text-slate-300">{mod.label}</p><p className="text-[10px] text-slate-600">Every {sched.interval_hours}h</p></div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <select value={sched.interval_hours} onChange={(e) => setSchedules({ ...schedules, [mod.key]: { ...sched, interval_hours: parseInt(e.target.value) } })}
+                      className="px-2 py-1.5 rounded-lg text-xs text-slate-300" style={inputStyle}>
+                      {[1,2,4,6,8,12,24].map((h) => <option key={h} value={h}>Every {h}h</option>)}
+                    </select>
+                    <Toggle on={sched.enabled} onToggle={() => setSchedules({ ...schedules, [mod.key]: { ...sched, enabled: !sched.enabled } })} />
+                    <button onClick={() => triggerScan(mod.key)} className="p-2 rounded-lg text-slate-500 hover:text-purple-400" style={{ background: "rgba(255,255,255,0.02)" }} title="Run now">
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
-              <button
-                onClick={() => handleTriggerScan(module.id)}
-                disabled={triggeringModule === module.id}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
-                  triggeredModules.has(module.id)
-                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                    : "bg-purple-500/10 text-purple-400 border-purple-500/30 hover:bg-purple-500/20"
-                } disabled:opacity-50`}
-              >
-                {triggeringModule === module.id ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : triggeredModules.has(module.id) ? (
-                  <CheckCircle className="w-3 h-3" />
-                ) : (
-                  <Play className="w-3 h-3" />
-                )}
-                {triggeredModules.has(module.id) ? "Triggered" : "Run Now"}
-              </button>
-            </div>
-          ))}
+            );
+          })}
+          <button onClick={saveSchedules} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 btn-brand rounded-lg text-sm font-medium">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Schedules
+          </button>
         </div>
-      </div>
+      )}
     </div>
   );
 }

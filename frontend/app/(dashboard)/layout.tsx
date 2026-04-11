@@ -21,6 +21,10 @@ import {
   Menu,
   Scan,
   ClipboardList,
+  Bug,
+  Building2,
+  Network,
+  Eye,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -30,7 +34,10 @@ const NAV_ITEMS = [
   { href: "/assets", label: "Assets", icon: Box },
   { href: "/alerts", label: "Alerts", icon: AlertTriangle },
   { href: "/scan-review", label: "Scan Review", icon: ClipboardList },
-  { href: "/intel", label: "Intel", icon: Database },
+  { href: "/cve", label: "CVE Intel", icon: Bug },
+  { href: "/vendors", label: "SVigil", icon: Building2 },
+  { href: "/infrastructure", label: "Infra Monitor", icon: Network },
+  { href: "/intel", label: "IOC Lookup", icon: Database },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

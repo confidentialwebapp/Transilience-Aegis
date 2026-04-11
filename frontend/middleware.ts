@@ -4,11 +4,11 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: request.headers } });
 
-  // If Supabase env vars are not configured, allow all access (demo mode)
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || !supabaseKey || supabaseUrl === "https://placeholder.supabase.co") {
+  // If Supabase is not configured, allow access (local dev without Supabase)
+  if (!supabaseUrl || !supabaseKey) {
     return response;
   }
 
@@ -39,21 +39,29 @@ export async function middleware(request: NextRequest) {
       request.nextUrl.pathname.startsWith("/login") ||
       request.nextUrl.pathname.startsWith("/register");
 
-    // If no session and NOT on an auth page, allow access anyway for demo/MVP.
-    // Users can still log in if they want, but the dashboard is accessible without auth.
-    if (!session && !isAuthPage) {
-      // Allow through - demo mode. The app will use the demo org ID.
+    const isPublicAsset =
+      request.nextUrl.pathname === "/logo.png" ||
+      request.nextUrl.pathname === "/favicon.ico";
+
+    if (isPublicAsset) {
       return response;
     }
 
-    // If logged in and on auth page, redirect to dashboard
+    // No session and not on auth page → redirect to login
+    if (!session && !isAuthPage) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/login";
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    // Logged in and on auth page → redirect to dashboard
     if (session && isAuthPage) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/";
       return NextResponse.redirect(redirectUrl);
     }
   } catch {
-    // If Supabase errors out (misconfigured, network, etc.), allow access
+    // On Supabase error, allow through to avoid locking users out
     return response;
   }
 

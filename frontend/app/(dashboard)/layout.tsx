@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { getOrgId } from "@/lib/api";
 import { useAlerts } from "@/hooks/useAlerts";
+import { createClient } from "@/lib/supabase/client";
 import {
   LayoutDashboard, AlertTriangle, Box, Bell, Search as SearchIcon,
   Settings, ChevronLeft, ChevronRight, Database, Menu, Scan,
   Bug, Building2, Network, Eye, Skull, Fingerprint, Brain, Activity,
-  Radio, FileText, Radar,
+  Radio, FileText, Radar, LogOut, User, ChevronDown,
 } from "lucide-react";
 
 const NAV_SECTIONS = [
@@ -58,12 +59,55 @@ const NAV_SECTIONS = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [orgId, setOrgIdState] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userName, setUserName] = useState("");
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setOrgIdState(getOrgId()); }, []);
   const { unreadCount, clearUnread } = useAlerts(orgId);
+
+  // Load user session
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUserEmail(session.user.email || "");
+          setUserName(session.user.user_metadata?.name || session.user.email?.split("@")[0] || "User");
+        }
+      } catch {}
+    };
+    loadUser();
+  }, []);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      localStorage.removeItem("tai_org_id");
+      router.push("/login");
+      router.refresh();
+    } catch {
+      router.push("/login");
+    }
+  };
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -216,16 +260,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             </button>
 
-            {/* User */}
-            <div className="flex items-center gap-2 pl-2" style={{ borderLeft: "1px solid rgba(139,92,246,0.06)" }}>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-purple-300 text-sm font-bold"
-                style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(236,72,153,0.15))", border: "1px solid rgba(139,92,246,0.1)" }}>
-                A
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-xs font-medium text-slate-300">Analyst</p>
-                <p className="text-[10px] text-slate-600">Security Ops</p>
-              </div>
+            {/* User Menu */}
+            <div className="relative pl-2" style={{ borderLeft: "1px solid rgba(139,92,246,0.06)" }} ref={userMenuRef}>
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-white/[0.02] transition-all"
+              >
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-purple-300 text-sm font-bold"
+                  style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(236,72,153,0.15))", border: "1px solid rgba(139,92,246,0.1)" }}>
+                  {userName ? userName[0].toUpperCase() : "U"}
+                </div>
+                <div className="hidden sm:block text-left">
+                  <p className="text-xs font-medium text-slate-300">{userName || "User"}</p>
+                  <p className="text-[10px] text-slate-600">{userEmail || "Not signed in"}</p>
+                </div>
+                <ChevronDown className="w-3 h-3 text-slate-600 hidden sm:block" />
+              </button>
+
+              {/* Dropdown */}
+              {showUserMenu && (
+                <div className="absolute right-0 top-full mt-2 w-56 rounded-xl overflow-hidden shadow-2xl z-50 animate-fade-up"
+                  style={{ background: "#110d1a", border: "1px solid rgba(139,92,246,0.12)" }}>
+                  <div className="p-3" style={{ borderBottom: "1px solid rgba(139,92,246,0.06)" }}>
+                    <p className="text-xs font-medium text-slate-300">{userName || "User"}</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{userEmail || "demo@transilience.ai"}</p>
+                  </div>
+                  <div className="p-1">
+                    <Link href="/settings" onClick={() => setShowUserMenu(false)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-white/[0.03] transition-all">
+                      <User className="w-3.5 h-3.5" /> Profile & Settings
+                    </Link>
+                    <button onClick={handleLogout}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-red-400 hover:text-red-300 hover:bg-red-500/[0.05] transition-all w-full text-left">
+                      <LogOut className="w-3.5 h-3.5" /> Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>

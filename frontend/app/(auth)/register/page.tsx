@@ -5,17 +5,18 @@ import { createClient } from "@/lib/supabase/client";
 import { setOrgId } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Shield, Mail, Lock, Building2, Loader2, CheckCircle } from "lucide-react";
+import Image from "next/image";
+import { Mail, Lock, User, Loader2, ArrowRight, CheckCircle } from "lucide-react";
 
 const DEMO_ORG_ID = "00000000-0000-0000-0000-000000000001";
 
 export default function RegisterPage() {
-  const [orgName, setOrgName] = useState("");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [emailConfirmationSent, setEmailConfirmationSent] = useState(false);
+  const [success, setSuccess] = useState(false);
   const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -23,12 +24,18 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
 
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      setLoading(false);
+      return;
+    }
+
     try {
       const supabase = createClient();
       const { data, error: authError } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { org_name: orgName } },
+        options: { data: { name } },
       });
 
       if (authError) {
@@ -37,110 +44,53 @@ export default function RegisterPage() {
         return;
       }
 
-      // Supabase may require email confirmation
-      // If identities is empty, it means the user needs to confirm their email
-      if (
-        data.user &&
-        data.user.identities &&
-        data.user.identities.length === 0
-      ) {
-        setEmailConfirmationSent(true);
-        setLoading(false);
-        return;
-      }
-
-      // If we got a session, the user is confirmed (e.g. email confirmation disabled)
-      if (data.user && data.session) {
+      if (data.user) {
+        // Create org and membership
         try {
-          // Create org and membership
-          const { data: org, error: orgError } = await supabase
-            .from("orgs")
-            .insert({ name: orgName, domain: email.split("@")[1] })
-            .select()
-            .single();
+          const { data: org } = await supabase.from("orgs").insert({
+            name: name ? `${name}'s Organization` : "My Organization",
+          }).select("id").single();
 
-          if (orgError) {
-            console.error("Failed to create org:", orgError);
-            // Use demo org as fallback
-            setOrgId(DEMO_ORG_ID);
-          } else if (org) {
-            const { error: memberError } = await supabase
-              .from("org_members")
-              .insert({
-                org_id: org.id,
-                user_id: data.user.id,
-                role: "admin",
-              });
-
-            if (memberError) {
-              console.error("Failed to create org membership:", memberError);
-            }
-
-            // Create default notification settings - non-critical, ignore errors
-            await supabase
-              .from("notification_settings")
-              .insert({
-                org_id: org.id,
-                email_enabled: true,
-                email_recipients: [email],
-              })
-              .catch(() => {});
-
+          if (org) {
+            await supabase.from("org_members").insert({
+              org_id: org.id,
+              user_id: data.user.id,
+              role: "admin",
+            });
             setOrgId(org.id);
+          } else {
+            setOrgId(DEMO_ORG_ID);
           }
         } catch {
-          // Non-critical: org creation failed, use demo org
           setOrgId(DEMO_ORG_ID);
         }
 
-        router.push("/");
-        router.refresh();
-        return;
+        // Check if email confirmation is required
+        if (data.session) {
+          router.push("/");
+          router.refresh();
+        } else {
+          setSuccess(true);
+        }
       }
-
-      // If no session but user exists, email confirmation is likely required
-      if (data.user && !data.session) {
-        setEmailConfirmationSent(true);
-        setLoading(false);
-        return;
-      }
-
-      // Fallback: just go to dashboard
-      setOrgId(DEMO_ORG_ID);
-      router.push("/");
-      router.refresh();
     } catch {
-      setError("An unexpected error occurred. Please try again.");
+      setError("Registration failed. Please try again.");
+    } finally {
       setLoading(false);
     }
   };
 
-  // Show email confirmation UI
-  if (emailConfirmationSent) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
-              <CheckCircle className="w-8 h-8 text-emerald-400" />
-            </div>
-            <h1 className="text-2xl font-bold text-slate-100">Check Your Email</h1>
-            <p className="text-slate-400 mt-2 leading-relaxed">
-              We&apos;ve sent a confirmation link to <strong className="text-slate-200">{email}</strong>.
-              Please check your inbox and click the link to activate your account.
-            </p>
-          </div>
+  const inputStyle = { background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.12)" };
 
-          <div className="bg-slate-900 rounded-xl border border-slate-700/50 p-6 text-center">
-            <p className="text-sm text-slate-400 mb-4">
-              After confirming your email, you can sign in to your account.
-            </p>
-            <Link
-              href="/login"
-              className="inline-block px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors"
-            >
-              Go to Sign In
-            </Link>
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 bg-grid-pattern" style={{ background: "#07040B" }}>
+        <div className="w-full max-w-md animate-fade-up">
+          <div className="card-enterprise p-8 text-center">
+            <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
+            <h2 className="text-lg font-semibold text-white mb-2">Check your email</h2>
+            <p className="text-sm text-slate-400 mb-6">We sent a confirmation link to <strong className="text-slate-200">{email}</strong></p>
+            <Link href="/login" className="text-purple-400 hover:text-purple-300 text-sm font-medium">Back to sign in</Link>
           </div>
         </div>
       </div>
@@ -148,89 +98,64 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-grid-pattern" style={{ background: "#07040B" }}>
+      <div className="w-full max-w-md animate-fade-up">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 mb-4">
-            <Shield className="w-8 h-8 text-purple-400" />
+            <Image src="/logo.png" alt="Transilience AI" width={40} height={40} className="object-contain" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-100">Transilience</h1>
-          <p className="text-slate-400 mt-1">Create your account</p>
+          <h1 className="text-2xl font-bold text-gradient-brand">Transilience AI</h1>
+          <p className="text-slate-500 mt-1 text-sm">Create your account</p>
         </div>
 
-        <div className="bg-slate-900 rounded-xl border border-slate-700/50 p-8">
-          <h2 className="text-xl font-semibold mb-6">Register</h2>
+        <div className="card-enterprise p-8">
+          <h2 className="text-lg font-semibold text-white mb-6">Register</h2>
 
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-              {error}
-            </div>
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>
           )}
 
           <form onSubmit={handleRegister} className="space-y-4">
             <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Organization Name</label>
-              <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="text"
-                  value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors"
-                  placeholder="Acme Corp"
-                  required
-                />
+              <label className="text-[11px] text-slate-500 uppercase tracking-wider font-medium">Full Name</label>
+              <div className="relative mt-1.5">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  style={inputStyle} placeholder="Your full name" required />
               </div>
             </div>
-
             <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors"
-                  placeholder="you@company.com"
-                  required
-                />
+              <label className="text-[11px] text-slate-500 uppercase tracking-wider font-medium">Email</label>
+              <div className="relative mt-1.5">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  style={inputStyle} placeholder="you@company.com" required />
               </div>
             </div>
-
             <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors"
-                  placeholder="Min 8 characters"
-                  minLength={8}
-                  required
-                />
+              <label className="text-[11px] text-slate-500 uppercase tracking-wider font-medium">Password</label>
+              <div className="relative mt-1.5">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  style={inputStyle} placeholder="At least 6 characters" required />
               </div>
             </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {loading ? "Creating account..." : "Create account"}
+            <button type="submit" disabled={loading}
+              className="w-full py-2.5 btn-brand rounded-lg font-medium flex items-center justify-center gap-2">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+              {loading ? "Creating account..." : "Create Account"}
             </button>
           </form>
 
-          <p className="text-center text-slate-400 text-sm mt-6">
+          <p className="text-center text-slate-500 text-sm mt-6">
             Already have an account?{" "}
-            <Link href="/login" className="text-purple-400 hover:text-purple-300">
-              Sign in
-            </Link>
+            <Link href="/login" className="text-purple-400 hover:text-purple-300 font-medium">Sign in</Link>
           </p>
         </div>
+        <p className="text-center text-[11px] text-slate-700 mt-6">Powered by Transilience AI</p>
       </div>
     </div>
   );

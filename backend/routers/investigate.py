@@ -27,6 +27,155 @@ class InvestigateRequest(BaseModel):
 VALID_TYPES = {"url", "email", "ip", "domain", "username", "phone"}
 
 
+async def _check_whois(domain: str) -> Dict[str, Any]:
+    """WHOIS/RDAP lookup — free, no key required."""
+    try:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+            resp = await client.get(f"https://rdap.org/domain/{domain}")
+            if resp.status_code == 200:
+                data = resp.json()
+                events = data.get("events", [])
+                result = {"source": "whois", "status": "found"}
+                for event in events:
+                    action = event.get("eventAction", "")
+                    if action == "registration":
+                        result["registered"] = event.get("eventDate", "")
+                    elif action == "expiration":
+                        result["expires"] = event.get("eventDate", "")
+                    elif action == "last changed":
+                        result["updated"] = event.get("eventDate", "")
+                result["status_codes"] = data.get("status", [])
+                result["nameservers"] = [ns.get("ldhName", "") for ns in data.get("nameservers", [])]
+                entities = data.get("entities", [])
+                for ent in entities:
+                    if "registrar" in ent.get("roles", []):
+                        result["registrar"] = ent.get("handle", "") or ent.get("vcardArray", [[],[]])[1][0][-1] if ent.get("vcardArray") else ""
+                return result
+            return {"source": "whois", "status": "clean", "detail": "No RDAP data"}
+    except Exception as e:
+        return {"source": "whois", "status": "error", "detail": str(e)[:200]}
+
+
+async def _check_dns(domain: str) -> Dict[str, Any]:
+    """DNS lookup via Cloudflare DoH — free, no key required."""
+    records = {}
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            for rtype in ["A", "AAAA", "MX", "NS", "TXT"]:
+                resp = await client.get(
+                    f"https://cloudflare-dns.com/dns-query?name={domain}&type={rtype}",
+                    headers={"Accept": "application/dns-json"},
+                )
+                if resp.status_code == 200:
+                    answers = resp.json().get("Answer", [])
+                    if answers:
+                        records[rtype] = [a.get("data", "") for a in answers]
+        has_spf = any("v=spf1" in v for v in records.get("TXT", []))
+        return {
+            "source": "dns",
+            "status": "found",
+            "records": records,
+            "ip_addresses": records.get("A", []),
+            "mail_servers": records.get("MX", []),
+            "nameservers": records.get("NS", []),
+            "has_spf": has_spf,
+            "record_count": sum(len(v) for v in records.values()),
+        }
+    except Exception as e:
+        return {"source": "dns", "status": "error", "detail": str(e)[:200]}
+
+
+async def _check_ip_geolocation(ip: str) -> Dict[str, Any]:
+    """IP geolocation via ip-api.com — free, no key, 45 req/min."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"http://ip-api.com/json/{ip}?fields=status,message,country,regionName,city,zip,lat,lon,timezone,isp,org,as,query")
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("status") == "success":
+                    return {
+                        "source": "geolocation",
+                        "status": "found",
+                        "country": data.get("country", ""),
+                        "region": data.get("regionName", ""),
+                        "city": data.get("city", ""),
+                        "isp": data.get("isp", ""),
+                        "org": data.get("org", ""),
+                        "as": data.get("as", ""),
+                        "timezone": data.get("timezone", ""),
+                        "lat": data.get("lat"),
+                        "lon": data.get("lon"),
+                    }
+            return {"source": "geolocation", "status": "clean", "detail": "No data"}
+    except Exception as e:
+        return {"source": "geolocation", "status": "error", "detail": str(e)[:200]}
+
+
+async def _check_threatfox(ioc: str) -> Dict[str, Any]:
+    """ThreatFox IOC lookup by Abuse.ch — free, no key required."""
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(
+                "https://threatfox-api.abuse.ch/api/v1/",
+                json={"query": "search_ioc", "search_term": ioc},
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("query_status") == "ok" and data.get("data"):
+                    entries = data["data"]
+                    return {
+                        "source": "threatfox",
+                        "status": "found",
+                        "threat_type": entries[0].get("threat_type", ""),
+                        "malware": entries[0].get("malware_printable", ""),
+                        "confidence": entries[0].get("confidence_level", 0),
+                        "first_seen": entries[0].get("first_seen", ""),
+                        "results": [
+                            {"malware": e.get("malware_printable", ""), "threat_type": e.get("threat_type", ""),
+                             "confidence": e.get("confidence_level", 0), "tags": e.get("tags", [])}
+                            for e in entries[:5]
+                        ],
+                        "total_count": len(entries),
+                    }
+                return {"source": "threatfox", "status": "clean", "detail": "Not found in ThreatFox"}
+    except Exception as e:
+        return {"source": "threatfox", "status": "error", "detail": str(e)[:200]}
+
+
+async def _check_urlhaus(ioc: str) -> Dict[str, Any]:
+    """URLhaus lookup by Abuse.ch — free, no key required."""
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            # Try as URL first
+            resp = await client.post("https://urlhaus-api.abuse.ch/v1/url/", data={"url": ioc})
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("query_status") == "ok":
+                    return {
+                        "source": "urlhaus",
+                        "status": "found",
+                        "threat": data.get("threat", ""),
+                        "url_status": data.get("url_status", ""),
+                        "date_added": data.get("date_added", ""),
+                        "tags": data.get("tags", []),
+                    }
+            # Try as host
+            resp = await client.post("https://urlhaus-api.abuse.ch/v1/host/", data={"host": ioc})
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("query_status") == "ok" and data.get("urls"):
+                    urls = data["urls"]
+                    return {
+                        "source": "urlhaus",
+                        "status": "found",
+                        "url_count": data.get("url_count", 0),
+                        "results": [{"url": u.get("url", ""), "status": u.get("url_status", ""), "threat": u.get("threat", "")} for u in urls[:5]],
+                    }
+            return {"source": "urlhaus", "status": "clean", "detail": "Not found in URLhaus"}
+    except Exception as e:
+        return {"source": "urlhaus", "status": "error", "detail": str(e)[:200]}
+
+
 async def _check_virustotal(target_type: str, value: str) -> Dict[str, Any]:
     settings = get_settings()
     if not settings.VIRUSTOTAL_API_KEY:
@@ -214,8 +363,8 @@ async def _check_urlscan(target: str) -> Dict[str, Any]:
 
 async def _check_crtsh(domain: str) -> Dict[str, Any]:
     try:
-        async with httpx.AsyncClient(timeout=60) as client:
-            resp = await client.get(f"https://crt.sh/", params={"q": f"%.{domain}", "output": "json"})
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+            resp = await client.get(f"https://crt.sh/?q=%.{domain}&output=json")
             if resp.status_code == 200:
                 certs = resp.json()
                 subdomains = set()
@@ -382,30 +531,57 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("haveibeenpwned")
             results["github"] = await _check_github_leaks(target)
             sources_checked.append("github")
-            # Extract domain from email for additional checks
             domain = target.split("@")[-1] if "@" in target else None
             if domain:
+                results["dns"] = await _check_dns(domain)
+                sources_checked.append("dns")
+                results["whois"] = await _check_whois(domain)
+                sources_checked.append("whois")
                 results["virustotal"] = await _check_virustotal("domain", domain)
                 sources_checked.append("virustotal")
+                results["threatfox"] = await _check_threatfox(domain)
+                sources_checked.append("threatfox")
             if results["hibp"].get("status") == "breached":
                 scoring_factors["in_breach_db"] = True
                 scoring_factors["exposed_credentials"] = True
 
         elif body.target_type == "domain":
+            # Free sources (no key required)
+            results["dns"] = await _check_dns(target)
+            sources_checked.append("dns")
+            results["whois"] = await _check_whois(target)
+            sources_checked.append("whois")
+            results["crtsh"] = await _check_crtsh(target)
+            sources_checked.append("crt.sh")
+            results["threatfox"] = await _check_threatfox(target)
+            sources_checked.append("threatfox")
+            results["urlhaus"] = await _check_urlhaus(target)
+            sources_checked.append("urlhaus")
+            results["github"] = await _check_github_leaks(target)
+            sources_checked.append("github")
+            # Keyed sources (optional)
             results["virustotal"] = await _check_virustotal("domain", target)
             sources_checked.append("virustotal")
             results["urlscan"] = await _check_urlscan(target)
             sources_checked.append("urlscan")
-            results["crtsh"] = await _check_crtsh(target)
-            sources_checked.append("crt.sh")
-            results["github"] = await _check_github_leaks(target)
-            sources_checked.append("github")
             if results["virustotal"].get("malicious", 0) > 0:
                 scoring_factors["virustotal_flagged"] = True
             if results["urlscan"].get("malicious_count", 0) > 0:
                 scoring_factors["urlscan_phishing"] = True
+            if results["threatfox"].get("status") == "found":
+                scoring_factors["virustotal_flagged"] = True
+            if results["urlhaus"].get("status") == "found":
+                scoring_factors["urlscan_phishing"] = True
 
         elif body.target_type == "ip":
+            # Free sources
+            results["geolocation"] = await _check_ip_geolocation(target)
+            sources_checked.append("geolocation")
+            results["threatfox"] = await _check_threatfox(target)
+            sources_checked.append("threatfox")
+            results["urlhaus"] = await _check_urlhaus(target)
+            sources_checked.append("urlhaus")
+            # Keyed sources
             results["virustotal"] = await _check_virustotal("ip", target)
             sources_checked.append("virustotal")
             results["shodan"] = await _check_shodan(target)
@@ -416,8 +592,20 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
                 scoring_factors["virustotal_flagged"] = True
             if results["shodan"].get("open_ports_count", 0) > 10:
                 scoring_factors["exposed_credentials"] = True
+            if results["threatfox"].get("status") == "found":
+                scoring_factors["virustotal_flagged"] = True
 
         elif body.target_type == "url":
+            # Extract domain for free checks
+            from urllib.parse import urlparse
+            parsed = urlparse(target)
+            domain = parsed.hostname or target
+            results["dns"] = await _check_dns(domain)
+            sources_checked.append("dns")
+            results["threatfox"] = await _check_threatfox(target)
+            sources_checked.append("threatfox")
+            results["urlhaus"] = await _check_urlhaus(target)
+            sources_checked.append("urlhaus")
             results["virustotal"] = await _check_virustotal("url", target)
             sources_checked.append("virustotal")
             results["urlscan"] = await _check_urlscan(target)
@@ -426,6 +614,8 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
                 scoring_factors["virustotal_flagged"] = True
             if results["urlscan"].get("malicious_count", 0) > 0:
                 scoring_factors["urlscan_phishing"] = True
+            if results["threatfox"].get("status") == "found":
+                scoring_factors["virustotal_flagged"] = True
 
         elif body.target_type == "username":
             results["username"] = await _check_username(target)

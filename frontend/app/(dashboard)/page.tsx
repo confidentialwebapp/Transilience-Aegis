@@ -10,6 +10,7 @@ import {
   ShieldCheck, Target, BarChart3,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { GlobalThreatMap } from "@/components/xvigil/GlobalThreatMap";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://tai-aegis-api.onrender.com";
 async function apiFetch(path: string) {
@@ -18,26 +19,6 @@ async function apiFetch(path: string) {
   return res.json();
 }
 
-const MAP_PATHS = [
-  "M 80 85 L 105 60 L 140 55 L 170 70 L 165 95 L 145 120 L 120 130 L 100 125 L 85 110 Z",
-  "M 120 140 L 140 135 L 155 155 L 150 190 L 135 210 L 120 200 L 115 170 Z",
-  "M 225 60 L 260 55 L 280 65 L 275 85 L 255 90 L 235 85 L 225 75 Z",
-  "M 230 95 L 260 90 L 280 100 L 285 140 L 270 175 L 245 180 L 225 155 L 220 120 Z",
-  "M 280 50 L 340 40 L 380 55 L 400 75 L 390 100 L 360 110 L 320 105 L 290 90 L 275 70 Z",
-  "M 350 115 L 380 110 L 400 120 L 410 140 L 395 150 L 370 145 L 355 130 Z",
-  "M 370 170 L 405 165 L 415 180 L 405 200 L 380 200 L 365 185 Z",
-];
-const THREAT_PINS = [
-  { x: 120, y: 90, type: "ransomware" }, { x: 105, y: 80, type: "hacktivism" },
-  { x: 245, y: 72, type: "ransomware" }, { x: 255, y: 78, type: "hacktivism" },
-  { x: 310, y: 65, type: "darkweb" }, { x: 340, y: 75, type: "darkweb" },
-  { x: 290, y: 85, type: "darkweb" }, { x: 315, y: 85, type: "ransomware" },
-  { x: 355, y: 65, type: "darkweb" }, { x: 360, y: 120, type: "ransomware" },
-  { x: 345, y: 80, type: "hacktivism" }, { x: 280, y: 75, type: "ransomware" },
-  { x: 300, y: 70, type: "hacktivism" }, { x: 130, y: 155, type: "darkweb" },
-  { x: 250, y: 120, type: "hacktivism" },
-];
-const PIN_COLORS: Record<string, string> = { ransomware: "#ef4444", darkweb: "#8b5cf6", hacktivism: "#f59e0b" };
 const DONUT_COLORS = ["#8b5cf6", "#ec4899", "#ef4444", "#f97316", "#eab308", "#3b82f6", "#10b981", "#06b6d4"];
 
 export default function DashboardPage() {
@@ -121,26 +102,8 @@ export default function DashboardPage() {
       {/* Map + Feed */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Global Threat Map */}
-        <div className="lg:col-span-2 card-enterprise p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-purple-400" /><h2 className="text-sm font-semibold text-slate-300">Global Threat Map</h2></div>
-            <div className="flex items-center gap-3">
-              {[{ l: "Hacktivism", c: "#f59e0b" }, { l: "Dark Web", c: "#8b5cf6" }, { l: "Ransomware", c: "#ef4444" }].map(l => (
-                <div key={l.l} className="flex items-center gap-1"><div className="w-2 h-2 rounded-full" style={{ background: l.c }} /><span className="text-[10px] text-slate-500">{l.l}</span></div>
-              ))}
-            </div>
-          </div>
-          <svg viewBox="0 0 480 230" className="w-full rounded-lg" style={{ background: "rgba(139,92,246,0.015)" }}>
-            {[0,1,2,3,4].map(i => <line key={`h${i}`} x1="0" y1={i*57.5} x2="480" y2={i*57.5} stroke="rgba(139,92,246,0.04)" strokeWidth="0.5" />)}
-            {[0,1,2,3,4,5,6,7].map(i => <line key={`v${i}`} x1={i*60} y1="0" x2={i*60} y2="230" stroke="rgba(139,92,246,0.04)" strokeWidth="0.5" />)}
-            {MAP_PATHS.map((d, i) => <path key={i} d={d} fill="rgba(139,92,246,0.06)" stroke="rgba(139,92,246,0.12)" strokeWidth="0.5" />)}
-            {THREAT_PINS.map((pin, i) => (
-              <g key={i}>
-                <circle cx={pin.x} cy={pin.y} r="6" fill={PIN_COLORS[pin.type]} opacity="0.15"><animate attributeName="r" values="4;12;4" dur={`${2+(i%3)}s`} repeatCount="indefinite" /><animate attributeName="opacity" values="0.2;0;0.2" dur={`${2+(i%3)}s`} repeatCount="indefinite" /></circle>
-                <circle cx={pin.x} cy={pin.y} r="2.5" fill={PIN_COLORS[pin.type]} opacity="0.9" />
-              </g>
-            ))}
-          </svg>
+        <div className="lg:col-span-2">
+          <GlobalThreatMap actors={actors} ransomwareGroups={ransomware} totalFeeds={totalAlerts} />
         </div>
 
         {/* Live Feed */}

@@ -163,7 +163,7 @@ export default function VendorsPage() {
             { label: "High Risk", value: stats.high, color: "text-orange-400" },
             { label: "Avg Risk Score", value: stats.avg_risk_score, color: SCORE_COLOR(stats.avg_risk_score) },
           ].map((s) => (
-            <div key={s.label} className="bg-slate-900 rounded-xl border border-slate-700/50 p-4">
+            <div key={s.label} className="card-enterprise p-4">
               <p className="text-xs text-slate-500 uppercase">{s.label}</p>
               <p className={`text-2xl font-bold mt-1 ${s.color}`}>{typeof s.value === "number" && s.value % 1 !== 0 ? s.value.toFixed(1) : s.value}</p>
             </div>
@@ -189,7 +189,7 @@ export default function VendorsPage() {
       </div>
 
       {/* Vendor Table */}
-      <div className="bg-slate-900 rounded-xl border border-slate-700/50 overflow-hidden">
+      <div className="card-enterprise overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div>
         ) : vendors.length === 0 ? (

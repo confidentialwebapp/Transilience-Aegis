@@ -66,7 +66,7 @@ app.add_middleware(
 )
 
 from routers import assets, alerts, scans, intel, dashboard, investigate
-from routers import cve, vendors, infrastructure, ioc_watchlist
+from routers import cve, vendors, infrastructure, ioc_watchlist, threat_actors
 
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
 app.include_router(assets.router, prefix="/api/v1/assets", tags=["Assets"])
@@ -78,6 +78,7 @@ app.include_router(cve.router, prefix="/api/v1/cve", tags=["CVE Intelligence"])
 app.include_router(vendors.router, prefix="/api/v1/vendors", tags=["Vendors (SVigil)"])
 app.include_router(infrastructure.router, prefix="/api/v1/infrastructure", tags=["Infrastructure"])
 app.include_router(ioc_watchlist.router, prefix="/api/v1/ioc-watchlist", tags=["IOC Watchlist"])
+app.include_router(threat_actors.router, prefix="/api/v1/threat-actors", tags=["Threat Actors"])
 
 
 @app.get("/health")

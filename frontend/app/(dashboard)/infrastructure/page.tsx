@@ -147,7 +147,7 @@ export default function InfrastructurePage() {
       </div>
 
       {/* Domain Input */}
-      <div className="bg-slate-900 rounded-xl border border-slate-700/50 p-4">
+      <div className="card-enterprise p-4">
         <div className="flex gap-3">
           <div className="relative flex-1">
             <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -186,7 +186,7 @@ export default function InfrastructurePage() {
             { label: "DNS Records", value: overview.dns?.total || 0, icon: Wifi, color: "text-purple-400" },
             { label: "DNS Changes", value: overview.dns?.changes_detected || 0, icon: RefreshCw, color: "text-red-400" },
           ].map((s) => (
-            <div key={s.label} className="bg-slate-900 rounded-xl border border-slate-700/50 p-4">
+            <div key={s.label} className="card-enterprise p-4">
               <s.icon className={`w-5 h-5 ${s.color} mb-2`} />
               <p className="text-xs text-slate-500">{s.label}</p>
               <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
@@ -197,7 +197,7 @@ export default function InfrastructurePage() {
 
       {/* Email Security Results */}
       {emailSecurity && (
-        <div className="bg-slate-900 rounded-xl border border-slate-700/50 p-6">
+        <div className="card-enterprise p-6">
           <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2"><Mail className="w-4 h-4 text-orange-400" />Email Security Check</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div className="bg-slate-800 rounded-lg p-3">
@@ -238,7 +238,7 @@ export default function InfrastructurePage() {
 
       {/* Subdomains Tab */}
       {tab === "subdomains" && (
-        <div className="bg-slate-900 rounded-xl border border-slate-700/50 overflow-hidden">
+        <div className="card-enterprise overflow-hidden">
           {loading ? <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div> :
           subdomains.length === 0 ? <div className="p-12 text-center text-slate-500"><Globe className="w-10 h-10 mx-auto mb-3 opacity-50" /><p>No subdomains found. Enter a domain above and click Subdomains.</p></div> : (
             <table className="w-full text-sm">
@@ -270,7 +270,7 @@ export default function InfrastructurePage() {
 
       {/* SSL Tab */}
       {tab === "ssl" && (
-        <div className="bg-slate-900 rounded-xl border border-slate-700/50 overflow-hidden">
+        <div className="card-enterprise overflow-hidden">
           {loading ? <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div> :
           sslCerts.length === 0 ? <div className="p-12 text-center text-slate-500"><Lock className="w-10 h-10 mx-auto mb-3 opacity-50" /><p>No SSL certificates monitored. Enter a domain above and click SSL.</p></div> : (
             <div className="divide-y divide-slate-700/50">
@@ -312,7 +312,7 @@ export default function InfrastructurePage() {
 
       {/* DNS Tab */}
       {tab === "dns" && (
-        <div className="bg-slate-900 rounded-xl border border-slate-700/50 overflow-hidden">
+        <div className="card-enterprise overflow-hidden">
           {loading ? <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div> :
           dnsRecords.length === 0 ? <div className="p-12 text-center text-slate-500"><Wifi className="w-10 h-10 mx-auto mb-3 opacity-50" /><p>No DNS records tracked. Enter a domain above and click DNS.</p></div> : (
             <table className="w-full text-sm">

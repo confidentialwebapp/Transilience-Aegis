@@ -175,7 +175,7 @@ export default function CVEPage() {
             { label: "CISA KEV", value: stats.kev_count, color: "text-yellow-400" },
             { label: "Last 24h", value: stats.last_24h, color: "text-cyan-400" },
           ].map((s) => (
-            <div key={s.label} className="bg-slate-900 rounded-xl border border-slate-700/50 p-4">
+            <div key={s.label} className="card-enterprise p-4">
               <p className="text-xs text-slate-500 uppercase">{s.label}</p>
               <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value.toLocaleString()}</p>
             </div>
@@ -200,7 +200,7 @@ export default function CVEPage() {
 
       {/* Watchlist Tab */}
       {tab === "watchlist" && (
-        <div className="bg-slate-900 rounded-xl border border-slate-700/50 p-6 space-y-4">
+        <div className="card-enterprise p-6 space-y-4">
           <h3 className="text-lg font-semibold">Tech Stack Watchlist</h3>
           <p className="text-sm text-slate-400">Add keywords to filter CVEs relevant to your tech stack</p>
           <div className="flex gap-2">
@@ -255,7 +255,7 @@ export default function CVEPage() {
           </div>
 
           {/* CVE Table */}
-          <div className="bg-slate-900 rounded-xl border border-slate-700/50 overflow-hidden">
+          <div className="card-enterprise overflow-hidden">
             {loading ? (
               <div className="flex items-center justify-center p-12">
                 <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />

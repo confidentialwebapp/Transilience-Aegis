@@ -294,15 +294,16 @@ async def _check_shodan(ip: str) -> Dict[str, Any]:
 
 
 async def _check_greynoise(ip: str) -> Dict[str, Any]:
+    """GreyNoise Community API — works WITHOUT API key."""
     settings = get_settings()
-    if not settings.GREYNOISE_API_KEY:
-        return {"source": "greynoise", "status": "skipped", "reason": "No API key"}
-
     try:
+        headers = {}
+        if settings.GREYNOISE_API_KEY:
+            headers["key"] = settings.GREYNOISE_API_KEY
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.get(
                 f"https://api.greynoise.io/v3/community/{ip}",
-                headers={"key": settings.GREYNOISE_API_KEY},
+                headers=headers,
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -324,16 +325,17 @@ async def _check_greynoise(ip: str) -> Dict[str, Any]:
 
 
 async def _check_urlscan(target: str) -> Dict[str, Any]:
+    """URLScan.io search — works WITHOUT API key for search queries."""
     settings = get_settings()
-    if not settings.URLSCAN_API_KEY:
-        return {"source": "urlscan", "status": "skipped", "reason": "No API key"}
-
     try:
+        headers = {}
+        if settings.URLSCAN_API_KEY:
+            headers["API-Key"] = settings.URLSCAN_API_KEY
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.get(
                 "https://urlscan.io/api/v1/search/",
                 params={"q": target, "size": 5},
-                headers={"API-Key": settings.URLSCAN_API_KEY},
+                headers=headers,
             )
             if resp.status_code == 200:
                 results = resp.json().get("results", [])

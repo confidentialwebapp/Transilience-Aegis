@@ -49,9 +49,8 @@ async def _query_virustotal(ioc_type: str, value: str) -> dict:
 
 
 async def _query_otx(ioc_type: str, value: str) -> dict:
+    """AlienVault OTX — works WITHOUT API key for basic lookups."""
     settings = _get_settings()
-    if not settings.OTX_API_KEY:
-        return {}
     type_map = {"ip": "IPv4", "domain": "domain", "url": "url", "hash": "file"}
     otx_type = type_map.get(ioc_type)
     if not otx_type:
@@ -59,10 +58,13 @@ async def _query_otx(ioc_type: str, value: str) -> dict:
 
     rate_limiter = _get_rate_limiter()
     await rate_limiter.wait("otx", min_interval=1.0)
+    headers = {}
+    if settings.OTX_API_KEY:
+        headers["X-OTX-API-KEY"] = settings.OTX_API_KEY
     async with httpx.AsyncClient() as client:
         resp = await client.get(
             f"https://otx.alienvault.com/api/v1/indicators/{otx_type}/{value}/general",
-            headers={"X-OTX-API-KEY": settings.OTX_API_KEY},
+            headers=headers,
             timeout=30,
         )
         if resp.status_code == 200:
@@ -76,16 +78,17 @@ async def _query_otx(ioc_type: str, value: str) -> dict:
 
 
 async def _query_greynoise(ip: str) -> dict:
+    """GreyNoise Community — works WITHOUT API key."""
     settings = _get_settings()
-    if not settings.GREYNOISE_API_KEY:
-        return {}
-
     rate_limiter = _get_rate_limiter()
     await rate_limiter.wait("greynoise", min_interval=1.0)
+    headers = {}
+    if settings.GREYNOISE_API_KEY:
+        headers["key"] = settings.GREYNOISE_API_KEY
     async with httpx.AsyncClient() as client:
         resp = await client.get(
             f"https://api.greynoise.io/v3/community/{ip}",
-            headers={"key": settings.GREYNOISE_API_KEY},
+            headers=headers,
             timeout=30,
         )
         if resp.status_code == 200:

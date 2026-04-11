@@ -13,7 +13,7 @@ def create_app():
     from fastapi import FastAPI
     from fastapi.middleware.cors import CORSMiddleware
 
-    app = FastAPI(title="TAI-AEGIS API", version="1.0.0")
+    app = FastAPI(title="TAI-AEGIS API", version="2.0.0")
 
     frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
     app.add_middleware(
@@ -49,12 +49,17 @@ def create_app():
     logger.info("Loading routers...")
     try:
         from routers import assets, alerts, scans, intel, dashboard, investigate
+        from routers import cve, vendors, infrastructure, ioc_watchlist
         app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
         app.include_router(assets.router, prefix="/api/v1/assets", tags=["Assets"])
         app.include_router(alerts.router, prefix="/api/v1/alerts", tags=["Alerts"])
         app.include_router(scans.router, prefix="/api/v1/scans", tags=["Scans"])
         app.include_router(intel.router, prefix="/api/v1/intel", tags=["Intel"])
         app.include_router(investigate.router, prefix="/api/v1/investigate", tags=["Investigate"])
+        app.include_router(cve.router, prefix="/api/v1/cve", tags=["CVE Intelligence"])
+        app.include_router(vendors.router, prefix="/api/v1/vendors", tags=["Vendors (SVigil)"])
+        app.include_router(infrastructure.router, prefix="/api/v1/infrastructure", tags=["Infrastructure"])
+        app.include_router(ioc_watchlist.router, prefix="/api/v1/ioc-watchlist", tags=["IOC Watchlist"])
         logger.info("All routers loaded successfully.")
     except Exception as e:
         import traceback

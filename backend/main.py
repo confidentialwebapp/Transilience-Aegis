@@ -24,7 +24,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting TAI-AEGIS API...")
+    logger.info("Starting Transilience AI API...")
     if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_KEY:
         try:
             from db import get_client
@@ -37,18 +37,18 @@ async def lifespan(app: FastAPI):
         start_scheduler()
     except Exception as e:
         logger.warning(f"Scheduler start deferred: {e}")
-    logger.info("TAI-AEGIS API ready.")
+    logger.info("Transilience AI API ready.")
     yield
     try:
         from scheduler import stop_scheduler
         stop_scheduler()
     except Exception:
         pass
-    logger.info("TAI-AEGIS API shutdown.")
+    logger.info("Transilience AI API shutdown.")
 
 
 app = FastAPI(
-    title="TAI-AEGIS Threat Intelligence API",
+    title="Transilience AI Threat Intelligence API",
     version="1.0.0",
     description="External Threat Intelligence & Digital Risk Monitoring Platform",
     lifespan=lifespan,
@@ -83,7 +83,7 @@ app.include_router(threat_actors.router, prefix="/api/v1/threat-actors", tags=["
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "tai-aegis-api", "version": "2.0.0"}
+    return {"status": "healthy", "service": "transilience-api", "version": "2.0.0"}
 
 
 @app.exception_handler(Exception)

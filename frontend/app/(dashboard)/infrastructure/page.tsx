@@ -142,7 +142,7 @@ export default function InfrastructurePage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2"><Network className="w-6 h-6 text-cyan-400" />Infrastructure Monitor</h1>
+        <h1 className="text-2xl font-bold flex items-center gap-2"><Network className="w-6 h-6 text-purple-400" />Infrastructure Monitor</h1>
         <p className="text-sm text-slate-400 mt-1">Subdomain enumeration, SSL/TLS monitoring, DNS change tracking</p>
       </div>
 
@@ -153,11 +153,11 @@ export default function InfrastructurePage() {
             <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input value={scanDomain} onChange={(e) => setScanDomain(e.target.value)}
               placeholder="Enter domain to scan (e.g. example.com)"
-              className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+              className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
               onKeyDown={(e) => e.key === "Enter" && triggerSubdomainEnum()} />
           </div>
           <button onClick={triggerSubdomainEnum} disabled={scanning}
-            className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-800 text-white rounded-lg text-sm font-medium flex items-center gap-2">
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white rounded-lg text-sm font-medium flex items-center gap-2">
             {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}Subdomains
           </button>
           <button onClick={triggerSSLCheck} disabled={scanning}
@@ -179,7 +179,7 @@ export default function InfrastructurePage() {
       {overview && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
-            { label: "Subdomains", value: overview.subdomains?.total || 0, icon: Globe, color: "text-cyan-400" },
+            { label: "Subdomains", value: overview.subdomains?.total || 0, icon: Globe, color: "text-purple-400" },
             { label: "New Subs", value: overview.subdomains?.new || 0, icon: AlertTriangle, color: "text-yellow-400" },
             { label: "SSL Certs", value: overview.ssl?.total || 0, icon: Lock, color: "text-emerald-400" },
             { label: "Expiring (30d)", value: overview.ssl?.expiring_30d || 0, icon: Clock, color: "text-orange-400" },
@@ -230,7 +230,7 @@ export default function InfrastructurePage() {
           { key: "dns", label: "DNS Records" },
         ] as const).map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${tab === t.key ? "bg-cyan-600 text-white" : "text-slate-400 hover:text-white"}`}>
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${tab === t.key ? "bg-purple-600 text-white" : "text-slate-400 hover:text-white"}`}>
             {t.label}
           </button>
         ))}
@@ -239,7 +239,7 @@ export default function InfrastructurePage() {
       {/* Subdomains Tab */}
       {tab === "subdomains" && (
         <div className="card-enterprise overflow-hidden">
-          {loading ? <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div> :
+          {loading ? <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div> :
           subdomains.length === 0 ? <div className="p-12 text-center text-slate-500"><Globe className="w-10 h-10 mx-auto mb-3 opacity-50" /><p>No subdomains found. Enter a domain above and click Subdomains.</p></div> : (
             <table className="w-full text-sm">
               <thead className="bg-slate-800/50">
@@ -250,7 +250,7 @@ export default function InfrastructurePage() {
               <tbody className="divide-y divide-slate-700/50">
                 {subdomains.map((s) => (
                   <tr key={s.id} className="hover:bg-slate-800/50">
-                    <td className="p-3 font-mono text-xs text-cyan-400">
+                    <td className="p-3 font-mono text-xs text-purple-400">
                       {s.subdomain}
                       {s.is_new && <span className="ml-2 px-1.5 py-0.5 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 rounded text-[10px] font-medium">NEW</span>}
                     </td>
@@ -271,7 +271,7 @@ export default function InfrastructurePage() {
       {/* SSL Tab */}
       {tab === "ssl" && (
         <div className="card-enterprise overflow-hidden">
-          {loading ? <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div> :
+          {loading ? <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div> :
           sslCerts.length === 0 ? <div className="p-12 text-center text-slate-500"><Lock className="w-10 h-10 mx-auto mb-3 opacity-50" /><p>No SSL certificates monitored. Enter a domain above and click SSL.</p></div> : (
             <div className="divide-y divide-slate-700/50">
               {sslCerts.map((cert) => {
@@ -283,7 +283,7 @@ export default function InfrastructurePage() {
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm text-cyan-400">{cert.domain}</span>
+                          <span className="font-mono text-sm text-purple-400">{cert.domain}</span>
                           {cert.grade && <span className={`px-2 py-0.5 rounded text-xs font-bold ${cert.grade?.startsWith("A") ? "bg-green-500/10 text-green-400" : cert.grade?.startsWith("B") ? "bg-yellow-500/10 text-yellow-400" : "bg-red-500/10 text-red-400"}`}>{cert.grade}</span>}
                           {cert.is_wildcard && <span className="px-2 py-0.5 rounded text-xs bg-purple-500/10 text-purple-400">Wildcard</span>}
                           {cert.has_weak_cipher && <span className="px-2 py-0.5 rounded text-xs bg-red-500/10 text-red-400">Weak Cipher</span>}
@@ -313,7 +313,7 @@ export default function InfrastructurePage() {
       {/* DNS Tab */}
       {tab === "dns" && (
         <div className="card-enterprise overflow-hidden">
-          {loading ? <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div> :
+          {loading ? <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div> :
           dnsRecords.length === 0 ? <div className="p-12 text-center text-slate-500"><Wifi className="w-10 h-10 mx-auto mb-3 opacity-50" /><p>No DNS records tracked. Enter a domain above and click DNS.</p></div> : (
             <table className="w-full text-sm">
               <thead className="bg-slate-800/50">

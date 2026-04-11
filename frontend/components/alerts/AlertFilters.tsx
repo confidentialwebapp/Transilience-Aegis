@@ -10,7 +10,7 @@ interface Props {
 }
 
 const SELECT_CLASS =
-  "bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500";
+  "bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500";
 
 export function AlertFilters({ filters, onChange }: Props) {
   return (

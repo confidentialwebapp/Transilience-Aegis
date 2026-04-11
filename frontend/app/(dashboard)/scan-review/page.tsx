@@ -117,9 +117,9 @@ export default function ScanReviewPage() {
             <button
               key={mod}
               onClick={() => triggerScan(mod)}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-cyan-500/30 hover:bg-slate-800 transition-colors"
+              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-purple-500/30 hover:bg-slate-800 transition-colors"
             >
-              <Play className="w-4 h-4 text-cyan-400" />
+              <Play className="w-4 h-4 text-purple-400" />
               <span className="text-xs text-slate-300 capitalize text-center">
                 {mod.replace(/_/g, " ")}
               </span>
@@ -151,7 +151,7 @@ export default function ScanReviewPage() {
 
           {loading ? (
             <div className="flex justify-center py-8">
-              <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
+              <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
             </div>
           ) : filteredScans.length === 0 ? (
             <div className="text-sm text-slate-500 text-center py-8">
@@ -165,7 +165,7 @@ export default function ScanReviewPage() {
                   onClick={() => loadScanAlerts(scan)}
                   className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
                     selectedScan?.id === scan.id
-                      ? "bg-cyan-500/10 border border-cyan-500/30"
+                      ? "bg-purple-500/10 border border-purple-500/30"
                       : "bg-slate-800/50 hover:bg-slate-800 border border-transparent"
                   }`}
                 >
@@ -233,7 +233,7 @@ export default function ScanReviewPage() {
               {/* Findings */}
               {loadingAlerts ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
+                  <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
                 </div>
               ) : scanAlerts.length === 0 ? (
                 <div className="text-sm text-slate-500 text-center py-8">
@@ -275,7 +275,7 @@ export default function ScanReviewPage() {
                               href={alert.source_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300"
+                              className="flex items-center gap-1 text-purple-400 hover:text-purple-300"
                             >
                               Source <ExternalLink className="w-3 h-3" />
                             </a>

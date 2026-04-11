@@ -79,7 +79,7 @@ export default function ThreatsPage() {
 
       {loading ? (
         <div className="flex justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+          <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -128,7 +128,7 @@ export default function ThreatsPage() {
                             href={alert.source_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300"
+                            className="flex items-center gap-1 text-purple-400 hover:text-purple-300"
                           >
                             Source <ExternalLink className="w-3 h-3" />
                           </a>

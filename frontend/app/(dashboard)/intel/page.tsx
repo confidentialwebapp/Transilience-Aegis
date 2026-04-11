@@ -66,14 +66,14 @@ export default function IntelPage() {
               value={value}
               onChange={(e) => setValue(e.target.value)}
               placeholder="Enter IP, domain, hash, URL, or email..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+              className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
               required
             />
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center justify-center gap-2 px-6 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-800 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center justify-center gap-2 px-6 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white rounded-lg text-sm font-medium transition-colors"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             Search
@@ -91,7 +91,7 @@ export default function IntelPage() {
           ) : (
             Object.entries(results).map(([source, data]) => (
               <div key={source} className="bg-slate-900 rounded-xl border border-slate-700/50 p-6">
-                <h3 className="text-sm font-semibold text-cyan-400 uppercase mb-3">{source}</h3>
+                <h3 className="text-sm font-semibold text-purple-400 uppercase mb-3">{source}</h3>
                 <pre className="text-xs bg-slate-800 rounded-lg p-4 overflow-x-auto max-h-80 text-slate-300">
                   {JSON.stringify(data, null, 2)}
                 </pre>

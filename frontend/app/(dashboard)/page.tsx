@@ -25,7 +25,7 @@ function StatCard({ label, value, icon: Icon, color, trend, subtitle }: {
   label: string; value: string | number; icon: any; color: string; trend?: string; subtitle?: string;
 }) {
   return (
-    <div className="stat-card p-4 group hover:border-cyan-500/10 transition-all">
+    <div className="stat-card p-4 group hover:border-purple-500/10 transition-all">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">{label}</p>
@@ -126,10 +126,10 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6 animate-fade-up">
         <div className="flex items-center gap-3">
-          <Shield className="w-6 h-6 text-cyan-400" />
-          <h1 className="text-xl font-bold text-gradient-cyan">Command Center</h1>
+          <Shield className="w-6 h-6 text-purple-400" />
+          <h1 className="text-xl font-bold text-gradient-brand">Command Center</h1>
           <div className="flex items-center gap-2 ml-4">
-            <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
             <span className="text-xs text-slate-500">Connecting to threat intelligence pipeline...</span>
           </div>
         </div>
@@ -157,7 +157,7 @@ export default function DashboardPage() {
         </div>
         <h2 className="text-lg font-semibold text-slate-200 mb-2">Pipeline Connection Failed</h2>
         <p className="text-sm text-slate-500 max-w-md mb-4">{error}. The backend is warming up.</p>
-        <button onClick={() => window.location.reload()} className="flex items-center gap-2 px-4 py-2 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-lg text-sm font-medium hover:bg-cyan-500/20 transition-all">
+        <button onClick={() => window.location.reload()} className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-500/20 transition-all">
           <RefreshCw className="w-4 h-4" />Retry Connection
         </button>
       </div>
@@ -174,8 +174,8 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/15 to-blue-600/15 border border-cyan-500/10 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-cyan-400" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/15 to-pink-600/15 border border-purple-500/10 flex items-center justify-center">
+            <Shield className="w-5 h-5 text-purple-400" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">Command Center</h1>
@@ -183,7 +183,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-cyan-500/[0.06]">
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-purple-500/[0.06]">
             <Clock className="w-3.5 h-3.5 text-slate-500" />
             <span className="text-[11px] text-slate-500">Last 90 days</span>
           </div>
@@ -195,7 +195,7 @@ export default function DashboardPage() {
         <StatCard label="Total Threats" value={totalAlerts} icon={ShieldAlert} color="text-red-400" subtitle="All severities" />
         <StatCard label="Critical" value={criticalAlerts} icon={Zap} color="text-red-500" subtitle="Immediate action" />
         <StatCard label="High Risk" value={highAlerts} icon={AlertTriangle} color="text-orange-400" subtitle="Needs review" />
-        <StatCard label="Assets Monitored" value={totalAssets} icon={Target} color="text-cyan-400" subtitle="Active tracking" />
+        <StatCard label="Assets Monitored" value={totalAssets} icon={Target} color="text-purple-400" subtitle="Active tracking" />
         <StatCard label="CVEs Tracked" value={cveStats?.total ?? 0} icon={Bug} color="text-purple-400" subtitle={`${cveStats?.critical ?? 0} critical`} />
         <StatCard label="Vendors" value={vendorStats?.total ?? 0} icon={Building2} color="text-emerald-400" subtitle={`${vendorStats?.critical ?? 0} critical risk`} />
       </div>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
       <div className="card-enterprise p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Cpu className="w-4 h-4 text-cyan-400" />
+            <Cpu className="w-4 h-4 text-purple-400" />
             <h2 className="text-sm font-semibold text-slate-300">AI Intelligence Pipeline</h2>
           </div>
           <div className="flex items-center gap-2">
@@ -214,7 +214,7 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center justify-between px-4">
           <PipelineStage label="Ingest" icon={Database} status="9 Sources" color="#06b6d4" />
-          <div className="flex-1 mx-2 h-px bg-gradient-to-r from-cyan-500/20 to-blue-500/20 relative">
+          <div className="flex-1 mx-2 h-px bg-gradient-to-r from-purple-500/20 to-blue-500/20 relative">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
               <ArrowRight className="w-3 h-3 text-cyan-500/30" />
             </div>
@@ -270,7 +270,7 @@ export default function DashboardPage() {
           <div className="card-enterprise p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-slate-300">Threat Distribution by Module</h2>
-              <Link href="/alerts" className="text-[11px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
+              <Link href="/alerts" className="text-[11px] text-purple-400 hover:text-purple-300 flex items-center gap-1">
                 View All <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
@@ -299,10 +299,10 @@ export default function DashboardPage() {
             <div className="grid grid-cols-3 gap-3">
               <div className="stat-card p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Globe className="w-4 h-4 text-cyan-400" />
+                  <Globe className="w-4 h-4 text-purple-400" />
                   <span className="text-[11px] text-slate-500 uppercase">Subdomains</span>
                 </div>
-                <p className="text-xl font-bold text-cyan-400">{infraStats.subdomains?.total ?? 0}</p>
+                <p className="text-xl font-bold text-purple-400">{infraStats.subdomains?.total ?? 0}</p>
                 {(infraStats.subdomains?.new ?? 0) > 0 && (
                   <p className="text-[10px] text-yellow-400 mt-1">+{infraStats.subdomains.new} new detected</p>
                 )}
@@ -389,7 +389,7 @@ export default function DashboardPage() {
                 ))
               )}
             </div>
-            <Link href="/alerts" className="flex items-center justify-center gap-1 mt-4 py-2 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[11px] text-slate-500 hover:text-cyan-400 hover:border-cyan-500/10 transition-all">
+            <Link href="/alerts" className="flex items-center justify-center gap-1 mt-4 py-2 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[11px] text-slate-500 hover:text-purple-400 hover:border-purple-500/10 transition-all">
               View All Alerts <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -400,7 +400,7 @@ export default function DashboardPage() {
             <div className="space-y-2">
               {[
                 { label: "Run IOC Lookup", href: "/intel", icon: Fingerprint, color: "text-blue-400" },
-                { label: "Investigate Target", href: "/investigate", icon: Target, color: "text-cyan-400" },
+                { label: "Investigate Target", href: "/investigate", icon: Target, color: "text-purple-400" },
                 { label: "Sync CVE Feed", href: "/cve", icon: Bug, color: "text-purple-400" },
                 { label: "Scan Vendor", href: "/vendors", icon: Building2, color: "text-emerald-400" },
               ].map((action) => (

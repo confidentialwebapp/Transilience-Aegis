@@ -67,7 +67,7 @@ export default function AlertsPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+          <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">

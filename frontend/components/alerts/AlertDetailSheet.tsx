@@ -73,7 +73,7 @@ export function AlertDetailSheet({ alert, onClose, onStatusChange }: Props) {
                 href={alert.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-cyan-400 hover:text-cyan-300"
+                className="inline-flex items-center gap-1 text-sm text-purple-400 hover:text-purple-300"
               >
                 {alert.source_url}
                 <ExternalLink className="w-3 h-3" />

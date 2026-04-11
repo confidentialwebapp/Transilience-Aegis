@@ -127,7 +127,7 @@ export default function DarkWebPage() {
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
               placeholder="Search dark web findings..."
-              className="w-full pl-10 pr-4 py-2.5 bg-white/[0.02] border border-cyan-500/[0.06] rounded-lg text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-purple-500/20 transition-all"
+              className="w-full pl-10 pr-4 py-2.5 bg-white/[0.02] border border-purple-500/[0.06] rounded-lg text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-purple-500/20 transition-all"
             />
           </div>
         </div>
@@ -135,7 +135,7 @@ export default function DarkWebPage() {
 
       {/* Alert Feed */}
       <div className="card-enterprise overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-cyan-500/[0.06]">
+        <div className="flex items-center justify-between p-4 border-b border-purple-500/[0.06]">
           <div className="flex items-center gap-2">
             <Radio className="w-4 h-4 text-purple-400" />
             <h2 className="text-sm font-semibold text-slate-300">Dark Web Intelligence Feed</h2>
@@ -184,7 +184,7 @@ export default function DarkWebPage() {
                         <span className="text-[10px] text-slate-600">Risk: <span className={alert.risk_score >= 80 ? "text-red-400 font-bold" : alert.risk_score >= 60 ? "text-orange-400 font-bold" : "text-yellow-400"}>{alert.risk_score}</span>/100</span>
                       )}
                       {alert.source_url && (
-                        <a href={alert.source_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
+                        <a href={alert.source_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1">
                           <ExternalLink className="w-3 h-3" />Source
                         </a>
                       )}

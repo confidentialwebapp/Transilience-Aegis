@@ -13,7 +13,7 @@ def create_app():
     from fastapi import FastAPI
     from fastapi.middleware.cors import CORSMiddleware
 
-    app = FastAPI(title="TAI-AEGIS API", version="2.0.0")
+    app = FastAPI(title="Transilience AI API", version="2.0.0")
 
     frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
     app.add_middleware(
@@ -26,7 +26,7 @@ def create_app():
 
     @app.get("/health")
     async def health():
-        return {"status": "healthy", "service": "tai-aegis-api"}
+        return {"status": "healthy", "service": "transilience-api"}
 
     @app.get("/debug/imports")
     async def debug_imports():

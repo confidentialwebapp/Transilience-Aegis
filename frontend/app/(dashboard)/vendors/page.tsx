@@ -144,11 +144,11 @@ export default function VendorsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Building2 className="w-6 h-6 text-cyan-400" />SVigil - Vendor Registry</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2"><Building2 className="w-6 h-6 text-purple-400" />SVigil - Vendor Registry</h1>
           <p className="text-sm text-slate-400 mt-1">Supply chain & vendor risk monitoring</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium">
+          <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium">
             <Plus className="w-4 h-4" />Add Vendor
           </button>
         </div>
@@ -176,7 +176,7 @@ export default function VendorsPage() {
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Search vendors..." className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500" />
+            placeholder="Search vendors..." className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500" />
         </div>
         <select value={riskTier} onChange={(e) => { setRiskTier(e.target.value); setPage(1); }}
           className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200">
@@ -191,7 +191,7 @@ export default function VendorsPage() {
       {/* Vendor Table */}
       <div className="card-enterprise overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div>
+          <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div>
         ) : vendors.length === 0 ? (
           <div className="p-12 text-center text-slate-500">
             <Building2 className="w-10 h-10 mx-auto mb-3 opacity-50" />
@@ -232,7 +232,7 @@ export default function VendorsPage() {
                   <td className="p-4">
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => triggerScan(v.id)} disabled={scanning === v.id}
-                        className="p-2 bg-slate-800 hover:bg-cyan-600/20 rounded-lg text-slate-400 hover:text-cyan-400 transition-colors">
+                        className="p-2 bg-slate-800 hover:bg-purple-600/20 rounded-lg text-slate-400 hover:text-purple-400 transition-colors">
                         {scanning === v.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scan className="w-4 h-4" />}
                       </button>
                       <button onClick={() => deleteVendor(v.id)}
@@ -274,12 +274,12 @@ export default function VendorsPage() {
               <div>
                 <label className="text-xs text-slate-400 uppercase">Name *</label>
                 <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-cyan-500" />
+                  className="w-full mt-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500" />
               </div>
               <div>
                 <label className="text-xs text-slate-400 uppercase">Domain</label>
                 <input value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })} placeholder="example.com"
-                  className="w-full mt-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-cyan-500" />
+                  className="w-full mt-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -309,15 +309,15 @@ export default function VendorsPage() {
                 <div>
                   <label className="text-xs text-slate-400 uppercase">Contact Name</label>
                   <input value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-cyan-500" />
+                    className="w-full mt-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500" />
                 </div>
                 <div>
                   <label className="text-xs text-slate-400 uppercase">Contact Email</label>
                   <input value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} type="email"
-                    className="w-full mt-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-cyan-500" />
+                    className="w-full mt-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500" />
                 </div>
               </div>
-              <button onClick={createVendor} className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium">Add Vendor</button>
+              <button onClick={createVendor} className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium">Add Vendor</button>
             </div>
           </div>
         </div>
@@ -330,7 +330,7 @@ export default function VendorsPage() {
             <div className="flex items-start justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold">{showDetail.name}</h2>
-                {showDetail.domain && <p className="text-sm text-cyan-400">{showDetail.domain}</p>}
+                {showDetail.domain && <p className="text-sm text-purple-400">{showDetail.domain}</p>}
               </div>
               <button onClick={() => setShowDetail(null)} className="p-2 text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
@@ -371,7 +371,7 @@ export default function VendorsPage() {
                     </div>
                     {scan.results && Object.keys(scan.results).length > 0 && (
                       <details className="mt-2">
-                        <summary className="text-xs text-cyan-400 cursor-pointer">View Results ({scan.findings_count} findings)</summary>
+                        <summary className="text-xs text-purple-400 cursor-pointer">View Results ({scan.findings_count} findings)</summary>
                         <pre className="mt-2 text-xs bg-slate-900 rounded p-3 overflow-x-auto max-h-60 text-slate-400">
                           {JSON.stringify(scan.results, null, 2)}
                         </pre>
@@ -383,7 +383,7 @@ export default function VendorsPage() {
               </div>
             )}
             <button onClick={() => triggerScan(showDetail.id)} disabled={scanning === showDetail.id}
-              className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-800 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+              className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2">
               {scanning === showDetail.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scan className="w-4 h-4" />}
               Run Full Security Scan
             </button>

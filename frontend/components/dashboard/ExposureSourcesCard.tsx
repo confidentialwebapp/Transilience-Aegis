@@ -38,8 +38,8 @@ export function ExposureSourcesCard({ totalMentions, suspects, incidents, byModu
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-cyan-500/10">
-            <Eye className="w-5 h-5 text-cyan-400" />
+          <div className="p-2 rounded-lg bg-purple-500/10">
+            <Eye className="w-5 h-5 text-purple-400" />
           </div>
           <div>
             <div className="text-2xl font-bold">{totalMentions.toLocaleString()}</div>

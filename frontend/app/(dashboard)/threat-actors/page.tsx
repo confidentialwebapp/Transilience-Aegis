@@ -103,10 +103,10 @@ export default function ThreatActorsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-[#0a0f1e] rounded-lg p-1 border border-cyan-500/[0.06] w-fit">
+      <div className="flex gap-1 bg-[#0a0f1e] rounded-lg p-1 border border-purple-500/[0.06] w-fit">
         {(["actors", "ransomware"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${tab === t ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20" : "text-slate-500 hover:text-white"}`}>
+            className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${tab === t ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" : "text-slate-500 hover:text-white"}`}>
             {t === "actors" ? "Threat Actors" : "Ransomware Groups"}
           </button>
         ))}
@@ -117,7 +117,7 @@ export default function ThreatActorsPage() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
         <input value={search} onChange={(e) => setSearch(e.target.value)}
           placeholder="Search threat actors, groups, TTPs..."
-          className="w-full pl-10 pr-4 py-2.5 bg-white/[0.02] border border-cyan-500/[0.06] rounded-lg text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-red-500/20 transition-all" />
+          className="w-full pl-10 pr-4 py-2.5 bg-white/[0.02] border border-purple-500/[0.06] rounded-lg text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-red-500/20 transition-all" />
       </div>
 
       {/* Actors Tab */}
@@ -211,7 +211,7 @@ export default function ThreatActorsPage() {
       {/* Actor Detail Modal */}
       {selectedActor && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedActor(null)}>
-          <div className="bg-[#0d1321] rounded-xl border border-cyan-500/10 max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[#0d1321] rounded-xl border border-purple-500/10 max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold text-red-400">{selectedActor.name}</h2>

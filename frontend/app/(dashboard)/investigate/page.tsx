@@ -107,7 +107,7 @@ function SourceResult({ name, data }: { name: string; data: any }) {
           {data.ports && data.ports.length > 0 && (
             <div className="text-sm">
               <span className="text-slate-400">Open ports:</span>{" "}
-              <span className="text-cyan-400">{data.ports.join(", ")}</span>
+              <span className="text-purple-400">{data.ports.join(", ")}</span>
             </div>
           )}
           {data.vulns && data.vulns.length > 0 && (
@@ -121,7 +121,7 @@ function SourceResult({ name, data }: { name: string; data: any }) {
               <span className="text-slate-400">{data.subdomain_count} subdomains found:</span>
               <div className="mt-1 flex flex-wrap gap-1">
                 {data.subdomains.slice(0, 20).map((s: string) => (
-                  <span key={s} className="text-xs px-2 py-0.5 rounded bg-slate-900 text-cyan-400">{s}</span>
+                  <span key={s} className="text-xs px-2 py-0.5 rounded bg-slate-900 text-purple-400">{s}</span>
                 ))}
                 {data.subdomain_count > 20 && (
                   <span className="text-xs text-slate-500">+{data.subdomain_count - 20} more</span>
@@ -132,7 +132,7 @@ function SourceResult({ name, data }: { name: string; data: any }) {
           {data.found_on && data.found_on.length > 0 && (
             <div className="text-sm">
               <span className="text-slate-400">Found on:</span>{" "}
-              <span className="text-cyan-400">{data.found_on.join(", ")}</span>
+              <span className="text-purple-400">{data.found_on.join(", ")}</span>
             </div>
           )}
           {data.results && data.results.length > 0 && (
@@ -145,7 +145,7 @@ function SourceResult({ name, data }: { name: string; data: any }) {
                   </div>
                   {(r.url || r.html_url) && (
                     <a href={r.url || r.html_url} target="_blank" rel="noopener noreferrer"
-                       className="text-cyan-400 hover:text-cyan-300 flex-shrink-0">
+                       className="text-purple-400 hover:text-purple-300 flex-shrink-0">
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
@@ -160,7 +160,7 @@ function SourceResult({ name, data }: { name: string; data: any }) {
           )}
           {data.classification && (
             <div className="text-sm">
-              Classification: <span className="text-cyan-400">{data.classification}</span>
+              Classification: <span className="text-purple-400">{data.classification}</span>
             </div>
           )}
           {data.reason && (
@@ -261,7 +261,7 @@ export default function InvestigatePage() {
                   onClick={() => setTargetType(t.value)}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                     targetType === t.value
-                      ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/30"
+                      ? "bg-purple-500/10 text-purple-400 border border-purple-500/30"
                       : "bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/50"
                   }`}
                 >
@@ -280,14 +280,14 @@ export default function InvestigatePage() {
               value={targetValue}
               onChange={(e) => setTargetValue(e.target.value)}
               placeholder={currentType?.placeholder || "Enter target..."}
-              className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+              className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-cyan-500"
               required
             />
           </div>
           <button
             type="submit"
             disabled={scanning}
-            className="flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-800 text-white rounded-lg text-sm font-medium transition-colors min-w-[140px] justify-center"
+            className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white rounded-lg text-sm font-medium transition-colors min-w-[140px] justify-center"
           >
             {scanning ? (
               <>
@@ -304,7 +304,7 @@ export default function InvestigatePage() {
         </div>
         {scanning && (
           <div className="mt-3 flex items-center gap-2 text-xs text-slate-400">
-            <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
             Querying OSINT sources... This may take 10-30 seconds.
           </div>
         )}
@@ -316,7 +316,7 @@ export default function InvestigatePage() {
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-lg font-semibold">
-                Results for <span className="text-cyan-400">{result.target_value}</span>
+                Results for <span className="text-purple-400">{result.target_value}</span>
               </h2>
               <div className="flex items-center gap-3 mt-1">
                 <span className="text-xs text-slate-400 capitalize">{result.target_type}</span>
@@ -349,7 +349,7 @@ export default function InvestigatePage() {
 
         {loadingHistory ? (
           <div className="flex justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
+            <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
           </div>
         ) : history.length === 0 ? (
           <div className="text-sm text-slate-500 text-center py-8">

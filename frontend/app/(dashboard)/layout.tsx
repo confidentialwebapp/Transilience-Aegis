@@ -2,16 +2,16 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { getOrgId } from "@/lib/api";
 import { useAlerts } from "@/hooks/useAlerts";
 import {
-  Shield, LayoutDashboard, AlertTriangle, Box, Bell, Search as SearchIcon,
-  Settings, ChevronLeft, ChevronRight, Crosshair, Database, Menu, Scan,
-  Bug, Building2, Network, Eye, Globe, Cpu, BarChart3, FileText,
-  Radio, Skull, Fingerprint, Radar, Brain, ChevronDown, Zap, Activity,
-  Lock,
+  LayoutDashboard, AlertTriangle, Box, Bell, Search as SearchIcon,
+  Settings, ChevronLeft, ChevronRight, Database, Menu, Scan,
+  Bug, Building2, Network, Eye, Skull, Fingerprint, Brain, Activity,
+  Radio, FileText, Radar,
 } from "lucide-react";
 
 const NAV_SECTIONS = [
@@ -71,7 +71,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#030712]">
+    <div className="flex h-screen overflow-hidden" style={{ background: "#07040B" }}>
       {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden" onClick={() => setMobileOpen(false)} />
@@ -79,19 +79,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed lg:static inset-y-0 left-0 z-50 flex flex-col bg-[#0a0f1e] border-r border-cyan-500/[0.06] transition-all duration-300",
+        "fixed lg:static inset-y-0 left-0 z-50 flex flex-col border-r transition-all duration-300",
         collapsed ? "w-[68px]" : "w-64",
         mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-      )}>
+      )} style={{ background: "#0d0a14", borderColor: "rgba(139,92,246,0.06)" }}>
         {/* Logo */}
-        <div className="flex items-center gap-3 px-4 h-16 border-b border-cyan-500/[0.06]">
-          <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/20 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-cyan-400" />
+        <div className="flex items-center gap-3 px-4 h-16" style={{ borderBottom: "1px solid rgba(139,92,246,0.06)" }}>
+          <div className="flex-shrink-0 w-9 h-9 flex items-center justify-center">
+            <Image src="/logo.png" alt="Transilience AI" width={36} height={36} className="object-contain" />
           </div>
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-base font-bold text-gradient-cyan tracking-tight">TAI-AEGIS</span>
-              <span className="text-[10px] text-cyan-500/50 font-medium tracking-[0.2em] -mt-0.5">THREAT INTELLIGENCE</span>
+              <span className="text-[15px] font-bold text-gradient-brand tracking-tight">Transilience</span>
+              <span className="text-[9px] font-semibold tracking-[0.2em] -mt-0.5" style={{ color: "rgba(139,92,246,0.5)" }}>THREAT INTELLIGENCE</span>
             </div>
           )}
         </div>
@@ -102,7 +102,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div key={section.title}>
               {!collapsed && (
                 <div className="px-3 mb-1.5">
-                  <span className="text-[10px] font-semibold text-slate-600 tracking-[0.15em]">{section.title}</span>
+                  <span className="text-[10px] font-semibold tracking-[0.15em]" style={{ color: "#4a3870" }}>{section.title}</span>
                 </div>
               )}
               <div className="space-y-0.5">
@@ -116,14 +116,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       className={cn(
                         "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 group relative",
                         active
-                          ? "bg-cyan-500/[0.08] text-cyan-400"
-                          : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.02]"
+                          ? "text-purple-300"
+                          : "text-slate-500 hover:text-slate-300"
                       )}
+                      style={active ? { background: "rgba(139,92,246,0.08)" } : undefined}
                     >
                       {active && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-cyan-400" />
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" style={{ background: "linear-gradient(180deg, #8b5cf6, #ec4899)" }} />
                       )}
-                      <item.icon className={cn("w-[18px] h-[18px] flex-shrink-0", active ? "text-cyan-400" : "text-slate-600 group-hover:text-slate-400")} />
+                      <item.icon className={cn("w-[18px] h-[18px] flex-shrink-0", active ? "text-purple-400" : "text-slate-600 group-hover:text-slate-400")} />
                       {!collapsed && (
                         <>
                           <span className="flex-1">{item.label}</span>
@@ -155,10 +156,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* System status */}
         {!collapsed && (
-          <div className="px-3 py-3 border-t border-cyan-500/[0.06]">
-            <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-emerald-500/[0.05] border border-emerald-500/10">
+          <div className="px-3 py-3" style={{ borderTop: "1px solid rgba(139,92,246,0.06)" }}>
+            <div className="flex items-center gap-2 px-2 py-2 rounded-lg" style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.1)" }}>
               <div className="status-live" />
-              <span className="text-[11px] text-emerald-400/80 font-medium">All Systems Operational</span>
+              <span className="text-[11px] font-medium" style={{ color: "rgba(16,185,129,0.8)" }}>All Systems Operational</span>
             </div>
           </div>
         )}
@@ -166,7 +167,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Collapse toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="hidden lg:flex items-center justify-center h-10 border-t border-cyan-500/[0.06] text-slate-600 hover:text-slate-400 transition-colors"
+          className="hidden lg:flex items-center justify-center h-10 text-slate-600 hover:text-slate-400 transition-colors"
+          style={{ borderTop: "1px solid rgba(139,92,246,0.06)" }}
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -175,7 +177,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top navbar */}
-        <header className="flex items-center gap-4 h-14 px-4 lg:px-6 bg-[#0a0f1e]/80 border-b border-cyan-500/[0.06] backdrop-blur-xl z-30">
+        <header className="flex items-center gap-4 h-14 px-4 lg:px-6 backdrop-blur-xl z-30"
+          style={{ background: "rgba(13,10,20,0.8)", borderBottom: "1px solid rgba(139,92,246,0.06)" }}>
           <button onClick={() => setMobileOpen(true)} className="lg:hidden p-2 text-slate-500 hover:text-slate-300">
             <Menu className="w-5 h-5" />
           </button>
@@ -183,49 +186,46 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Search */}
           <div className="flex-1 max-w-2xl">
             <div className="relative group">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors" />
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-purple-400 transition-colors" />
               <input
                 type="text"
                 placeholder="Search threats, IOCs, CVEs, assets..."
-                className="w-full pl-10 pr-4 py-2 bg-white/[0.02] border border-cyan-500/[0.06] rounded-lg text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-cyan-500/20 focus:bg-white/[0.04] transition-all"
+                className="w-full pl-10 pr-4 py-2 rounded-lg text-sm text-slate-300 placeholder-slate-600 focus:outline-none transition-all"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.06)" }}
               />
-              <kbd className="hidden sm:inline absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] text-slate-600 bg-white/[0.03] border border-slate-700/50 rounded font-mono">/</kbd>
+              <kbd className="hidden sm:inline absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] text-slate-600 rounded font-mono" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(100,100,120,0.2)" }}>/</kbd>
             </div>
           </div>
 
           {/* Right side */}
           <div className="flex items-center gap-2">
             {/* Pipeline status */}
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-cyan-500/[0.06]">
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.06)" }}>
               <Activity className="w-3.5 h-3.5 text-emerald-400" />
               <span className="text-[11px] text-slate-500 font-medium">Pipeline</span>
               <span className="text-[11px] text-emerald-400 font-bold">ACTIVE</span>
             </div>
 
             {/* Notifications */}
-            <button
-              onClick={clearUnread}
-              className="relative p-2 text-slate-500 hover:text-slate-300 transition-colors rounded-lg hover:bg-white/[0.02]"
-            >
+            <button onClick={clearUnread} className="relative p-2 text-slate-500 hover:text-slate-300 transition-colors rounded-lg hover:bg-white/[0.02]">
               <Bell className="w-[18px] h-[18px]" />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center text-[9px] font-bold rounded-full bg-red-500 text-white ring-2 ring-[#0a0f1e]">
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center text-[9px] font-bold rounded-full bg-red-500 text-white" style={{ boxShadow: "0 0 0 2px #0d0a14" }}>
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
             </button>
 
             {/* User */}
-            <div className="flex items-center gap-2 pl-2 border-l border-cyan-500/[0.06]">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500/20 to-purple-600/20 border border-cyan-500/10 flex items-center justify-center text-cyan-400 text-sm font-bold">
+            <div className="flex items-center gap-2 pl-2" style={{ borderLeft: "1px solid rgba(139,92,246,0.06)" }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-purple-300 text-sm font-bold"
+                style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(236,72,153,0.15))", border: "1px solid rgba(139,92,246,0.1)" }}>
                 A
               </div>
-              {!collapsed && (
-                <div className="hidden sm:block">
-                  <p className="text-xs font-medium text-slate-300">Analyst</p>
-                  <p className="text-[10px] text-slate-600">Security Ops</p>
-                </div>
-              )}
+              <div className="hidden sm:block">
+                <p className="text-xs font-medium text-slate-300">Analyst</p>
+                <p className="text-[10px] text-slate-600">Security Ops</p>
+              </div>
             </div>
           </div>
         </header>

@@ -190,7 +190,7 @@ export default function NexusAIPage() {
                   </div>
                   <div className="stat-card p-3">
                     <p className="text-[10px] text-slate-500">Surface Findings</p>
-                    <p className="text-lg font-bold text-cyan-400">{riskData.infra?.subdomains?.total || 0}</p>
+                    <p className="text-lg font-bold text-purple-400">{riskData.infra?.subdomains?.total || 0}</p>
                   </div>
                 </div>
               </div>
@@ -255,10 +255,10 @@ export default function NexusAIPage() {
                 </div>
               )}
               {riskData.attack_surface >= 30 && (
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-cyan-500/[0.03] border border-cyan-500/10">
-                  <Globe className="w-4 h-4 text-cyan-400 mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-purple-500/[0.03] border border-purple-500/10">
+                  <Globe className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-xs font-medium text-cyan-400">Attack Surface Monitoring</p>
+                    <p className="text-xs font-medium text-purple-400">Attack Surface Monitoring</p>
                     <p className="text-[11px] text-slate-500 mt-0.5">Review newly discovered subdomains and expiring SSL certificates. DNS changes detected that may indicate domain hijacking.</p>
                   </div>
                 </div>

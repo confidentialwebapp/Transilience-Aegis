@@ -92,7 +92,7 @@ export default function AssetsPage() {
         <div className="flex gap-2">
           <button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium transition-colors"
           >
             <Plus className="w-4 h-4" />
             Add Asset
@@ -118,7 +118,7 @@ export default function AssetsPage() {
               value={newValue}
               onChange={(e) => setNewValue(e.target.value)}
               placeholder="e.g., example.com"
-              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
               required
             />
             <input
@@ -126,12 +126,12 @@ export default function AssetsPage() {
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               placeholder="Label (optional)"
-              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
             />
             <button
               type="submit"
               disabled={adding}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-800 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white rounded-lg text-sm font-medium transition-colors"
             >
               {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               Add
@@ -145,7 +145,7 @@ export default function AssetsPage() {
         <button
           onClick={() => setFilterType("")}
           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-            !filterType ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/30" : "bg-slate-800 text-slate-400 hover:text-slate-200"
+            !filterType ? "bg-purple-500/10 text-purple-400 border border-purple-500/30" : "bg-slate-800 text-slate-400 hover:text-slate-200"
           }`}
         >
           All
@@ -155,7 +155,7 @@ export default function AssetsPage() {
             key={t.value}
             onClick={() => setFilterType(t.value)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              filterType === t.value ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/30" : "bg-slate-800 text-slate-400 hover:text-slate-200"
+              filterType === t.value ? "bg-purple-500/10 text-purple-400 border border-purple-500/30" : "bg-slate-800 text-slate-400 hover:text-slate-200"
             }`}
           >
             {t.label}
@@ -181,7 +181,7 @@ export default function AssetsPage() {
       {/* Assets table */}
       {loading ? (
         <div className="flex justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+          <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
         </div>
       ) : !error && (
         <div className="bg-slate-900 rounded-xl border border-slate-700/50 overflow-hidden">

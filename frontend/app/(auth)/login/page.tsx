@@ -72,10 +72,10 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 mb-4">
-            <Shield className="w-8 h-8 text-cyan-400" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-cyan-500/10 border border-purple-500/20 mb-4">
+            <Shield className="w-8 h-8 text-purple-400" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-100">TAI-AEGIS</h1>
+          <h1 className="text-2xl font-bold text-slate-100">Transilience</h1>
           <p className="text-slate-400 mt-1">Threat Intelligence Platform</p>
         </div>
 
@@ -97,7 +97,7 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
                   placeholder="you@company.com"
                   required
                 />
@@ -112,7 +112,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
                   placeholder="Enter your password"
                   required
                 />
@@ -122,7 +122,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-800 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-cyan-800 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               {loading ? "Signing in..." : "Sign in"}
@@ -147,7 +147,7 @@ export default function LoginPage() {
 
           <p className="text-center text-slate-400 text-sm mt-6">
             Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-cyan-400 hover:text-cyan-300">
+            <Link href="/register" className="text-purple-400 hover:text-cyan-300">
               Register
             </Link>
           </p>

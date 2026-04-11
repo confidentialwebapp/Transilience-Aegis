@@ -151,14 +151,14 @@ export default function CVEPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Bug className="w-6 h-6 text-cyan-400" />CVE Intelligence Feed
+            <Bug className="w-6 h-6 text-purple-400" />CVE Intelligence Feed
           </h1>
           <p className="text-sm text-slate-400 mt-1">Real-time vulnerability tracking from NVD, CISA KEV & EPSS</p>
         </div>
         <button
           onClick={triggerSync}
           disabled={syncing}
-          className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-800 text-white rounded-lg text-sm font-medium transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white rounded-lg text-sm font-medium transition-colors"
         >
           {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           Sync NVD
@@ -173,7 +173,7 @@ export default function CVEPage() {
             { label: "Critical", value: stats.critical, color: "text-red-400" },
             { label: "High", value: stats.high, color: "text-orange-400" },
             { label: "CISA KEV", value: stats.kev_count, color: "text-yellow-400" },
-            { label: "Last 24h", value: stats.last_24h, color: "text-cyan-400" },
+            { label: "Last 24h", value: stats.last_24h, color: "text-purple-400" },
           ].map((s) => (
             <div key={s.label} className="card-enterprise p-4">
               <p className="text-xs text-slate-500 uppercase">{s.label}</p>
@@ -190,7 +190,7 @@ export default function CVEPage() {
             key={t}
             onClick={() => { setTab(t); setPage(1); if (t === "kev") setKevOnly(true); else setKevOnly(false); }}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              tab === t ? "bg-cyan-600 text-white" : "text-slate-400 hover:text-white"
+              tab === t ? "bg-purple-600 text-white" : "text-slate-400 hover:text-white"
             }`}
           >
             {t === "feed" ? "All CVEs" : t === "kev" ? "CISA KEV" : "Watchlist"}
@@ -209,9 +209,9 @@ export default function CVEPage() {
               onChange={(e) => setNewKeyword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addKeyword()}
               placeholder="e.g. apache, nginx, react, postgresql..."
-              className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+              className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
             />
-            <button onClick={addKeyword} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium">
+            <button onClick={addKeyword} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium">
               <Plus className="w-4 h-4" />
             </button>
           </div>
@@ -238,7 +238,7 @@ export default function CVEPage() {
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 placeholder="Search CVE ID or description..."
-                className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
               />
             </div>
             <select
@@ -258,7 +258,7 @@ export default function CVEPage() {
           <div className="card-enterprise overflow-hidden">
             {loading ? (
               <div className="flex items-center justify-center p-12">
-                <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+                <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
               </div>
             ) : cves.length === 0 ? (
               <div className="p-12 text-center text-slate-500">
@@ -276,7 +276,7 @@ export default function CVEPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-sm font-bold text-cyan-400">{cve.cve_id}</span>
+                          <span className="font-mono text-sm font-bold text-purple-400">{cve.cve_id}</span>
                           <span className={`px-2 py-0.5 rounded text-xs font-medium border ${SEVERITY_COLORS[cve.severity] || SEVERITY_COLORS.none}`}>
                             {cve.severity?.toUpperCase()}
                           </span>
@@ -339,7 +339,7 @@ export default function CVEPage() {
           <div className="bg-slate-900 rounded-xl border border-slate-700 max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h2 className="text-xl font-bold font-mono text-cyan-400">{selectedCve.cve_id}</h2>
+                <h2 className="text-xl font-bold font-mono text-purple-400">{selectedCve.cve_id}</h2>
                 <div className="flex items-center gap-2 mt-2">
                   <span className={`px-2 py-1 rounded text-xs font-medium border ${SEVERITY_COLORS[selectedCve.severity]}`}>
                     {selectedCve.severity?.toUpperCase()}
@@ -384,7 +384,7 @@ export default function CVEPage() {
                   <h4 className="text-sm font-semibold text-slate-300 mb-2">References</h4>
                   <div className="space-y-1">
                     {selectedCve.ref_urls.slice(0, 5).map((ref, i) => (
-                      <a key={i} href={ref.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300">
+                      <a key={i} href={ref.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300">
                         <ExternalLink className="w-3 h-3" />{ref.url}
                       </a>
                     ))}

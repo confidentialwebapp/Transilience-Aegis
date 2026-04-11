@@ -38,7 +38,7 @@ export function TopAssetsTable({ assets }: Props) {
                   <div className="text-sm truncate">{asset.value}</div>
                   <div className="h-1.5 mt-1 rounded-full bg-slate-800 overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500"
+                      className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500"
                       style={{ width: `${widthPct}%` }}
                     />
                   </div>

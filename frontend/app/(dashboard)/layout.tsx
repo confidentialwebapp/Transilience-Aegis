@@ -12,7 +12,7 @@ import {
   LayoutDashboard, AlertTriangle, Box, Bell, Search as SearchIcon,
   Settings, ChevronLeft, ChevronRight, Database, Menu, Scan,
   Bug, Building2, Network, Eye, Skull, Fingerprint, Brain, Activity,
-  Radio, FileText, Radar, LogOut, User, ChevronDown,
+  Radio, FileText, Radar, LogOut, User, ChevronDown, BarChart3,
 } from "lucide-react";
 
 const NAV_SECTIONS = [
@@ -36,7 +36,8 @@ const NAV_SECTIONS = [
   {
     title: "ATTACK SURFACE",
     items: [
-      { href: "/infrastructure", label: "Surface Monitor", icon: Radar, badge: null },
+      { href: "/attack-surface", label: "Surface Map", icon: Radar, badge: null },
+      { href: "/infrastructure", label: "Infra Monitor", icon: Network, badge: null },
       { href: "/assets", label: "Asset Inventory", icon: Box, badge: null },
       { href: "/scan-review", label: "Scan Review", icon: FileText, badge: null },
     ],
@@ -45,6 +46,7 @@ const NAV_SECTIONS = [
     title: "DIGITAL RISK",
     items: [
       { href: "/alerts", label: "Alert Center", icon: AlertTriangle, badge: null },
+      { href: "/exposure", label: "Exposure", icon: BarChart3, badge: null },
       { href: "/vendors", label: "Supply Chain", icon: Building2, badge: null },
       { href: "/nexus-ai", label: "Nexus AI", icon: Brain, badge: "AI" },
     ],

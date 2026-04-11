@@ -145,26 +145,57 @@ async def sync_mitre_actors():
 # Ransomware.live — Free
 # ---------------------------------------------------------------------------
 async def fetch_ransomware_groups() -> list:
-    """Fetch active ransomware groups from Ransomware.live API."""
+    """Fetch active ransomware groups from ransomwatch GitHub data."""
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.get("https://api.ransomware.live/groups")
-            if resp.status_code == 200:
-                groups = resp.json()
-                return [
-                    {
-                        "name": g.get("name", ""),
-                        "url": g.get("url", ""),
-                        "last_seen": g.get("last_seen", ""),
-                        "victim_count": len(g.get("locations", [])),
-                        "status": "active" if g.get("available") else "inactive",
-                        "description": g.get("description", ""),
-                    }
-                    for g in groups
-                    if g.get("name")
-                ]
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+            # Fetch groups
+            groups_resp = await client.get(
+                "https://raw.githubusercontent.com/joshhighet/ransomwatch/main/groups.json"
+            )
+            # Fetch recent posts for victim counts
+            posts_resp = await client.get(
+                "https://raw.githubusercontent.com/joshhighet/ransomwatch/main/posts.json"
+            )
+
+            groups_data = groups_resp.json() if groups_resp.status_code == 200 else []
+            posts_data = posts_resp.json() if posts_resp.status_code == 200 else []
+
+            # Count victims per group
+            victim_counts: dict[str, int] = {}
+            last_seen_map: dict[str, str] = {}
+            for post in posts_data:
+                gname = post.get("group_name", "")
+                if gname:
+                    victim_counts[gname] = victim_counts.get(gname, 0) + 1
+                    post_date = post.get("discovered", post.get("published", ""))
+                    if post_date and (gname not in last_seen_map or post_date > last_seen_map[gname]):
+                        last_seen_map[gname] = post_date
+
+            result = []
+            for g in groups_data:
+                name = g.get("name", "")
+                if not name:
+                    continue
+                locations = g.get("locations", [])
+                # Determine status from locations
+                is_available = any(loc.get("available", False) for loc in locations) if locations else False
+                # Get onion URLs
+                urls = [loc.get("slug", "") for loc in locations if loc.get("slug")]
+
+                result.append({
+                    "name": name,
+                    "url": urls[0] if urls else "",
+                    "last_seen": last_seen_map.get(name, ""),
+                    "victim_count": victim_counts.get(name, 0),
+                    "status": "active" if is_available else "inactive",
+                    "description": f"Ransomware group with {victim_counts.get(name, 0)} known victims",
+                })
+
+            # Sort by victim count descending
+            result.sort(key=lambda x: x["victim_count"], reverse=True)
+            return result
     except Exception as e:
-        logger.error("Ransomware.live fetch failed: %s", e)
+        logger.error("Ransomware data fetch failed: %s", e)
     return []
 
 

@@ -184,6 +184,9 @@ frontend/out/
 frontend/.env
 frontend/.env.local
 frontend/tsconfig.tsbuildinfo
+frontend/.claude/
+frontend/package-lock.json
+.vercel/
 
 # Backend
 backend/.env

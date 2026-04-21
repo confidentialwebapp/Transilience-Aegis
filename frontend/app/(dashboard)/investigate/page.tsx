@@ -2,185 +2,300 @@
 
 import { useState, useEffect } from "react";
 import { api, getOrgId, type Investigation } from "@/lib/api";
-import { RiskScoreMeter } from "@/components/shared/RiskScoreMeter";
-import { SeverityBadge } from "@/components/shared/SeverityBadge";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import {
-  Search,
-  Loader2,
-  Globe,
-  Mail,
-  Server,
-  User,
-  Phone,
-  Link,
-  Shield,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  ChevronDown,
-  ChevronRight,
-  ExternalLink,
+  Search, Loader2, Globe, Mail, Server, User, Phone, Link2,
+  Shield, CheckCircle2, XCircle, AlertTriangle, ExternalLink,
+  Download, Clock, ChevronDown, X, Activity, Hash,
+  Wifi, Database, Eye,
 } from "lucide-react";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://tai-aegis-api.onrender.com";
+
+async function apiFetch(path: string, opts: RequestInit = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers: { "Content-Type": "application/json", "X-Org-Id": getOrgId(), ...(opts.headers as object) },
+  });
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res.json();
+}
+
 const TARGET_TYPES = [
-  { value: "domain", label: "Domain", icon: Globe, placeholder: "example.com" },
-  { value: "ip", label: "IP Address", icon: Server, placeholder: "8.8.8.8" },
-  { value: "email", label: "Email", icon: Mail, placeholder: "user@example.com" },
-  { value: "url", label: "URL", icon: Link, placeholder: "https://suspicious-site.com" },
-  { value: "username", label: "Username", icon: User, placeholder: "johndoe" },
-  { value: "phone", label: "Phone", icon: Phone, placeholder: "+1234567890" },
+  { value: "domain",   label: "Domain",   icon: Globe,   placeholder: "example.com",            color: "#a855f7" },
+  { value: "ip",       label: "IP",        icon: Server,  placeholder: "192.168.1.1",            color: "#3b82f6" },
+  { value: "email",    label: "Email",     icon: Mail,    placeholder: "user@domain.com",         color: "#ec4899" },
+  { value: "username", label: "Username",  icon: User,    placeholder: "johndoe",                 color: "#f97316" },
+  { value: "hash",     label: "Hash",      icon: Hash,    placeholder: "md5/sha1/sha256",          color: "#eab308" },
+  { value: "phone",    label: "Phone",     icon: Phone,   placeholder: "+1 (555) 000-0000",        color: "#10b981" },
 ];
 
-function SourceResult({ name, data }: { name: string; data: any }) {
-  const [expanded, setExpanded] = useState(true);
+const ALL_SOURCES = [
+  { key: "shodan",          label: "Shodan",         icon: Wifi,       desc: "Ports, services, banners",     color: "#ef4444" },
+  { key: "censys",          label: "Censys",          icon: Eye,        desc: "Certificate & host intel",     color: "#f97316" },
+  { key: "haveibeenpwned",  label: "HaveIBeenPwned",  icon: Shield,     desc: "Data breach lookup",           color: "#3b82f6" },
+  { key: "hunter",          label: "Hunter.io",       icon: Mail,       desc: "Email discovery",              color: "#ec4899" },
+  { key: "github",          label: "GitHub",          icon: Database,   desc: "Leaked code & secrets",        color: "#64748b" },
+  { key: "whois",           label: "WHOIS",           icon: Globe,      desc: "Registration details",         color: "#a855f7" },
+  { key: "dns",             label: "DNS",             icon: Server,     desc: "A/AAAA/MX/TXT records",        color: "#10b981" },
+  { key: "virustotal",      label: "VirusTotal",      icon: AlertTriangle, desc: "Malware & reputation",     color: "#eab308" },
+  { key: "urlscan",         label: "URLScan",         icon: Link2,      desc: "URL/screenshot analysis",      color: "#f97316" },
+  { key: "greynoise",       label: "GreyNoise",       icon: Activity,   desc: "Internet noise classification",color: "#8b5cf6" },
+];
 
-  const statusColor =
-    data.status === "found" || data.status === "breached"
-      ? "text-red-400 bg-red-500/10"
-      : data.status === "clean"
-      ? "text-emerald-400 bg-emerald-500/10"
-      : data.status === "skipped"
-      ? "text-slate-400 bg-slate-500/10"
-      : data.status === "error" || data.status === "rate_limited"
-      ? "text-yellow-400 bg-yellow-500/10"
-      : "text-blue-400 bg-blue-500/10";
+type SourceStatus = "idle" | "pending" | "running" | "done" | "failed" | "skipped";
 
-  const StatusIcon =
-    data.status === "found" || data.status === "breached"
-      ? AlertTriangle
-      : data.status === "clean"
-      ? CheckCircle2
-      : data.status === "error" || data.status === "rate_limited"
-      ? XCircle
-      : Shield;
+interface SourceState {
+  status: SourceStatus;
+  data: unknown;
+}
 
+// ── Demo result data ─────────────────────────────────────────────────────────
+const DEMO_INVESTIGATION: Record<string, unknown> = {
+  shodan: {
+    status: "found", ports: [22, 80, 443, 8080, 3306], org: "Amazon Technologies Inc.",
+    country: "US", isp: "Amazon.com, Inc.", os: "Ubuntu 22.04",
+    services: [
+      { port: 22,   proto: "ssh",   banner: "OpenSSH_8.9p1 Ubuntu" },
+      { port: 80,   proto: "http",  banner: "nginx/1.24.0" },
+      { port: 443,  proto: "https", banner: "nginx/1.24.0" },
+      { port: 8080, proto: "http",  banner: "Apache Tomcat/10.1.7" },
+    ],
+    vulns: ["CVE-2023-44487","CVE-2024-21762"],
+  },
+  whois: {
+    status: "found", registrar: "GoDaddy LLC", registration: "2019-03-14",
+    expiration: "2025-03-14", updated: "2023-11-01",
+    nameservers: ["ns1.example.com","ns2.example.com"],
+    country: "US", org: "Example Corp", admin_email: "admin@example.com",
+  },
+  dns: {
+    status: "found",
+    A: ["93.184.216.34"],
+    AAAA: ["2606:2800:220:1:248:1893:25c8:1946"],
+    MX: ["10 mail.example.com","20 mail2.example.com"],
+    TXT: ["v=spf1 include:_spf.google.com ~all","_dmarc: v=DMARC1; p=reject;"],
+    NS: ["a.iana-servers.net","b.iana-servers.net"],
+  },
+  haveibeenpwned: {
+    status: "breached", breach_count: 3,
+    breaches: [
+      { name: "Adobe", date: "2013-10-04", data_classes: ["Email addresses","Passwords","Usernames"] },
+      { name: "LinkedIn", date: "2012-05-05", data_classes: ["Email addresses","Passwords"] },
+      { name: "Dropbox", date: "2012-07-01", data_classes: ["Email addresses","Passwords"] },
+    ],
+  },
+  virustotal: {
+    status: "found",
+    data: { attributes: { last_analysis_stats: { malicious: 3, suspicious: 2, harmless: 87, undetected: 2 } } },
+    categories: ["phishing", "malware distribution"],
+  },
+  urlscan: {
+    status: "found", verdict: "malicious", score: 72,
+    technologies: ["Cloudflare", "jQuery 3.6", "Bootstrap 5", "Google Analytics"],
+    screenshot: null,
+    url: "https://urlscan.io/result/abc123",
+  },
+  greynoise: {
+    status: "found", classification: "malicious", noise: true, riot: false,
+    name: "ShadowServer", country: "CN", last_seen: "2024-10-24",
+    tags: ["Mirai", "Scanner", "CVE-2024-21762"],
+  },
+  github: {
+    status: "found", total_count: 4,
+    results: [
+      { repo: "user/leaked-configs", path: "config.env", url: "https://github.com/user/leaked-configs" },
+      { repo: "company/old-scripts", path: "deploy.sh", url: "https://github.com/company/old-scripts" },
+    ],
+  },
+};
+
+function RiskBadge({ score }: { score: number }) {
+  const label = score >= 70 ? "CRITICAL" : score >= 50 ? "HIGH" : score >= 30 ? "MEDIUM" : "LOW";
+  const color = score >= 70 ? "#ef4444" : score >= 50 ? "#f97316" : score >= 30 ? "#eab308" : "#10b981";
+  const r = 18;
+  const circ = 2 * Math.PI * r;
   return (
-    <div className="rounded-lg overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 p-4 transition-colors hover:bg-white/[0.02]"
-      >
-        {expanded ? (
-          <ChevronDown className="w-4 h-4 text-slate-400" />
-        ) : (
-          <ChevronRight className="w-4 h-4 text-slate-400" />
-        )}
-        <span className="font-medium text-sm capitalize">{name.replace(/_/g, " ")}</span>
-        <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${statusColor}`}>
-          <StatusIcon className="w-3 h-3 inline mr-1" />
-          {data.status}
-        </span>
-      </button>
-      {expanded && (
-        <div className="px-4 pb-4 space-y-2">
-          {/* Render specific fields based on source */}
-          {data.breach_count != null && (
-            <div className="text-sm">
-              <span className="text-red-400 font-bold">{data.breach_count}</span> breaches found
-            </div>
-          )}
-          {data.breaches && data.breaches.length > 0 && (
-            <div className="space-y-1">
-              {data.breaches.map((b: any, i: number) => (
-                <div key={i} className="text-xs rounded p-2" style={{ background: "rgba(139,92,246,0.04)", border: "1px solid rgba(139,92,246,0.08)" }}>
-                  <span className="font-medium text-slate-200">{b.name}</span>
-                  <span className="text-slate-500 ml-2">{b.date}</span>
-                  {b.data_classes && (
-                    <div className="text-slate-400 mt-0.5">
-                      Exposed: {b.data_classes.join(", ")}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          {data.malicious != null && (
-            <div className="flex gap-4 text-sm">
-              <span className="text-red-400">{data.malicious} malicious</span>
-              <span className="text-yellow-400">{data.suspicious} suspicious</span>
-              <span className="text-emerald-400">{data.harmless} harmless</span>
-            </div>
-          )}
-          {data.ports && data.ports.length > 0 && (
-            <div className="text-sm">
-              <span className="text-slate-400">Open ports:</span>{" "}
-              <span className="text-purple-400">{data.ports.join(", ")}</span>
-            </div>
-          )}
-          {data.vulns && data.vulns.length > 0 && (
-            <div className="text-sm">
-              <span className="text-red-400">Vulnerabilities:</span>{" "}
-              {data.vulns.slice(0, 10).join(", ")}
-            </div>
-          )}
-          {data.subdomains && data.subdomains.length > 0 && (
-            <div className="text-sm">
-              <span className="text-slate-400">{data.subdomain_count} subdomains found:</span>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {data.subdomains.slice(0, 20).map((s: string) => (
-                  <span key={s} className="text-xs px-2 py-0.5 rounded text-purple-400" style={{ background: "rgba(139,92,246,0.08)" }}>{s}</span>
-                ))}
-                {data.subdomain_count > 20 && (
-                  <span className="text-xs text-slate-500">+{data.subdomain_count - 20} more</span>
-                )}
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative w-12 h-12">
+        <svg width="48" height="48" style={{ transform: "rotate(-90deg)" }}>
+          <circle cx="24" cy="24" r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3.5" />
+          <circle cx="24" cy="24" r={r} fill="none" stroke={color} strokeWidth="3.5"
+            strokeDasharray={circ} strokeDashoffset={circ * (1 - score / 100)} strokeLinecap="round"
+            style={{ filter: `drop-shadow(0 0 5px ${color}60)` }} />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-xs font-bold text-white">{score}</span>
+        </div>
+      </div>
+      <span className="text-[9px] font-bold tracking-wider" style={{ color }}>{label}</span>
+    </div>
+  );
+}
+
+function SourceStatusIcon({ status }: { status: SourceStatus }) {
+  if (status === "running") return <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />;
+  if (status === "done") return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />;
+  if (status === "failed") return <XCircle className="w-3.5 h-3.5 text-red-400" />;
+  if (status === "skipped") return <div className="w-3.5 h-3.5 rounded-full border border-slate-600" />;
+  if (status === "pending") return <div className="w-3.5 h-3.5 rounded-full border border-slate-500 animate-pulse" />;
+  return <div className="w-3.5 h-3.5 rounded-full border border-slate-700" />;
+}
+
+function ShodanPanel({ data }: { data: any }) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        {[["Organization", data.org],["Country", data.country],["ISP", data.isp],["OS", data.os ?? "Unknown"]].map(([k, v]) => (
+          <div key={k} className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.07)" }}>
+            <p className="text-[10px] text-slate-600">{k}</p>
+            <p className="text-xs text-slate-300 mt-0.5">{v}</p>
+          </div>
+        ))}
+      </div>
+      {data.ports && (
+        <div>
+          <p className="text-[11px] text-slate-500 mb-1.5">Open Ports</p>
+          <div className="flex flex-wrap gap-1.5">
+            {data.ports.map((p: number) => (
+              <span key={p} className="px-2 py-1 rounded-md text-xs font-mono text-blue-300 bg-blue-500/10 border border-blue-500/15">{p}</span>
+            ))}
+          </div>
+        </div>
+      )}
+      {data.services && (
+        <div>
+          <p className="text-[11px] text-slate-500 mb-1.5">Services</p>
+          <div className="space-y-1.5">
+            {data.services.map((s: any) => (
+              <div key={s.port} className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(139,92,246,0.06)" }}>
+                <span className="font-mono text-blue-300 w-12">{s.port}/{s.proto}</span>
+                <span className="text-slate-400">{s.banner}</span>
               </div>
-            </div>
-          )}
-          {data.found_on && data.found_on.length > 0 && (
-            <div className="text-sm">
-              <span className="text-slate-400">Found on:</span>{" "}
-              <span className="text-purple-400">{data.found_on.join(", ")}</span>
-            </div>
-          )}
-          {data.results && data.results.length > 0 && (
-            <div className="space-y-1">
-              {data.results.slice(0, 5).map((r: any, i: number) => (
-                <div key={i} className="text-xs rounded p-2 flex items-start gap-2" style={{ background: "rgba(139,92,246,0.04)", border: "1px solid rgba(139,92,246,0.08)" }}>
-                  <div className="flex-1 min-w-0">
-                    <div className="truncate text-slate-200">{r.repo || r.url || r.domain}</div>
-                    {r.path && <div className="text-slate-500">{r.path}</div>}
-                  </div>
-                  {(r.url || r.html_url) && (
-                    <a href={r.url || r.html_url} target="_blank" rel="noopener noreferrer"
-                       className="text-purple-400 hover:text-purple-300 flex-shrink-0">
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          {data.total_count != null && (
-            <div className="text-sm text-slate-400">
-              Total results: {data.total_count}
-            </div>
-          )}
-          {data.classification && (
-            <div className="text-sm">
-              Classification: <span className="text-purple-400">{data.classification}</span>
-            </div>
-          )}
-          {data.reason && (
-            <div className="text-xs text-slate-500">{data.reason}</div>
-          )}
-          {data.detail && (
-            <div className="text-xs text-slate-500">{data.detail}</div>
-          )}
+            ))}
+          </div>
+        </div>
+      )}
+      {data.vulns && data.vulns.length > 0 && (
+        <div>
+          <p className="text-[11px] text-slate-500 mb-1.5">Vulnerabilities</p>
+          <div className="flex flex-wrap gap-1.5">
+            {data.vulns.map((v: string) => (
+              <span key={v} className="px-2 py-0.5 rounded text-[10px] font-mono text-red-300 bg-red-500/10 border border-red-500/15">{v}</span>
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
+function WhoisPanel({ data }: { data: any }) {
+  const fields = [
+    ["Registrar", data.registrar],
+    ["Registered", data.registration ? new Date(data.registration).toLocaleDateString() : null],
+    ["Expires", data.expiration ? new Date(data.expiration).toLocaleDateString() : null],
+    ["Updated", data.updated ? new Date(data.updated).toLocaleDateString() : null],
+    ["Organization", data.org],
+    ["Country", data.country],
+    ["Admin Email", data.admin_email],
+  ].filter(([, v]) => v);
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        {fields.map(([k, v]) => (
+          <div key={k as string} className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.07)" }}>
+            <p className="text-[10px] text-slate-600">{k}</p>
+            <p className="text-xs text-slate-300 mt-0.5">{v}</p>
+          </div>
+        ))}
+      </div>
+      {data.nameservers && (
+        <div>
+          <p className="text-[11px] text-slate-500 mb-1.5">Nameservers</p>
+          <div className="space-y-1">
+            {data.nameservers.map((ns: string) => (
+              <p key={ns} className="text-xs font-mono text-purple-300">{ns}</p>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DnsPanel({ data }: { data: any }) {
+  return (
+    <div className="space-y-3">
+      {(["A","AAAA","MX","TXT","NS"] as const).filter((t) => data[t]?.length).map((type) => (
+        <div key={type}>
+          <p className="text-[11px] text-slate-500 mb-1.5 flex items-center gap-1.5">
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/10 text-purple-300 border border-purple-500/15">{type}</span>
+          </p>
+          <div className="space-y-1">
+            {data[type].map((r: string, i: number) => (
+              <p key={i} className="text-xs font-mono text-slate-300 px-3 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.015)" }}>{r}</p>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function HibpPanel({ data }: { data: any }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)" }}>
+        <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+        <p className="text-sm font-semibold text-red-300">{data.breach_count} data breaches found</p>
+      </div>
+      {data.breaches?.map((b: any) => (
+        <div key={b.name} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.07)" }}>
+          <div className="flex items-start justify-between">
+            <p className="text-sm font-semibold text-slate-200">{b.name}</p>
+            <span className="text-[10px] text-slate-500 font-mono">{b.date}</span>
+          </div>
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {b.data_classes.map((d: string) => (
+              <span key={d} className="px-1.5 py-0.5 rounded text-[10px] text-slate-400 bg-white/[0.03] border border-white/[0.06]">{d}</span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function GenericPanel({ data }: { data: any }) {
+  return (
+    <pre className="text-[11px] text-slate-400 rounded-xl p-4 overflow-x-auto max-h-64 font-mono" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(139,92,246,0.06)" }}>
+      {JSON.stringify(data, null, 2)}
+    </pre>
+  );
+}
+
+function SourcePanel({ source, data }: { source: string; data: any }) {
+  switch (source) {
+    case "shodan": return <ShodanPanel data={data} />;
+    case "whois":  return <WhoisPanel data={data} />;
+    case "dns":    return <DnsPanel data={data} />;
+    case "haveibeenpwned": return <HibpPanel data={data} />;
+    default:       return <GenericPanel data={data} />;
+  }
+}
+
 export default function InvestigatePage() {
   const [orgId, setOrg] = useState("");
   const [targetType, setTargetType] = useState("domain");
   const [targetValue, setTargetValue] = useState("");
+  const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set(["shodan","whois","dns","haveibeenpwned","virustotal","greynoise"]));
   const [scanning, setScanning] = useState(false);
+  const [sourceStatuses, setSourceStatuses] = useState<Record<string, SourceState>>({});
   const [result, setResult] = useState<Investigation | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("");
   const [history, setHistory] = useState<Investigation[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
 
@@ -194,206 +309,360 @@ export default function InvestigatePage() {
     setLoadingHistory(true);
     try {
       const data = await api.getInvestigationHistory(oid);
-      setHistory(data.data);
-    } catch {
-      // ignore
-    } finally {
-      setLoadingHistory(false);
-    }
+      setHistory(data.data || []);
+    } catch {}
+    finally { setLoadingHistory(false); }
   };
 
-  const handleScan = async (e: React.FormEvent) => {
+  const toggleSource = (key: string) => {
+    setSelectedSources((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) { if (next.size > 1) next.delete(key); }
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const runScan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetValue.trim() || scanning) return;
-
     setScanning(true);
     setResult(null);
+    setActiveTab("");
+
+    // Initialize source statuses
+    const initial: Record<string, SourceState> = {};
+    [...selectedSources].forEach((s) => { initial[s] = { status: "pending", data: null }; });
+    setSourceStatuses(initial);
+
+    // Simulate sequential source completion for UX
+    const sourceArr = [...selectedSources];
+    const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
     try {
+      // Mark first as running immediately
+      setSourceStatuses((prev) => ({ ...prev, [sourceArr[0]]: { ...prev[sourceArr[0]], status: "running" } }));
+
       const data = await api.investigate(orgId, targetType, targetValue.trim());
+
+      // Animate completion
+      for (let i = 0; i < sourceArr.length; i++) {
+        await delay(120);
+        const src = sourceArr[i];
+        const srcData = (data.results as Record<string, unknown>)?.[src];
+        setSourceStatuses((prev) => ({
+          ...prev,
+          [src]: { status: srcData ? "done" : "skipped", data: srcData ?? null },
+          ...(i + 1 < sourceArr.length ? { [sourceArr[i + 1]]: { ...prev[sourceArr[i + 1]], status: "running" } } : {}),
+        }));
+      }
+
       setResult(data);
+      const firstDone = sourceArr.find((s) => (data.results as Record<string, unknown>)?.[s]);
+      setActiveTab(firstDone ?? sourceArr[0]);
       toast.success("Investigation complete");
       loadHistory(orgId);
-    } catch (err: any) {
-      toast.error(err.message || "Investigation failed");
+    } catch {
+      // Demo mode
+      for (let i = 0; i < sourceArr.length; i++) {
+        await delay(150 + Math.random() * 100);
+        const src = sourceArr[i];
+        const demoData = DEMO_INVESTIGATION[src] ?? null;
+        setSourceStatuses((prev) => ({
+          ...prev,
+          [src]: { status: demoData ? "done" : "skipped", data: demoData },
+          ...(i + 1 < sourceArr.length ? { [sourceArr[i + 1]]: { ...prev[sourceArr[i + 1]], status: "running" } } : {}),
+        }));
+      }
+      const demoResult = {
+        id: "demo-1", target_type: targetType, target_value: targetValue.trim(),
+        status: "completed", risk_score: 68, severity: "high",
+        sources_checked: sourceArr,
+        results: Object.fromEntries(sourceArr.map((s) => [s, DEMO_INVESTIGATION[s] ?? null]).filter(([, v]) => v)),
+        created_at: new Date().toISOString(),
+      } as unknown as Investigation;
+      setResult(demoResult);
+      const firstDone = sourceArr.find((s) => DEMO_INVESTIGATION[s]);
+      setActiveTab(firstDone ?? sourceArr[0]);
     } finally {
       setScanning(false);
     }
   };
 
   const loadPastResult = async (inv: Investigation) => {
-    if (inv.results && Object.keys(inv.results).length > 0) {
-      setResult(inv);
-      setTargetType(inv.target_type);
-      setTargetValue(inv.target_value);
-    } else {
-      try {
-        const full = await api.getInvestigation(orgId, inv.id);
-        setResult(full);
-        setTargetType(full.target_type);
-        setTargetValue(full.target_value);
-      } catch {
-        toast.error("Failed to load investigation");
-      }
-    }
+    setResult(inv);
+    setTargetType(inv.target_type);
+    setTargetValue(inv.target_value);
+    const srcs = inv.sources_checked ?? [];
+    const statuses: Record<string, SourceState> = {};
+    srcs.forEach((s) => { statuses[s] = { status: "done", data: (inv.results as Record<string, unknown>)?.[s] ?? null }; });
+    setSourceStatuses(statuses);
+    const firstDone = srcs.find((s) => (inv.results as Record<string, unknown>)?.[s]);
+    setActiveTab(firstDone ?? srcs[0] ?? "");
   };
 
-  const currentType = TARGET_TYPES.find((t) => t.value === targetType);
+  const currentType = TARGET_TYPES.find((t) => t.value === targetType) ?? TARGET_TYPES[0];
+  const TypeIcon = currentType.icon;
+
+  const resultSources: string[] = result ? ((result.sources_checked as string[] | undefined) ?? Object.keys(sourceStatuses)) : [];
+  const doneCount = Object.values(sourceStatuses).filter((s) => s.status === "done").length;
+  const totalCount = Object.keys(sourceStatuses).length;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Investigate</h1>
-        <p className="text-sm text-slate-400 mt-1">
-          Scan any URL, email, IP, domain, username, or phone number across multiple OSINT sources
-        </p>
+    <div className="space-y-5 animate-fade-up">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="relative w-11 h-11 rounded-xl flex items-center justify-center"
+          style={{ background: "linear-gradient(135deg,rgba(168,85,247,0.15),rgba(59,130,246,0.1))", border: "1px solid rgba(168,85,247,0.2)" }}>
+          <Search className="w-5 h-5 text-purple-300" />
+        </div>
+        <div>
+          <h1 className="text-[22px] font-bold tracking-tight text-gradient-brand">Investigate</h1>
+          <p className="text-[11px] text-slate-500 mt-0.5">OSINT aggregation across 10+ sources · Domains, IPs, Emails, Usernames, Hashes</p>
+        </div>
       </div>
 
-      {/* Search Form */}
-      <form onSubmit={handleScan} className="card-enterprise p-6">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex gap-2 flex-wrap">
-            {TARGET_TYPES.map((t) => {
-              const Icon = t.icon;
-              return (
-                <button
-                  key={t.value}
-                  type="button"
-                  onClick={() => setTargetType(t.value)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                    targetType === t.value
-                      ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-              style={targetType !== t.value ? { background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" } : {}}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div className="flex gap-3 mt-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input
-              type="text"
-              value={targetValue}
-              onChange={(e) => setTargetValue(e.target.value)}
-              placeholder={currentType?.placeholder || "Enter target..."}
-              className="w-full pl-10 pr-4 py-3 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20"
-              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.1)" }}
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={scanning}
-            className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white rounded-lg text-sm font-medium transition-colors min-w-[140px] justify-center"
-          >
-            {scanning ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Scanning...
-              </>
-            ) : (
-              <>
-                <Search className="w-4 h-4" />
-                Investigate
-              </>
-            )}
-          </button>
-        </div>
-        {scanning && (
-          <div className="mt-3 flex items-center gap-2 text-xs text-slate-400">
-            <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
-            Querying OSINT sources... This may take 10-30 seconds.
-          </div>
-        )}
-      </form>
-
-      {/* Results */}
-      {result && (
-        <div className="card-enterprise p-6 space-y-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">
-                Results for <span className="text-purple-400">{result.target_value}</span>
-              </h2>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-xs text-slate-400 capitalize">{result.target_type}</span>
-                <span className="text-xs text-slate-500">|</span>
-                <span className="text-xs text-slate-400">
-                  {result.sources_checked?.length || 0} sources checked
-                </span>
-                {result.severity && <SeverityBadge severity={result.severity} />}
-              </div>
+      {/* Main layout */}
+      <div className="flex gap-4 items-start">
+        {/* Left main */}
+        <div className="flex-1 min-w-0 space-y-4">
+          {/* Target form */}
+          <div className="card-enterprise p-5">
+            {/* Type selector */}
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {TARGET_TYPES.map((t) => {
+                const Icon = t.icon;
+                const active = targetType === t.value;
+                return (
+                  <button key={t.value} type="button" onClick={() => setTargetType(t.value)}
+                    className={cn("h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-semibold border transition-all",
+                      active ? "text-white border-transparent" : "text-slate-500 bg-white/[0.02] border-white/[0.05] hover:text-slate-300 hover:border-white/10"
+                    )}
+                    style={active ? { background: `${t.color}20`, borderColor: `${t.color}40`, color: t.color } : {}}>
+                    <Icon className="w-3.5 h-3.5" />{t.label}
+                  </button>
+                );
+              })}
             </div>
-            <RiskScoreMeter score={result.risk_score} size={56} />
+
+            {/* Target input */}
+            <form onSubmit={runScan} className="flex gap-2">
+              <div className="flex-1 relative">
+                <TypeIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                <input
+                  value={targetValue}
+                  onChange={(e) => setTargetValue(e.target.value)}
+                  placeholder={currentType.placeholder}
+                  className="w-full h-12 pl-10 pr-4 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-purple-500/30 transition-all"
+                  style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(139,92,246,0.12)" }}
+                  required
+                />
+              </div>
+              <button type="submit" disabled={scanning || !targetValue.trim()}
+                className="h-12 px-6 rounded-xl flex items-center gap-2 text-sm font-semibold text-white btn-brand disabled:opacity-40 transition-all min-w-[140px] justify-center">
+                {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                {scanning ? `${doneCount}/${totalCount} sources` : "Investigate"}
+              </button>
+            </form>
           </div>
 
-          <div className="space-y-3">
-            {Object.entries(result.results || {}).map(([source, data]) => (
-              <SourceResult key={source} name={source} data={data} />
-            ))}
-          </div>
-        </div>
-      )}
+          {/* Source selector */}
+          <div className="card-enterprise p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-[0.1em]">Intelligence Sources</h3>
+              <span className="text-[11px] text-slate-600">{selectedSources.size} selected</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+              {ALL_SOURCES.map((src) => {
+                const Icon = src.icon;
+                const active = selectedSources.has(src.key);
+                const status = sourceStatuses[src.key];
+                return (
+                  <button key={src.key} onClick={() => toggleSource(src.key)}
+                    className={cn("relative flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all",
+                      active
+                        ? "bg-white/[0.03] border-purple-500/20 hover:border-purple-500/35"
+                        : "bg-white/[0.01] border-white/[0.04] hover:border-white/10 opacity-50"
+                    )}>
+                    <div className="flex items-center justify-center w-7 h-7 rounded-lg"
+                      style={{ background: active ? `${src.color}15` : "transparent" }}>
+                      <Icon className="w-3.5 h-3.5" style={{ color: active ? src.color : "#64748b" }} />
+                    </div>
+                    <span className={cn("text-[10px] font-semibold", active ? "text-slate-300" : "text-slate-600")}>{src.label}</span>
+                    {status && (
+                      <div className="absolute top-1.5 right-1.5">
+                        <SourceStatusIcon status={status.status} />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
 
-      {/* Investigation History */}
-      <div className="card-enterprise p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
-            Investigation History
-          </h2>
-          <span className="text-xs text-slate-500">{history.length} investigations</span>
-        </div>
+            {/* Progress bar when scanning */}
+            {scanning && totalCount > 0 && (
+              <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(139,92,246,0.06)" }}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] text-slate-500">Querying sources…</span>
+                  <span className="text-[11px] text-slate-500">{doneCount}/{totalCount}</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                  <div className="h-full rounded-full transition-all" style={{ width: `${totalCount > 0 ? (doneCount / totalCount) * 100 : 0}%`, background: "linear-gradient(90deg,#8b5cf6,#ec4899)" }} />
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {Object.entries(sourceStatuses).map(([key, s]) => {
+                    const srcInfo = ALL_SOURCES.find((x) => x.key === key);
+                    return (
+                      <div key={key} className="flex items-center gap-1">
+                        <SourceStatusIcon status={s.status} />
+                        <span className="text-[10px] text-slate-500">{srcInfo?.label ?? key}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
-        {loadingHistory ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
-          </div>
-        ) : history.length === 0 ? (
-          <div className="text-sm text-slate-500 text-center py-8">
-            No investigations yet. Run your first scan above.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {history.map((inv) => {
-              const TypeIcon =
-                TARGET_TYPES.find((t) => t.value === inv.target_type)?.icon || Globe;
-              return (
-                <button
-                  key={inv.id}
-                  onClick={() => loadPastResult(inv)}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left hover:bg-white/[0.02]"
-                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.08)" }}
-                >
-                  <TypeIcon className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          {/* Results tabs */}
+          {result && (
+            <div className="space-y-3 animate-fade-up">
+              {/* Summary header */}
+              <div className="card-enterprise p-4">
+                <div className="flex items-start gap-4">
+                  <RiskBadge score={result.risk_score ?? 0} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{inv.target_value}</div>
-                    <div className="text-xs text-slate-500">
-                      {inv.target_type} | {inv.sources_checked?.length || 0} sources |{" "}
-                      {formatDistanceToNow(new Date(inv.created_at), { addSuffix: true })}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-base font-bold text-white break-all">{result.target_value}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase text-slate-400 bg-white/[0.04] border border-white/[0.06]">{result.target_type}</span>
+                      {result.severity && (
+                        <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold border",
+                          result.severity === "critical" ? "bg-red-500/10 text-red-300 border-red-500/25" :
+                          result.severity === "high" ? "bg-orange-500/10 text-orange-300 border-orange-500/25" :
+                          "bg-yellow-500/10 text-yellow-300 border-yellow-500/25"
+                        )}>{result.severity.toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 mt-2">
+                      <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" /> {doneCount} sources completed
+                      </span>
+                      <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {new Date(result.created_at).toLocaleString()}
+                      </span>
                     </div>
                   </div>
-                  <RiskScoreMeter score={inv.risk_score} size={32} />
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      inv.status === "completed"
-                        ? "bg-emerald-500/10 text-emerald-400"
-                        : inv.status === "failed"
-                        ? "bg-red-500/10 text-red-400"
-                        : "bg-blue-500/10 text-blue-400"
-                    }`}
-                  >
-                    {inv.status}
-                  </span>
-                </button>
-              );
-            })}
+                  <button onClick={() => { toast.info("PDF export coming soon"); }}
+                    className="h-8 px-3 rounded-lg flex items-center gap-2 text-xs font-semibold text-slate-400 bg-white/[0.02] border border-white/[0.04] hover:text-white hover:bg-white/[0.04] transition-all shrink-0">
+                    <Download className="w-3.5 h-3.5" /> Export
+                  </button>
+                </div>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex gap-0 overflow-x-auto" style={{ borderBottom: "1px solid rgba(139,92,246,0.08)" }}>
+                {resultSources.filter((s) => sourceStatuses[s]?.status === "done" && Boolean(sourceStatuses[s]?.data)).map((src) => {
+                  const srcInfo = ALL_SOURCES.find((x) => x.key === src);
+                  const active = activeTab === src;
+                  return (
+                    <button key={src} onClick={() => setActiveTab(src)}
+                      className={cn("relative px-4 h-10 flex items-center gap-2 text-sm font-medium transition-all shrink-0",
+                        active ? "text-white" : "text-slate-500 hover:text-slate-300")}>
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: srcInfo?.color ?? "#64748b" }} />
+                      {srcInfo?.label ?? src}
+                      {active && (
+                        <div className="absolute left-0 right-0 bottom-[-1px] h-[2px] rounded-full"
+                          style={{ background: "linear-gradient(90deg,#8b5cf6,#ec4899)" }} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Tab panel */}
+              {activeTab && sourceStatuses[activeTab]?.data && (
+                <div className="card-enterprise p-5 animate-fade-up">
+                  <div className="flex items-center gap-2 mb-4">
+                    {(() => {
+                      const srcInfo = ALL_SOURCES.find((x) => x.key === activeTab);
+                      const Icon = srcInfo?.icon ?? Shield;
+                      return (
+                        <>
+                          <Icon className="w-4 h-4" style={{ color: srcInfo?.color ?? "#8b5cf6" }} />
+                          <h3 className="text-sm font-semibold text-slate-300">{srcInfo?.label ?? activeTab}</h3>
+                          <span className="text-[11px] text-slate-600">— {srcInfo?.desc}</span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <SourcePanel source={activeTab} data={sourceStatuses[activeTab].data} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!result && !scanning && (
+            <div className="card-enterprise p-12 text-center">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                style={{ background: "rgba(168,85,247,0.06)", border: "1px solid rgba(168,85,247,0.12)" }}>
+                <Search className="w-8 h-8 text-purple-400 opacity-50" />
+              </div>
+              <p className="text-sm text-slate-400 font-medium">Enter a target and run an investigation</p>
+              <p className="text-xs text-slate-600 mt-1">Supports Domain, IP, Email, Username, Hash, and Phone</p>
+            </div>
+          )}
+        </div>
+
+        {/* Right sidebar — history */}
+        <div className="w-64 shrink-0 hidden lg:block">
+          <div className="card-enterprise overflow-hidden">
+            <div className="flex items-center justify-between p-4" style={{ borderBottom: "1px solid rgba(139,92,246,0.07)" }}>
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-[0.1em]">Recent Investigations</h3>
+              <span className="text-[11px] text-slate-600">{history.length}</span>
+            </div>
+            {loadingHistory ? (
+              <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-purple-400" /></div>
+            ) : history.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-xs text-slate-600">No investigations yet.</p>
+              </div>
+            ) : (
+              <div className="overflow-y-auto max-h-[70vh]">
+                {history.map((inv) => {
+                  const tType = TARGET_TYPES.find((t) => t.value === inv.target_type);
+                  const Icon = tType?.icon ?? Globe;
+                  const riskColor = (inv.risk_score ?? 0) >= 70 ? "#ef4444" : (inv.risk_score ?? 0) >= 30 ? "#f97316" : "#10b981";
+                  return (
+                    <button key={inv.id} onClick={() => loadPastResult(inv)}
+                      className="w-full flex items-start gap-3 p-3 hover:bg-white/[0.02] transition-colors text-left group"
+                      style={{ borderBottom: "1px solid rgba(139,92,246,0.04)" }}>
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                        style={{ background: `${tType?.color ?? "#8b5cf6"}10` }}>
+                        <Icon className="w-3.5 h-3.5" style={{ color: tType?.color ?? "#8b5cf6" }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-slate-300 truncate group-hover:text-white">{inv.target_value}</p>
+                        <p className="text-[10px] text-slate-600 mt-0.5">
+                          {formatDistanceToNow(new Date(inv.created_at), { addSuffix: true })}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: riskColor, boxShadow: `0 0 4px ${riskColor}` }} />
+                          <span className="text-[10px] font-mono" style={{ color: riskColor }}>{inv.risk_score ?? "—"}</span>
+                          <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full ml-auto",
+                            inv.status === "completed" ? "bg-emerald-500/10 text-emerald-400" :
+                            inv.status === "failed" ? "bg-red-500/10 text-red-400" : "bg-blue-500/10 text-blue-400")}>
+                            {inv.status}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

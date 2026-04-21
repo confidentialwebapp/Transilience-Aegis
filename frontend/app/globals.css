@@ -21,6 +21,43 @@
   --accent-yellow: #eab308;
   --gradient-brand: linear-gradient(135deg, #8b5cf6, #a855f7, #ec4899, #ef4444);
   --grid-color: rgba(139, 92, 246, 0.03);
+  --density-scale: 1;
+}
+
+/* Theme variants applied via <html data-theme=""> */
+html[data-theme="midnight"] {
+  --bg-primary: #030712;
+  --bg-secondary: #0b1022;
+  --bg-card: #0f1529;
+  --accent-primary: #3b82f6;
+  --accent-secondary: #6366f1;
+  --gradient-brand: linear-gradient(135deg, #1e40af, #3b82f6, #6366f1, #8b5cf6);
+  --grid-color: rgba(59, 130, 246, 0.04);
+}
+html[data-theme="cyberpunk"] {
+  --bg-primary: #0a0015;
+  --bg-secondary: #130025;
+  --bg-card: #1d0038;
+  --accent-primary: #ec4899;
+  --accent-secondary: #d946ef;
+  --gradient-brand: linear-gradient(135deg, #ec4899, #d946ef, #a855f7, #22d3ee);
+  --grid-color: rgba(236, 72, 153, 0.05);
+}
+
+/* Density scaling */
+html[data-density="compact"]    { --density-scale: 0.92; }
+html[data-density="comfortable"]{ --density-scale: 1; }
+html[data-density="spacious"]   { --density-scale: 1.08; }
+html[data-density] body { font-size: calc(14px * var(--density-scale)); }
+html[data-density] .card-enterprise { padding: calc(1rem * var(--density-scale)); }
+
+/* Reduce motion — respect user preference */
+html[data-reduce-motion="true"] *,
+html[data-reduce-motion="true"] *::before,
+html[data-reduce-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
 }
 
 body {

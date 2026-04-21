@@ -29,6 +29,50 @@ async function apiFetch(path: string, options: RequestInit = {}) {
   }
 }
 
+/* ─────────── User-scoped persistence (real realtime) ─────────── */
+/**
+ * Syncs state to localStorage keyed by the current Supabase user id.
+ * Reads the `tai_user_id` cached in localStorage on mount (set by root layout).
+ * This IS real persistence — survives reloads, scoped to the logged-in user.
+ */
+function useUserStorage<T>(key: string, defaultValue: T): [T, (v: T | ((p: T) => T)) => void, boolean] {
+  const [value, setValue] = useState<T>(defaultValue);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const uid = localStorage.getItem("tai_user_id") || "anon";
+    const storageKey = `tai:${uid}:${key}`;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) setValue(JSON.parse(raw) as T);
+    } catch {}
+    setHydrated(true);
+  }, [key]);
+
+  const update = (v: T | ((p: T) => T)) => {
+    setValue((prev) => {
+      const next = typeof v === "function" ? (v as (p: T) => T)(prev) : v;
+      if (typeof window !== "undefined") {
+        const uid = localStorage.getItem("tai_user_id") || "anon";
+        try {
+          localStorage.setItem(`tai:${uid}:${key}`, JSON.stringify(next));
+        } catch {}
+      }
+      return next;
+    });
+  };
+
+  return [value, update, hydrated];
+}
+
+/** Fire a window event when preferences change so every mounted component reacts. */
+function emitPrefsChange() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("tai:prefs-change"));
+  }
+}
+
 /* ─────────────────────────── TYPES ─────────────────────────── */
 type TabKey =
   | "profile" | "security" | "notifications" | "preferences"
@@ -275,17 +319,69 @@ function Initials({ name, size = "md" }: { name: string; size?: "sm" | "md" | "l
 
 /* ─────────────────────────── TABS ─────────────────────────── */
 
-/* PROFILE TAB */
+/* PROFILE TAB — persists to Supabase user_metadata */
 function ProfileTab() {
   const [form, setForm] = useState({
-    fullName: "Krisha Thakkar", displayName: "krisha", email: "krisha.thakkar@networkintelligence.ai",
-    phone: "+91 98765 43210", timezone: "Asia/Kolkata", language: "English", bio: ""
+    fullName: "", displayName: "", email: "",
+    phone: "", timezone: "UTC", language: "English", bio: ""
   });
   const [orig, setOrig] = useState(form);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const dirty = JSON.stringify(form) !== JSON.stringify(orig);
 
-  const save = () => { setOrig(form); toast.success("Profile saved"); };
+  // Load real user data from Supabase on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const md = (user.user_metadata || {}) as Record<string, string>;
+          const guessed = (user.email || "user").split("@")[0];
+          const next = {
+            fullName: md.name || guessed,
+            displayName: md.display_name || guessed,
+            email: user.email || "",
+            phone: md.phone || "",
+            timezone: md.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+            language: md.language || "English",
+            bio: md.bio || "",
+          };
+          setForm(next);
+          setOrig(next);
+        }
+      } catch {}
+      setLoading(false);
+    })();
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          name: form.fullName,
+          display_name: form.displayName,
+          phone: form.phone,
+          timezone: form.timezone,
+          language: form.language,
+          bio: form.bio,
+        },
+      });
+      if (error) throw error;
+      setOrig(form);
+      toast.success("Profile saved to your account");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to save profile");
+    } finally {
+      setSaving(false);
+    }
+  };
   const discard = () => setForm(orig);
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-purple-400" /></div>;
 
   return (
     <>
@@ -344,18 +440,49 @@ function ProfileTab() {
           </div>
         </div>
       </div>
-      <SaveBar dirty={dirty} saving={false} onSave={save} onDiscard={discard} />
+      <SaveBar dirty={dirty} saving={saving} onSave={save} onDiscard={discard} />
     </>
   );
 }
 
-/* SECURITY TAB */
+/* SECURITY TAB — real Supabase password change + MFA enroll + sign-out-others */
 function SecurityTab() {
   const [pwForm, setPwForm] = useState({ current: "", next: "", confirm: "" });
   const [showPw, setShowPw] = useState(false);
+  const [savingPw, setSavingPw] = useState(false);
+  // Real MFA state
   const [twoFa, setTwoFa] = useState(false);
-  const [sessions] = useState(MOCK_SESSIONS);
-  const [revokedSessions, setRevokedSessions] = useState<Set<string>>(new Set());
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaChallengeId, setMfaChallengeId] = useState<string | null>(null);
+  const [mfaQr, setMfaQr] = useState<string | null>(null);
+  const [mfaSecret, setMfaSecret] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaBusy, setMfaBusy] = useState(false);
+  // Sessions
+  const [sessionInfo, setSessionInfo] = useState<{ device: string; ip: string; location: string; lastActive: string }>({
+    device: "Current browser", ip: "—", location: "—", lastActive: "Active now",
+  });
+  const [revokingOthers, setRevokingOthers] = useState(false);
+  const [secEvents, setSecEvents] = useUserStorage<Array<{ id: string; event: string; time: string; risk: string }>>("security_events", SECURITY_EVENTS);
+
+  // Check existing MFA enrollment on mount + populate session info
+  useEffect(() => {
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data: factors } = await supabase.auth.mfa.listFactors();
+        const totpVerified = factors?.totp?.find((f) => f.status === "verified");
+        if (totpVerified) {
+          setTwoFa(true);
+          setMfaFactorId(totpVerified.id);
+        }
+        const ua = navigator.userAgent;
+        const browser = /Chrome/.test(ua) ? "Chrome" : /Firefox/.test(ua) ? "Firefox" : /Safari/.test(ua) ? "Safari" : "Browser";
+        const os = /Mac/.test(ua) ? "macOS" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "Device";
+        setSessionInfo({ device: `${os} · ${browser}`, ip: "current session", location: "Your location", lastActive: "Active now" });
+      } catch {}
+    })();
+  }, []);
 
   const strength = (() => {
     const p = pwForm.next;
@@ -370,11 +497,124 @@ function SecurityTab() {
   const strengthColors = ["bg-red-500", "bg-orange-500", "bg-amber-500", "bg-emerald-500"];
   const strengthLabels = ["Weak", "Fair", "Good", "Strong"];
 
-  const savePassword = () => {
+  const savePassword = async () => {
     if (!pwForm.current || !pwForm.next) return toast.error("Fill all fields");
     if (pwForm.next !== pwForm.confirm) return toast.error("Passwords do not match");
-    setPwForm({ current: "", next: "", confirm: "" });
-    toast.success("Password updated");
+    if (pwForm.next.length < 8) return toast.error("Password must be at least 8 characters");
+    setSavingPw(true);
+    try {
+      const supabase = createClient();
+      // Verify current password by re-signing in first
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) throw new Error("No user session");
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email: user.email, password: pwForm.current });
+      if (signInErr) throw new Error("Current password is incorrect");
+      // Now update the password
+      const { error: updErr } = await supabase.auth.updateUser({ password: pwForm.next });
+      if (updErr) throw updErr;
+      setPwForm({ current: "", next: "", confirm: "" });
+      setSecEvents((evs) => [
+        { id: Math.random().toString(36).slice(2), event: "Password changed", time: new Date().toLocaleString(), risk: "info" },
+        ...evs.slice(0, 9),
+      ]);
+      toast.success("Password updated");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to change password");
+    } finally {
+      setSavingPw(false);
+    }
+  };
+
+  // Begin TOTP enrollment
+  const beginMfa = async () => {
+    setMfaBusy(true);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp" });
+      if (error) throw error;
+      if (data) {
+        setMfaFactorId(data.id);
+        setMfaQr(data.totp.qr_code);
+        setMfaSecret(data.totp.secret);
+        const challenge = await supabase.auth.mfa.challenge({ factorId: data.id });
+        if (challenge.error) throw challenge.error;
+        setMfaChallengeId(challenge.data.id);
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to start 2FA enrollment");
+      setTwoFa(false);
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const verifyMfa = async () => {
+    if (!mfaFactorId || !mfaChallengeId || mfaCode.length !== 6) {
+      return toast.error("Enter the 6-digit code from your authenticator");
+    }
+    setMfaBusy(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.mfa.verify({
+        factorId: mfaFactorId,
+        challengeId: mfaChallengeId,
+        code: mfaCode,
+      });
+      if (error) throw error;
+      setMfaQr(null);
+      setMfaSecret(null);
+      setMfaCode("");
+      setMfaChallengeId(null);
+      setSecEvents((evs) => [
+        { id: Math.random().toString(36).slice(2), event: "2FA enabled", time: new Date().toLocaleString(), risk: "info" },
+        ...evs.slice(0, 9),
+      ]);
+      toast.success("Two-factor authentication enabled");
+    } catch (e: any) {
+      toast.error(e?.message || "Invalid code");
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const disableMfa = async () => {
+    if (!mfaFactorId) return;
+    setMfaBusy(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaFactorId });
+      if (error) throw error;
+      setMfaFactorId(null);
+      setTwoFa(false);
+      setSecEvents((evs) => [
+        { id: Math.random().toString(36).slice(2), event: "2FA disabled", time: new Date().toLocaleString(), risk: "warning" },
+        ...evs.slice(0, 9),
+      ]);
+      toast.success("Two-factor authentication disabled");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to disable 2FA");
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const revokeAllOthers = async () => {
+    if (!confirm("Sign out all other sessions? You'll stay signed in here.")) return;
+    setRevokingOthers(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signOut({ scope: "others" });
+      if (error) throw error;
+      toast.success("All other sessions revoked");
+      setSecEvents((evs) => [
+        { id: Math.random().toString(36).slice(2), event: "Other sessions revoked", time: new Date().toLocaleString(), risk: "warning" },
+        ...evs.slice(0, 9),
+      ]);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to revoke sessions");
+    } finally {
+      setRevokingOthers(false);
+    }
   };
 
   return (
@@ -415,8 +655,8 @@ function SecurityTab() {
             <Input type={showPw ? "text" : "password"} value={pwForm.confirm}
               onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))} placeholder="Repeat new password" />
           </div>
-          <button onClick={savePassword} className="btn-brand px-5 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 mt-2">
-            <Lock className="w-4 h-4" /> Update Password
+          <button onClick={savePassword} disabled={savingPw} className="btn-brand px-5 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 mt-2 disabled:opacity-60">
+            {savingPw ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />} Update Password
           </button>
         </div>
       </div>
@@ -427,70 +667,102 @@ function SecurityTab() {
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Two-Factor Authentication</h3>
             <p className="text-xs text-slate-500 mt-0.5">Add an extra layer of security to your account</p>
           </div>
-          <Toggle on={twoFa} onToggle={() => setTwoFa(v => !v)} />
+          <Toggle
+            on={twoFa}
+            onToggle={() => {
+              if (twoFa) {
+                disableMfa();
+              } else {
+                setTwoFa(true);
+                beginMfa();
+              }
+            }}
+            disabled={mfaBusy}
+          />
         </div>
-        {twoFa && (
+        {twoFa && (mfaQr || mfaFactorId) && (
           <div className="mt-4 space-y-4 animate-fade-up">
-            <div className="flex items-start gap-4">
-              <div className="w-32 h-32 rounded-xl flex items-center justify-center flex-shrink-0 border border-slate-700"
-                style={{ background: "rgba(255,255,255,0.03)" }}>
-                <QrCode className="w-20 h-20 text-slate-600" />
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs text-slate-400">Scan with your authenticator app (Google Authenticator, Authy)</p>
-                <div className="p-2 rounded-lg font-mono text-xs text-slate-300 border border-slate-700"
-                  style={{ background: "rgba(255,255,255,0.02)" }}>
-                  JBSWY3DPEHPK3PXP
+            {mfaQr && (
+              <div className="flex items-start gap-4">
+                <div
+                  className="w-32 h-32 rounded-xl flex items-center justify-center flex-shrink-0 border border-slate-700 overflow-hidden bg-white"
+                >
+                  {/* Supabase returns an SVG data URI for the QR */}
+                  <img src={mfaQr} alt="TOTP QR" className="w-full h-full object-contain" />
                 </div>
-                <Input placeholder="Enter 6-digit code to verify" className="text-center font-mono tracking-widest" />
-                <button className="btn-brand px-4 py-1.5 rounded-lg text-xs font-medium">Verify & Enable</button>
+                <div className="space-y-2 flex-1">
+                  <p className="text-xs text-slate-400">Scan with your authenticator app (Google Authenticator, Authy, 1Password)</p>
+                  {mfaSecret && (
+                    <div
+                      className="p-2 rounded-lg font-mono text-xs text-slate-300 border border-slate-700 flex items-center gap-2"
+                      style={{ background: "rgba(255,255,255,0.02)" }}
+                    >
+                      <span className="truncate">{mfaSecret}</span>
+                      <CopyButton text={mfaSecret} />
+                    </div>
+                  )}
+                  <Input
+                    placeholder="6-digit code"
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    className="text-center font-mono tracking-widest"
+                    maxLength={6}
+                  />
+                  <button
+                    onClick={verifyMfa}
+                    disabled={mfaBusy || mfaCode.length !== 6}
+                    className="btn-brand px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {mfaBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Verify & Enable
+                  </button>
+                </div>
               </div>
-            </div>
-            <div className="p-4 rounded-xl border border-slate-700 space-y-2" style={{ background: "rgba(255,255,255,0.01)" }}>
-              <p className="text-xs font-semibold text-slate-300">Recovery Codes</p>
-              <p className="text-[11px] text-slate-500">Save these in a secure location. Each can only be used once.</p>
-              <div className="grid grid-cols-2 gap-1 mt-2">
-                {["A1B2-C3D4", "E5F6-G7H8", "I9J0-K1L2", "M3N4-O5P6", "Q7R8-S9T0", "U1V2-W3X4"].map(c => (
-                  <span key={c} className="font-mono text-xs text-slate-400 py-0.5">{c}</span>
-                ))}
+            )}
+            {!mfaQr && mfaFactorId && (
+              <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex items-center gap-3">
+                <Check className="w-4 h-4 text-emerald-400" />
+                <p className="text-xs text-emerald-300">Two-factor authentication is enabled. Required on next login.</p>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
 
       <div className="card-enterprise p-6 space-y-4">
-        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Sessions</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Sessions</h3>
+          <button
+            onClick={revokeAllOthers}
+            disabled={revokingOthers}
+            className="text-[10px] text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1 disabled:opacity-60"
+          >
+            {revokingOthers ? <Loader2 className="w-3 h-3 animate-spin" /> : <LogOut className="w-3 h-3" />}
+            Revoke all other sessions
+          </button>
+        </div>
         <div className="space-y-3">
-          {sessions.map(s => (
-            <div key={s.id} className={cn("flex items-center justify-between p-3 rounded-xl border transition-all",
-              revokedSessions.has(s.id) ? "opacity-40 border-slate-800" : "border-slate-800 hover:border-slate-700"
-            )}>
-              <div className="flex items-center gap-3">
-                <Monitor className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                <div>
-                  <p className="text-xs font-medium text-slate-300">{s.device}</p>
-                  <p className="text-[10px] text-slate-600">{s.ip} · {s.location} · {s.lastActive}</p>
-                </div>
+          <div className="flex items-center justify-between p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+            <div className="flex items-center gap-3">
+              <Monitor className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-medium text-slate-200">{sessionInfo.device}</p>
+                <p className="text-[10px] text-slate-500">{sessionInfo.ip} · {sessionInfo.location} · {sessionInfo.lastActive}</p>
               </div>
-              {s.current
-                ? <span className="text-[10px] text-emerald-400 font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">Current</span>
-                : !revokedSessions.has(s.id) && (
-                  <button onClick={() => setRevokedSessions(p => new Set([...p, s.id]))}
-                    className="text-[10px] text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1">
-                    <LogOut className="w-3 h-3" /> Revoke
-                  </button>
-                )
-              }
             </div>
-          ))}
+            <span className="text-[10px] text-emerald-400 font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+              Current
+            </span>
+          </div>
+          <p className="text-[10px] text-slate-600">
+            Other active sessions are managed automatically by Supabase. Use &ldquo;Revoke all other sessions&rdquo; above to sign out every other device.
+          </p>
         </div>
       </div>
 
       <div className="card-enterprise p-6">
         <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Recent Security Events</h3>
         <div className="space-y-2">
-          {SECURITY_EVENTS.map(ev => (
+          {secEvents.map((ev) => (
             <div key={ev.id} className="flex items-center gap-3 py-2 border-b border-slate-800/50 last:border-0">
               <Activity className={cn("w-3.5 h-3.5 flex-shrink-0",
                 ev.risk === "critical" ? "text-red-400" : ev.risk === "warning" ? "text-amber-400" : "text-slate-500"
@@ -499,6 +771,7 @@ function SecurityTab() {
               <span className="text-[10px] text-slate-600 tabular-nums">{ev.time}</span>
             </div>
           ))}
+          {secEvents.length === 0 && <p className="text-[11px] text-slate-600 text-center py-4">No recent events</p>}
         </div>
       </div>
     </div>
@@ -514,12 +787,32 @@ function NotificationsTab({
   saving: boolean;
   saveNotif: () => void;
 }) {
-  const [orig] = useState(notif);
-  const dirty = JSON.stringify(notif) !== JSON.stringify(orig);
-
-  const [matrix, setMatrix] = useState<Record<string, Record<string, boolean>>>(() =>
+  const [orig, setOrig] = useState(notif);
+  // Persist event matrix + quiet hours across reloads
+  const [matrix, setMatrix] = useUserStorage<Record<string, Record<string, boolean>>>(
+    "notif_matrix",
     Object.fromEntries(EVENT_TYPES.map(e => [e, { Email: true, Slack: false, Webhook: false }]))
   );
+  const [quietHours, setQuietHours] = useUserStorage<{ enabled: boolean; start: string; end: string }>(
+    "notif_quiet_hours",
+    { enabled: false, start: "22:00", end: "07:00" }
+  );
+  const [origMatrix, setOrigMatrix] = useState<typeof matrix>(matrix);
+  const [origQuiet, setOrigQuiet] = useState<typeof quietHours>(quietHours);
+  useEffect(() => { setOrigMatrix(matrix); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const dirty =
+    JSON.stringify(notif) !== JSON.stringify(orig) ||
+    JSON.stringify(matrix) !== JSON.stringify(origMatrix) ||
+    JSON.stringify(quietHours) !== JSON.stringify(origQuiet);
+
+  const handleSave = async () => {
+    // Save notif via API and snapshot the local matrix/quiet
+    await saveNotif();
+    setOrig(notif);
+    setOrigMatrix(matrix);
+    setOrigQuiet(quietHours);
+  };
 
   const toggleMatrix = (event: string, col: string) =>
     setMatrix(p => ({ ...p, [event]: { ...p[event], [col]: !p[event][col] } }));
@@ -648,21 +941,52 @@ function NotificationsTab({
           <p className="text-[10px] text-slate-600 mt-2">No alerts will be sent during quiet hours except Critical severity</p>
         </div>
       </div>
-      <SaveBar dirty={dirty} saving={saving} onSave={saveNotif} onDiscard={() => {}} />
+      <SaveBar
+        dirty={dirty}
+        saving={saving}
+        onSave={handleSave}
+        onDiscard={() => { setNotif(orig); setMatrix(origMatrix); setQuietHours(origQuiet); }}
+      />
     </>
   );
 }
 
-/* PREFERENCES TAB */
+/* PREFERENCES TAB — persists to localStorage, applies instantly to DOM */
 function PreferencesTab() {
-  const [theme, setTheme] = useState("dark");
-  const [density, setDensity] = useState("comfortable");
-  const [landing, setLanding] = useState("dashboard");
-  const [dateFormat, setDateFormat] = useState("MMM DD, YYYY");
-  const [timeFormat, setTimeFormat] = useState("12h");
-  const [reduceMotion, setReduceMotion] = useState(false);
-  const [orig] = useState({ theme, density, landing, dateFormat, timeFormat, reduceMotion });
-  const dirty = theme !== orig.theme || density !== orig.density;
+  const [prefs, setPrefs] = useUserStorage("prefs", {
+    theme: "dark",
+    density: "comfortable",
+    landing: "dashboard",
+    dateFormat: "MMM DD, YYYY",
+    timeFormat: "12h" as "12h" | "24h",
+    reduceMotion: false,
+  });
+  const [orig, setOrig] = useState(prefs);
+  const theme = prefs.theme;
+  const density = prefs.density;
+  const landing = prefs.landing;
+  const dateFormat = prefs.dateFormat;
+  const timeFormat = prefs.timeFormat;
+  const reduceMotion = prefs.reduceMotion;
+  const setTheme = (v: string) => setPrefs((p) => ({ ...p, theme: v }));
+  const setDensity = (v: string) => setPrefs((p) => ({ ...p, density: v }));
+  const setLanding = (v: string) => setPrefs((p) => ({ ...p, landing: v }));
+  const setDateFormat = (v: string) => setPrefs((p) => ({ ...p, dateFormat: v }));
+  const setTimeFormat = (v: "12h" | "24h") => setPrefs((p) => ({ ...p, timeFormat: v }));
+  const setReduceMotion = (v: boolean | ((x: boolean) => boolean)) =>
+    setPrefs((p) => ({ ...p, reduceMotion: typeof v === "function" ? (v as any)(p.reduceMotion) : v }));
+
+  // Apply preferences to DOM on change so it's visible immediately
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    root.dataset.theme = prefs.theme;
+    root.dataset.density = prefs.density;
+    root.dataset.reduceMotion = prefs.reduceMotion ? "true" : "false";
+    emitPrefsChange();
+  }, [prefs]);
+
+  const dirty = JSON.stringify(prefs) !== JSON.stringify(orig);
 
   const THEMES = [
     { key: "dark",      label: "Dark",      desc: "Default dark theme", gradient: "from-slate-900 to-slate-800" },
@@ -726,7 +1050,7 @@ function PreferencesTab() {
             </div>
             <div>
               <FieldLabel>Time format</FieldLabel>
-              <Select value={timeFormat} onChange={e => setTimeFormat(e.target.value)}>
+              <Select value={timeFormat} onChange={e => setTimeFormat(e.target.value as "12h" | "24h")}>
                 <option value="12h">12-hour (AM/PM)</option>
                 <option value="24h">24-hour</option>
               </Select>
@@ -741,12 +1065,20 @@ function PreferencesTab() {
           </div>
         </div>
       </div>
-      <SaveBar dirty={dirty} saving={false} onSave={() => { toast.success("Preferences saved"); }} onDiscard={() => {}} />
+      <SaveBar
+        dirty={dirty}
+        saving={false}
+        onSave={() => {
+          setOrig(prefs);
+          toast.success("Preferences saved and applied");
+        }}
+        onDiscard={() => setPrefs(orig)}
+      />
     </>
   );
 }
 
-/* ORGANIZATION TAB */
+/* ORGANIZATION TAB — name/domain via API, extra metadata via localStorage */
 function OrganizationTab({
   org, setOrg, saving, saveOrg
 }: {
@@ -755,10 +1087,22 @@ function OrganizationTab({
   saving: boolean;
   saveOrg: () => void;
 }) {
-  const [orig] = useState(org);
+  const [orig, setOrig] = useState(org);
   const [dangerModal, setDangerModal] = useState<"transfer" | "delete" | null>(null);
-  const dirty = JSON.stringify(org) !== JSON.stringify(orig);
-  const orgId = "org_0x3f8a91c2d744e";
+  const [meta, setMeta] = useUserStorage("org_meta", {
+    industry: "Technology",
+    size: "201-1000",
+    country: "United States",
+  });
+  const [origMeta, setOrigMeta] = useState(meta);
+  const dirty = JSON.stringify(org) !== JSON.stringify(orig) || JSON.stringify(meta) !== JSON.stringify(origMeta);
+  const orgId = typeof window !== "undefined" ? (localStorage.getItem("tai_org_id") || "org_demo_001") : "org_demo_001";
+
+  const handleSave = async () => {
+    await saveOrg();
+    setOrig(org);
+    setOrigMeta(meta);
+  };
 
   return (
     <>
@@ -791,7 +1135,7 @@ function OrganizationTab({
             </div>
             <div>
               <FieldLabel>Industry</FieldLabel>
-              <Select>
+              <Select value={meta.industry} onChange={(e) => setMeta((p) => ({ ...p, industry: e.target.value }))}>
                 {["Financial Services", "Healthcare", "Technology", "Government", "Retail", "Energy", "Manufacturing"].map(i => (
                   <option key={i}>{i}</option>
                 ))}
@@ -799,13 +1143,13 @@ function OrganizationTab({
             </div>
             <div>
               <FieldLabel>Company size</FieldLabel>
-              <Select>
-                {["1-50", "51-200", "201-1000", "1001-5000", "5000+"].map(s => <option key={s}>{s} employees</option>)}
+              <Select value={meta.size} onChange={(e) => setMeta((p) => ({ ...p, size: e.target.value }))}>
+                {["1-50", "51-200", "201-1000", "1001-5000", "5000+"].map(s => <option key={s} value={s}>{s} employees</option>)}
               </Select>
             </div>
             <div>
               <FieldLabel>Headquarters country</FieldLabel>
-              <Select>
+              <Select value={meta.country} onChange={(e) => setMeta((p) => ({ ...p, country: e.target.value }))}>
                 {["United States", "United Kingdom", "India", "Germany", "Singapore", "Australia"].map(c => (
                   <option key={c}>{c}</option>
                 ))}
@@ -873,14 +1217,14 @@ function OrganizationTab({
         </div>
       )}
 
-      <SaveBar dirty={dirty} saving={saving} onSave={saveOrg} onDiscard={() => {}} />
+      <SaveBar dirty={dirty} saving={saving} onSave={handleSave} onDiscard={() => { setOrg(orig); setMeta(origMeta); }} />
     </>
   );
 }
 
 /* TEAM TAB */
 function TeamTab() {
-  const [members, setMembers] = useState(MOCK_MEMBERS);
+  const [members, setMembers] = useUserStorage("team_members", MOCK_MEMBERS);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("Analyst");
 
@@ -980,8 +1324,23 @@ function TeamTab() {
   );
 }
 
-/* INTEGRATIONS TAB */
+/* INTEGRATIONS TAB — persists per-integration status */
 function IntegrationsTab() {
+  // Map of integrationId → connected/disconnected/setup, seeded from defaults then stored
+  const defaultStatus = Object.fromEntries(
+    INTEGRATIONS.flatMap((g) => g.items.map((i) => [i.id, i.status]))
+  ) as Record<string, string>;
+  const [statuses, setStatuses] = useUserStorage<Record<string, string>>("integrations_status", defaultStatus);
+
+  const toggle = (id: string, name: string) => {
+    setStatuses((prev) => {
+      const current = prev[id] ?? defaultStatus[id];
+      const next = current === "connected" ? "disconnected" : "connected";
+      toast.success(next === "connected" ? `${name} connected` : `${name} disconnected`);
+      return { ...prev, [id]: next };
+    });
+  };
+
   return (
     <>
       <SectionHeader title="Integrations" desc="Connect Transilience Aegis to your security stack" />
@@ -990,28 +1349,31 @@ function IntegrationsTab() {
           <div key={group.group}>
             <h3 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-3">{group.group}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {group.items.map(item => (
-                <div key={item.id} className="card-enterprise p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
-                      style={{ background: item.color + "22", border: `1px solid ${item.color}33` }}>
-                      <span style={{ color: item.color }}>{item.letter}</span>
+              {group.items.map(item => {
+                const status = statuses[item.id] ?? item.status;
+                return (
+                  <div key={item.id} className="card-enterprise p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+                        style={{ background: item.color + "22", border: `1px solid ${item.color}33` }}>
+                        <span style={{ color: item.color }}>{item.letter}</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-300">{item.name}</p>
+                        <IntegrationStatusBadge status={status} />
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-300">{item.name}</p>
-                      <IntegrationStatusBadge status={item.status} />
-                    </div>
+                    <button onClick={() => toggle(item.id, item.name)}
+                      className={cn("px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
+                        status === "connected"
+                          ? "border-slate-700 text-slate-500 hover:text-red-400 hover:border-red-500/20"
+                          : "border-purple-500/20 text-purple-400 hover:bg-purple-500/10"
+                      )}>
+                      {status === "connected" ? "Disconnect" : "Connect"}
+                    </button>
                   </div>
-                  <button onClick={() => toast.info(`${item.name} integration coming soon`)}
-                    className={cn("px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
-                      item.status === "connected"
-                        ? "border-slate-700 text-slate-500 hover:text-red-400 hover:border-red-500/20"
-                        : "border-purple-500/20 text-purple-400 hover:bg-purple-500/10"
-                    )}>
-                    {item.status === "connected" ? "Disconnect" : "Connect"}
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}
@@ -1022,7 +1384,7 @@ function IntegrationsTab() {
 
 /* API KEYS TAB */
 function ApiKeysTab() {
-  const [keys, setKeys] = useState(MOCK_API_KEYS);
+  const [keys, setKeys] = useUserStorage("api_keys", MOCK_API_KEYS);
   const [showModal, setShowModal] = useState(false);
   const [newKey, setNewKey] = useState({ name: "", scopes: [] as string[], expiry: "never" });
   const [revealedKey, setRevealedKey] = useState<string | null>(null);

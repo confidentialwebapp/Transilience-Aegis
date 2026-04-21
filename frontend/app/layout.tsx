@@ -13,10 +13,30 @@ export const metadata: Metadata = {
   },
 };
 
+// Inline script: apply saved user preferences before hydration so theme/density/motion
+// render correctly on first paint (prevents flash of default styling).
+const APPLY_PREFS_SCRIPT = `
+(function(){
+  try {
+    var uid = localStorage.getItem('tai_user_id') || 'anon';
+    var raw = localStorage.getItem('tai:' + uid + ':prefs');
+    if (!raw) return;
+    var p = JSON.parse(raw);
+    var r = document.documentElement;
+    if (p.theme) r.dataset.theme = p.theme;
+    if (p.density) r.dataset.density = p.density;
+    r.dataset.reduceMotion = p.reduceMotion ? 'true' : 'false';
+  } catch(e){}
+})();
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} antialiased`} style={{ background: "#07040B", color: "#e2e8f0" }}>
+    <html lang="en" className="dark" data-theme="dark" data-density="comfortable">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: APPLY_PREFS_SCRIPT }} />
+      </head>
+      <body className={`${inter.className} antialiased`} style={{ background: "var(--bg-primary, #07040B)", color: "#e2e8f0" }}>
         {children}
         <Toaster
           theme="dark"

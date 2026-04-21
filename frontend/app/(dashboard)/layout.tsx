@@ -118,6 +118,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (session?.user) {
           setUserEmail(session.user.email || "");
           setUserName(session.user.user_metadata?.name || session.user.email?.split("@")[0] || "User");
+          // Cache user id for useUserStorage() on settings + other pages
+          try { localStorage.setItem("tai_user_id", session.user.id); } catch {}
         }
       } catch {}
     };

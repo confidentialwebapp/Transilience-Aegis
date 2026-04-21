@@ -35,6 +35,7 @@ export default function LoginPage() {
 
       if (data.user) {
         try {
+          localStorage.setItem("tai_user_id", data.user.id);
           const { data: membership } = await supabase
             .from("org_members")
             .select("org_id")

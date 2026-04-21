@@ -24,7 +24,13 @@
   --density-scale: 1;
 }
 
-/* Theme variants applied via <html data-theme=""> */
+/* ------------------------------------------------------------------
+   Theme variants — applied via <html data-theme="...">
+   These use !important to win over component inline styles so the
+   theme visibly changes colors across the whole app.
+------------------------------------------------------------------ */
+
+/* ===== MIDNIGHT: deep blue/navy ===== */
 html[data-theme="midnight"] {
   --bg-primary: #030712;
   --bg-secondary: #0b1022;
@@ -32,17 +38,103 @@ html[data-theme="midnight"] {
   --accent-primary: #3b82f6;
   --accent-secondary: #6366f1;
   --gradient-brand: linear-gradient(135deg, #1e40af, #3b82f6, #6366f1, #8b5cf6);
-  --grid-color: rgba(59, 130, 246, 0.04);
+  --grid-color: rgba(59, 130, 246, 0.05);
 }
+html[data-theme="midnight"] body                    { background-color: #030712 !important; }
+html[data-theme="midnight"] aside                   { background: #0b1022 !important; border-color: rgba(59,130,246,0.1) !important; }
+html[data-theme="midnight"] header                  { background: rgba(11,16,34,0.85) !important; border-color: rgba(59,130,246,0.1) !important; }
+html[data-theme="midnight"] main.bg-grid-pattern    { background-color: #030712; }
+html[data-theme="midnight"] .bg-grid-pattern {
+  background-image:
+    linear-gradient(rgba(59,130,246,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,0.035) 1px, transparent 1px) !important;
+}
+html[data-theme="midnight"] .card-enterprise {
+  background: linear-gradient(135deg, rgba(15,21,41,0.95) 0%, rgba(11,16,34,0.98) 100%) !important;
+  border-color: rgba(59,130,246,0.14) !important;
+}
+html[data-theme="midnight"] .stat-card {
+  background: linear-gradient(180deg, rgba(15,21,41,0.95) 0%, rgba(3,7,18,0.98) 100%) !important;
+  border-color: rgba(59,130,246,0.1) !important;
+}
+html[data-theme="midnight"] .stat-card::before {
+  background: linear-gradient(90deg, transparent, #3b82f6, #6366f1, transparent) !important;
+}
+html[data-theme="midnight"] .text-gradient-brand {
+  background: linear-gradient(135deg, #3b82f6, #6366f1, #8b5cf6) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+}
+html[data-theme="midnight"] .btn-brand {
+  background: linear-gradient(135deg, #2563eb, #4f46e5) !important;
+}
+html[data-theme="midnight"] .btn-brand:hover {
+  background: linear-gradient(135deg, #1d4ed8, #4338ca) !important;
+  box-shadow: 0 0 20px rgba(59,130,246,0.35) !important;
+}
+html[data-theme="midnight"] .glow-purple,
+html[data-theme="midnight"] .glow-brand {
+  box-shadow: 0 0 25px rgba(59,130,246,0.18), 0 0 60px rgba(99,102,241,0.08) !important;
+}
+html[data-theme="midnight"] ::-webkit-scrollbar-thumb       { background: rgba(59,130,246,0.18) !important; }
+html[data-theme="midnight"] ::-webkit-scrollbar-thumb:hover { background: rgba(59,130,246,0.35) !important; }
+
+/* ===== CYBERPUNK: hot magenta + cyan ===== */
 html[data-theme="cyberpunk"] {
   --bg-primary: #0a0015;
-  --bg-secondary: #130025;
+  --bg-secondary: #150025;
   --bg-card: #1d0038;
   --accent-primary: #ec4899;
   --accent-secondary: #d946ef;
   --gradient-brand: linear-gradient(135deg, #ec4899, #d946ef, #a855f7, #22d3ee);
-  --grid-color: rgba(236, 72, 153, 0.05);
+  --grid-color: rgba(236,72,153,0.06);
 }
+html[data-theme="cyberpunk"] body                    { background-color: #0a0015 !important; }
+html[data-theme="cyberpunk"] aside                   { background: #150025 !important; border-color: rgba(236,72,153,0.14) !important; }
+html[data-theme="cyberpunk"] header                  { background: rgba(21,0,37,0.85) !important; border-color: rgba(236,72,153,0.14) !important; }
+html[data-theme="cyberpunk"] main.bg-grid-pattern    { background-color: #0a0015; }
+html[data-theme="cyberpunk"] .bg-grid-pattern {
+  background-image:
+    linear-gradient(rgba(236,72,153,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(236,72,153,0.04) 1px, transparent 1px) !important;
+}
+html[data-theme="cyberpunk"] .card-enterprise {
+  background: linear-gradient(135deg, rgba(29,0,56,0.92) 0%, rgba(10,0,21,0.96) 100%) !important;
+  border-color: rgba(236,72,153,0.2) !important;
+  box-shadow: 0 0 24px rgba(236,72,153,0.04) !important;
+}
+html[data-theme="cyberpunk"] .stat-card {
+  background: linear-gradient(180deg, rgba(29,0,56,0.96) 0%, rgba(10,0,21,0.98) 100%) !important;
+  border-color: rgba(236,72,153,0.18) !important;
+}
+html[data-theme="cyberpunk"] .stat-card::before {
+  background: linear-gradient(90deg, transparent, #ec4899, #22d3ee, transparent) !important;
+  opacity: 0.7 !important;
+}
+html[data-theme="cyberpunk"] .text-gradient-brand {
+  background: linear-gradient(135deg, #ec4899, #d946ef, #22d3ee) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+}
+html[data-theme="cyberpunk"] .btn-brand {
+  background: linear-gradient(135deg, #ec4899, #d946ef) !important;
+  box-shadow: 0 0 16px rgba(236,72,153,0.3) !important;
+}
+html[data-theme="cyberpunk"] .btn-brand:hover {
+  background: linear-gradient(135deg, #db2777, #c026d3) !important;
+  box-shadow: 0 0 30px rgba(236,72,153,0.6) !important;
+}
+html[data-theme="cyberpunk"] .glow-purple,
+html[data-theme="cyberpunk"] .glow-brand {
+  box-shadow: 0 0 30px rgba(236,72,153,0.25), 0 0 70px rgba(34,211,238,0.12) !important;
+}
+html[data-theme="cyberpunk"] ::-webkit-scrollbar-thumb       { background: rgba(236,72,153,0.25) !important; }
+html[data-theme="cyberpunk"] ::-webkit-scrollbar-thumb:hover { background: rgba(236,72,153,0.5) !important; }
+
+/* ===== DARK (default) — explicit so it wins if another theme is set then reverted ===== */
+html[data-theme="dark"] body                        { background-color: #07040B !important; }
+html[data-theme="dark"] aside                       { background: #0d0a14 !important; }
+html[data-theme="dark"] main.bg-grid-pattern        { background-color: #07040B; }
 
 /* Density scaling */
 html[data-density="compact"]    { --density-scale: 0.92; }

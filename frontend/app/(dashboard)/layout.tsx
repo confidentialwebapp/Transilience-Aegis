@@ -10,9 +10,11 @@ import { useAlerts } from "@/hooks/useAlerts";
 import { createClient } from "@/lib/supabase/client";
 import {
   LayoutDashboard, AlertTriangle, Box, Bell, Search as SearchIcon,
-  Settings, ChevronLeft, ChevronRight, Database, Menu, Scan,
+  Settings, ChevronLeft, ChevronRight, Menu, Scan,
   Bug, Building2, Network, Eye, Skull, Fingerprint, Brain, Activity,
   Radio, FileText, Radar, LogOut, User, ChevronDown, BarChart3, KeyRound,
+  Command, Zap, Sparkles, ArrowRight, HelpCircle, Keyboard, Gift, Sun, Moon,
+  Check, X, Shield, Target, Globe as GlobeIcon, Plus, MessageSquare,
 } from "lucide-react";
 
 const NAV_SECTIONS = [
@@ -60,6 +62,30 @@ const NAV_SECTIONS = [
   },
 ];
 
+const PAGE_TITLES: Record<string, string> = {
+  "/": "Command Center",
+  "/investigate": "Investigate",
+  "/threats": "Threat Feed",
+  "/cve": "CVE Intelligence",
+  "/threat-actors": "Threat Actors",
+  "/dark-web": "Dark Web Monitor",
+  "/intel": "IOC Lookup",
+  "/attack-surface": "Surface Map",
+  "/infrastructure": "Infra Monitor",
+  "/assets": "Asset Inventory",
+  "/scan-review": "Scan Review",
+  "/alerts": "Alert Center",
+  "/credentials": "Credentials",
+  "/exposure": "Exposure",
+  "/vendors": "Supply Chain",
+  "/transilience-ai": "Transilience AI",
+  "/settings": "Settings",
+};
+
+interface CommandPaletteItem {
+  id: string; label: string; section: string; icon: any; href?: string; shortcut?: string;
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -69,7 +95,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifTab, setNotifTab] = useState<"all" | "unread" | "mentions">("all");
+  const [cmdOpen, setCmdOpen] = useState(false);
+  const [cmdQuery, setCmdQuery] = useState("");
+  const [pipelineRate, setPipelineRate] = useState(14);
+  const [liveEventCount, setLiveEventCount] = useState(0);
+  const [now, setNow] = useState<Date>(new Date());
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const notifMenuRef = useRef<HTMLDivElement>(null);
+  const cmdInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setOrgIdState(getOrgId()); }, []);
   const { unreadCount, clearUnread } = useAlerts(orgId);
@@ -89,15 +124,55 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     loadUser();
   }, []);
 
-  // Close user menu when clicking outside
+  // Close user menu + notifications when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setShowUserMenu(false);
       }
+      if (notifMenuRef.current && !notifMenuRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Command palette keyboard shortcut (Cmd/Ctrl+K)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCmdOpen((o) => !o);
+      }
+      if (e.key === "Escape") {
+        setCmdOpen(false);
+        setShowNotifications(false);
+        setShowUserMenu(false);
+      }
+      // Quick "/" opens command palette too
+      if (e.key === "/" && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        setCmdOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  useEffect(() => {
+    if (cmdOpen) setTimeout(() => cmdInputRef.current?.focus(), 30);
+    else setCmdQuery("");
+  }, [cmdOpen]);
+
+  // Pipeline live rate + clock
+  useEffect(() => {
+    const id = setInterval(() => {
+      setNow(new Date());
+      setPipelineRate((r) => Math.max(6, Math.min(60, r + (Math.random() - 0.45) * 3)));
+      setLiveEventCount((c) => c + Math.floor(Math.random() * 3));
+    }, 1500);
+    return () => clearInterval(id);
   }, []);
 
   const handleLogout = async () => {
@@ -229,78 +304,305 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top navbar */}
-        <header className="flex items-center gap-4 h-14 px-4 lg:px-6 backdrop-blur-xl z-30"
-          style={{ background: "rgba(13,10,20,0.8)", borderBottom: "1px solid rgba(139,92,246,0.06)" }}>
+        <header className="flex items-center gap-3 h-14 px-3 lg:px-5 backdrop-blur-xl z-30 relative"
+          style={{ background: "rgba(13,10,20,0.85)", borderBottom: "1px solid rgba(139,92,246,0.08)" }}>
+          {/* Mobile menu */}
           <button onClick={() => setMobileOpen(true)} className="lg:hidden p-2 text-slate-500 hover:text-slate-300">
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Search */}
-          <div className="flex-1 max-w-2xl">
-            <div className="relative group">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-purple-400 transition-colors" />
-              <input
-                type="text"
-                placeholder="Search threats, IOCs, CVEs, assets..."
-                className="w-full pl-10 pr-4 py-2 rounded-lg text-sm text-slate-300 placeholder-slate-600 focus:outline-none transition-all"
-                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.06)" }}
-              />
-              <kbd className="hidden sm:inline absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] text-slate-600 rounded font-mono" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(100,100,120,0.2)" }}>/</kbd>
-            </div>
-          </div>
+          {/* Breadcrumbs */}
+          <nav className="hidden md:flex items-center gap-1.5 text-[12px] min-w-0">
+            <Link href="/" className="flex items-center gap-1 text-slate-500 hover:text-purple-300 transition-colors shrink-0">
+              <LayoutDashboard className="w-3 h-3" /> Dashboard
+            </Link>
+            {pathname !== "/" && (
+              <>
+                <ChevronRight className="w-3 h-3 text-slate-700" />
+                <span className="text-slate-300 font-medium truncate">
+                  {PAGE_TITLES[pathname] ?? pathname.replace(/^\//, "").replace(/-/g, " ")}
+                </span>
+              </>
+            )}
+          </nav>
 
-          {/* Right side */}
-          <div className="flex items-center gap-2">
-            {/* Pipeline status */}
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.06)" }}>
-              <Activity className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-[11px] text-slate-500 font-medium">Pipeline</span>
-              <span className="text-[11px] text-emerald-400 font-bold">ACTIVE</span>
+          {/* Search / Cmd+K trigger */}
+          <button
+            onClick={() => setCmdOpen(true)}
+            className="flex-1 max-w-[440px] h-9 pl-3 pr-2 rounded-lg flex items-center gap-2 text-[12px] text-slate-500 hover:text-slate-300 transition-all group"
+            style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(139,92,246,0.08)" }}
+          >
+            <SearchIcon className="w-3.5 h-3.5 group-hover:text-purple-300 transition-colors" />
+            <span className="flex-1 text-left truncate">Search threats, CVEs, IOCs, actors…</span>
+            <kbd className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 text-[10px] text-slate-500 rounded font-mono"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(100,100,120,0.2)" }}>
+              <Command className="w-2.5 h-2.5" /> K
+            </kbd>
+          </button>
+
+          {/* Right cluster */}
+          <div className="flex items-center gap-1.5 ml-auto">
+            {/* Clock */}
+            <div className="hidden xl:flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-mono text-[11px] text-slate-500 tabular-nums"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.06)" }}>
+              {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              <span className="text-slate-700">UTC{now.getTimezoneOffset() === 0 ? "" : (now.getTimezoneOffset() < 0 ? "+" : "-") + Math.abs(now.getTimezoneOffset() / 60)}</span>
             </div>
+
+            {/* Pipeline status — clickable */}
+            <button
+              className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-lg group hover:bg-white/[0.03] transition-all"
+              style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.15)" }}
+              title="Ingest pipeline"
+            >
+              <div className="relative">
+                <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              </div>
+              <div className="flex flex-col items-start leading-none">
+                <span className="text-[9px] text-slate-500 uppercase tracking-wider">Pipeline</span>
+                <span className="text-[11px] text-emerald-300 font-bold font-mono">{Math.round(pipelineRate)}/min</span>
+              </div>
+            </button>
+
+            {/* Quick action: New investigation */}
+            <Link
+              href="/investigate"
+              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-purple-200 hover:text-white transition-all"
+              style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}
+            >
+              <Plus className="w-3 h-3" />
+              <span>Investigate</span>
+            </Link>
 
             {/* Notifications */}
-            <button onClick={clearUnread} className="relative p-2 text-slate-500 hover:text-slate-300 transition-colors rounded-lg hover:bg-white/[0.02]">
-              <Bell className="w-[18px] h-[18px]" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center text-[9px] font-bold rounded-full bg-red-500 text-white" style={{ boxShadow: "0 0 0 2px #0d0a14" }}>
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
+            <div className="relative" ref={notifMenuRef}>
+              <button
+                onClick={() => { setShowNotifications(!showNotifications); setShowUserMenu(false); }}
+                className="relative p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/[0.04]"
+              >
+                <Bell className="w-[18px] h-[18px]" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 w-4 h-4 flex items-center justify-center text-[9px] font-bold rounded-full bg-red-500 text-white animate-pulse"
+                    style={{ boxShadow: "0 0 0 2px #0d0a14" }}>
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification panel */}
+              {showNotifications && (
+                <div
+                  className="absolute right-0 top-full mt-2 w-[380px] rounded-xl overflow-hidden shadow-2xl z-50 animate-fade-up"
+                  style={{ background: "#110d1a", border: "1px solid rgba(139,92,246,0.2)" }}
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between p-3"
+                    style={{ borderBottom: "1px solid rgba(139,92,246,0.08)" }}>
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <Bell className="w-4 h-4 text-purple-300" />
+                        {unreadCount > 0 && (
+                          <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                        )}
+                      </div>
+                      <h3 className="text-sm font-semibold text-white">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-red-500/15 text-red-300 border border-red-500/25">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => { clearUnread(); }}
+                      className="text-[10px] text-purple-300 hover:text-purple-200 font-semibold"
+                    >
+                      Mark all read
+                    </button>
+                  </div>
+
+                  {/* Tabs */}
+                  <div className="flex px-3 pt-2 gap-1 border-b border-purple-500/[0.08]">
+                    {(["all", "unread", "mentions"] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setNotifTab(t)}
+                        className={cn(
+                          "relative px-3 py-2 text-[11px] font-semibold capitalize transition-all",
+                          notifTab === t ? "text-white" : "text-slate-500 hover:text-slate-300"
+                        )}
+                      >
+                        {t}
+                        {notifTab === t && (
+                          <div className="absolute left-0 right-0 bottom-[-1px] h-[2px] rounded-full"
+                            style={{ background: "linear-gradient(90deg,#8b5cf6,#ec4899)" }} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Notification items */}
+                  <div className="max-h-[400px] overflow-y-auto">
+                    {[
+                      { sev: "critical", icon: AlertTriangle, color: "#ef4444", title: "CVE-2024-3400 actively exploited", desc: "Palo Alto GlobalProtect — 14 assets potentially affected", time: "2m ago", unread: true, href: "/cve" },
+                      { sev: "high", icon: KeyRound, color: "#3b82f6", title: "Credential leak match", desc: "27 credentials for your domain in new combolist", time: "18m ago", unread: true, href: "/credentials" },
+                      { sev: "high", icon: Skull, color: "#ec4899", title: "LockBit claimed victim in your industry", desc: "Healthcare provider listed on leak site", time: "1h ago", unread: true, href: "/threat-actors" },
+                      { sev: "medium", icon: Eye, color: "#a855f7", title: "Brand mention on dark web forum", desc: "Thread: \"buying access to Transilience clients\"", time: "3h ago", unread: true, href: "/dark-web" },
+                      { sev: "medium", icon: Building2, color: "#10b981", title: "Vendor score dropped", desc: "Cloudflare: A → B (DNS anomaly)", time: "6h ago", unread: false, href: "/vendors" },
+                      { sev: "info", icon: Radar, color: "#06b6d4", title: "Attack surface scan completed", desc: "7 new subdomains discovered", time: "12h ago", unread: false, href: "/attack-surface" },
+                    ]
+                      .filter((n) => notifTab === "all" || (notifTab === "unread" && n.unread) || (notifTab === "mentions" && n.title.includes("mention")))
+                      .map((n, i) => (
+                        <Link
+                          key={i}
+                          href={n.href}
+                          onClick={() => setShowNotifications(false)}
+                          className="flex items-start gap-2.5 p-3 hover:bg-white/[0.02] transition-colors border-b border-purple-500/[0.04] relative group"
+                        >
+                          {n.unread && (
+                            <span className="absolute left-1 top-5 w-1 h-1 rounded-full bg-purple-400" />
+                          )}
+                          <div
+                            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                            style={{ background: `${n.color}15`, border: `1px solid ${n.color}30` }}
+                          >
+                            <n.icon className="w-3.5 h-3.5" style={{ color: n.color }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className={cn("text-[12px] font-medium", n.unread ? "text-white" : "text-slate-400")}>
+                                {n.title}
+                              </p>
+                              <span
+                                className="px-1 py-0 text-[8px] font-bold rounded uppercase tracking-wider"
+                                style={{ background: `${n.color}15`, color: n.color, border: `1px solid ${n.color}25` }}
+                              >
+                                {n.sev}
+                              </span>
+                            </div>
+                            <p className="text-[10.5px] text-slate-500 mt-0.5 line-clamp-1">{n.desc}</p>
+                            <p className="text-[9.5px] text-slate-600 mt-0.5 font-mono">{n.time}</p>
+                          </div>
+                        </Link>
+                      ))}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="p-2.5 text-center" style={{ borderTop: "1px solid rgba(139,92,246,0.08)" }}>
+                    <Link
+                      href="/alerts"
+                      onClick={() => setShowNotifications(false)}
+                      className="text-[11px] font-semibold text-purple-300 hover:text-purple-200 flex items-center justify-center gap-1"
+                    >
+                      View all in Alert Center <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                </div>
               )}
+            </div>
+
+            {/* Help */}
+            <button
+              onClick={() => setCmdOpen(true)}
+              className="hidden sm:block p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/[0.04]"
+              title="Help & shortcuts"
+            >
+              <HelpCircle className="w-[18px] h-[18px]" />
             </button>
 
             {/* User Menu */}
-            <div className="relative pl-2" style={{ borderLeft: "1px solid rgba(139,92,246,0.06)" }} ref={userMenuRef}>
+            <div className="relative pl-1.5 ml-0.5" style={{ borderLeft: "1px solid rgba(139,92,246,0.08)" }} ref={userMenuRef}>
               <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-white/[0.02] transition-all"
+                onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false); }}
+                className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-white/[0.04] transition-all"
               >
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-purple-300 text-sm font-bold"
-                  style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(236,72,153,0.15))", border: "1px solid rgba(139,92,246,0.1)" }}>
+                <div className="relative w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(139,92,246,0.4), rgba(236,72,153,0.3))",
+                    border: "1px solid rgba(139,92,246,0.4)",
+                  }}>
                   {userName ? userName[0].toUpperCase() : "U"}
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0d0a14]" />
                 </div>
                 <div className="hidden sm:block text-left">
-                  <p className="text-xs font-medium text-slate-300">{userName || "User"}</p>
-                  <p className="text-[10px] text-slate-600">{userEmail || "Not signed in"}</p>
+                  <p className="text-xs font-semibold text-slate-200">{userName || "User"}</p>
+                  <p className="text-[10px] text-slate-500">Analyst · Transilience</p>
                 </div>
-                <ChevronDown className="w-3 h-3 text-slate-600 hidden sm:block" />
+                <ChevronDown className="w-3 h-3 text-slate-500 hidden sm:block" />
               </button>
 
-              {/* Dropdown */}
+              {/* User dropdown — larger, richer */}
               {showUserMenu && (
-                <div className="absolute right-0 top-full mt-2 w-56 rounded-xl overflow-hidden shadow-2xl z-50 animate-fade-up"
-                  style={{ background: "#110d1a", border: "1px solid rgba(139,92,246,0.12)" }}>
-                  <div className="p-3" style={{ borderBottom: "1px solid rgba(139,92,246,0.06)" }}>
-                    <p className="text-xs font-medium text-slate-300">{userName || "User"}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">{userEmail || "demo@transilience.ai"}</p>
+                <div className="absolute right-0 top-full mt-2 w-72 rounded-xl overflow-hidden shadow-2xl z-50 animate-fade-up"
+                  style={{ background: "#110d1a", border: "1px solid rgba(139,92,246,0.2)" }}>
+                  {/* User card */}
+                  <div className="relative p-4"
+                    style={{
+                      background: "linear-gradient(135deg,rgba(139,92,246,0.1),rgba(236,72,153,0.05))",
+                      borderBottom: "1px solid rgba(139,92,246,0.12)",
+                    }}>
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-11 h-11 rounded-xl flex items-center justify-center text-white text-lg font-bold flex-shrink-0"
+                        style={{
+                          background: "linear-gradient(135deg, #8b5cf6, #ec4899)",
+                          border: "1px solid rgba(255,255,255,0.15)",
+                        }}>
+                        {userName ? userName[0].toUpperCase() : "U"}
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#110d1a]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">{userName || "User"}</p>
+                        <p className="text-[11px] text-slate-400 truncate">{userEmail || "demo@transilience.ai"}</p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="px-1.5 py-0 text-[9px] font-bold rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25 uppercase tracking-wider">
+                            Analyst
+                          </span>
+                          <span className="text-[9px] text-slate-600">·</span>
+                          <span className="text-[9.5px] text-slate-500">Transilience Org</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-1">
+
+                  {/* Menu items */}
+                  <div className="p-1.5">
                     <Link href="/settings" onClick={() => setShowUserMenu(false)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-white/[0.03] transition-all">
-                      <User className="w-3.5 h-3.5" /> Profile & Settings
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-white/[0.04] transition-all">
+                      <User className="w-3.5 h-3.5" /> <span className="flex-1">Profile & Settings</span>
+                      <kbd className="text-[9px] text-slate-600 font-mono">⌘,</kbd>
                     </Link>
+                    <Link href="/settings" onClick={() => setShowUserMenu(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-white/[0.04] transition-all">
+                      <Shield className="w-3.5 h-3.5" /> <span className="flex-1">Security & 2FA</span>
+                    </Link>
+                    <button onClick={() => { setShowUserMenu(false); setCmdOpen(true); }}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-white/[0.04] transition-all w-full text-left">
+                      <Keyboard className="w-3.5 h-3.5" /> <span className="flex-1">Keyboard shortcuts</span>
+                      <kbd className="text-[9px] text-slate-600 font-mono">⌘K</kbd>
+                    </button>
+                  </div>
+
+                  <div className="p-1.5 border-t border-purple-500/[0.08]">
+                    <Link href="/settings" onClick={() => setShowUserMenu(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-white/[0.04] transition-all">
+                      <Building2 className="w-3.5 h-3.5" /> <span className="flex-1">Switch organization</span>
+                      <ChevronRight className="w-3 h-3 text-slate-600" />
+                    </Link>
+                    <a href="https://github.com/confidentialwebapp/Transilience-Aegis" target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-white/[0.04] transition-all">
+                      <HelpCircle className="w-3.5 h-3.5" /> <span className="flex-1">Help & documentation</span>
+                    </a>
+                    <button className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-white/[0.04] transition-all w-full text-left">
+                      <Gift className="w-3.5 h-3.5 text-amber-300" />
+                      <span className="flex-1">What&apos;s new</span>
+                      <span className="px-1.5 py-0 text-[9px] font-bold rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/25">NEW</span>
+                    </button>
+                  </div>
+
+                  <div className="p-1.5 border-t border-purple-500/[0.08]">
                     <button onClick={handleLogout}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-red-400 hover:text-red-300 hover:bg-red-500/[0.05] transition-all w-full text-left">
-                      <LogOut className="w-3.5 h-3.5" /> Sign Out
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-red-400 hover:text-red-300 hover:bg-red-500/[0.08] transition-all w-full text-left">
+                      <LogOut className="w-3.5 h-3.5" /> Sign out
                     </button>
                   </div>
                 </div>
@@ -309,12 +611,194 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
+        {/* Command Palette — Cmd+K overlay */}
+        {cmdOpen && (
+          <CommandPalette
+            query={cmdQuery}
+            setQuery={setCmdQuery}
+            onClose={() => setCmdOpen(false)}
+            router={router}
+            cmdInputRef={cmdInputRef}
+          />
+        )}
+
         {/* Page content */}
         <main className="flex-1 overflow-y-auto bg-grid-pattern">
           <div className="p-4 lg:p-6 max-w-[1600px] mx-auto">
             {children}
           </div>
         </main>
+      </div>
+    </div>
+  );
+}
+
+/* --- Command Palette (Cmd+K) --- */
+function CommandPalette({
+  query, setQuery, onClose, router, cmdInputRef,
+}: {
+  query: string;
+  setQuery: (q: string) => void;
+  onClose: () => void;
+  router: ReturnType<typeof useRouter>;
+  cmdInputRef: React.RefObject<HTMLInputElement>;
+}) {
+  const [selectedIdx, setSelectedIdx] = useState(0);
+
+  const items: CommandPaletteItem[] = [
+    { id: "nav-1", label: "Go to Dashboard", section: "Navigate", icon: LayoutDashboard, href: "/", shortcut: "G D" },
+    { id: "nav-2", label: "Open Threat Feed", section: "Navigate", icon: Radio, href: "/threats", shortcut: "G T" },
+    { id: "nav-3", label: "Open Alerts", section: "Navigate", icon: AlertTriangle, href: "/alerts", shortcut: "G A" },
+    { id: "nav-4", label: "Open CVE Intelligence", section: "Navigate", icon: Bug, href: "/cve" },
+    { id: "nav-5", label: "Open Threat Actors", section: "Navigate", icon: Skull, href: "/threat-actors" },
+    { id: "nav-6", label: "Open Dark Web Monitor", section: "Navigate", icon: Eye, href: "/dark-web" },
+    { id: "nav-7", label: "Open IOC Lookup", section: "Navigate", icon: Fingerprint, href: "/intel" },
+    { id: "nav-8", label: "Open Credentials", section: "Navigate", icon: KeyRound, href: "/credentials" },
+    { id: "nav-9", label: "Open Attack Surface", section: "Navigate", icon: Radar, href: "/attack-surface" },
+    { id: "nav-10", label: "Open Exposure Score", section: "Navigate", icon: BarChart3, href: "/exposure" },
+    { id: "nav-11", label: "Open Supply Chain", section: "Navigate", icon: Building2, href: "/vendors" },
+    { id: "nav-12", label: "Open Transilience AI", section: "Navigate", icon: Brain, href: "/transilience-ai" },
+    { id: "nav-13", label: "Open Settings", section: "Navigate", icon: Settings, href: "/settings", shortcut: "⌘ ," },
+    { id: "act-1", label: "New investigation", section: "Actions", icon: Plus, href: "/investigate" },
+    { id: "act-2", label: "Trigger scan", section: "Actions", icon: Scan, href: "/settings" },
+    { id: "act-3", label: "Ask Transilience AI", section: "Actions", icon: Sparkles, href: "/transilience-ai" },
+    { id: "act-4", label: "Export report", section: "Actions", icon: FileText, href: "/exposure" },
+    { id: "q-1", label: "Show critical alerts", section: "Quick queries", icon: Zap, href: "/alerts" },
+    { id: "q-2", label: "Top exploited CVEs this week", section: "Quick queries", icon: Target, href: "/cve" },
+    { id: "q-3", label: "Active ransomware groups", section: "Quick queries", icon: Skull, href: "/threat-actors" },
+    { id: "q-4", label: "Dark web mentions (24h)", section: "Quick queries", icon: Eye, href: "/dark-web" },
+    { id: "help-1", label: "Keyboard shortcuts", section: "Help", icon: Keyboard },
+    { id: "help-2", label: "Contact support", section: "Help", icon: MessageSquare },
+  ];
+
+  const filtered = query
+    ? items.filter((i) => i.label.toLowerCase().includes(query.toLowerCase()) || i.section.toLowerCase().includes(query.toLowerCase()))
+    : items;
+
+  const grouped: Record<string, CommandPaletteItem[]> = {};
+  filtered.forEach((i) => {
+    if (!grouped[i.section]) grouped[i.section] = [];
+    grouped[i.section].push(i);
+  });
+
+  const flat = filtered;
+
+  useEffect(() => { setSelectedIdx(0); }, [query]);
+
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIdx((i) => Math.min(flat.length - 1, i + 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIdx((i) => Math.max(0, i - 1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const item = flat[selectedIdx];
+      if (item?.href) {
+        router.push(item.href);
+        onClose();
+      }
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4"
+      style={{ background: "rgba(5,3,10,0.7)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[620px] rounded-2xl overflow-hidden shadow-2xl animate-fade-up"
+        style={{
+          background: "linear-gradient(180deg,#16112a 0%,#0c0817 100%)",
+          border: "1px solid rgba(139,92,246,0.3)",
+          boxShadow: "0 20px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.15)",
+        }}
+      >
+        {/* Input */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-purple-500/[0.12]">
+          <SearchIcon className="w-4 h-4 text-purple-300" />
+          <input
+            ref={cmdInputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder="Type a command or search…"
+            className="flex-1 bg-transparent text-[14px] text-white placeholder-slate-600 focus:outline-none"
+          />
+          <kbd className="text-[10px] text-slate-500 font-mono px-1.5 py-0.5 rounded"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.12)" }}>
+            ESC
+          </kbd>
+        </div>
+
+        {/* Results */}
+        <div className="max-h-[50vh] overflow-y-auto p-2">
+          {flat.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-10 gap-2">
+              <HelpCircle className="w-8 h-8 text-slate-700" />
+              <p className="text-xs text-slate-500">No results for &ldquo;{query}&rdquo;</p>
+            </div>
+          )}
+          {Object.entries(grouped).map(([section, list]) => (
+            <div key={section} className="mb-3 last:mb-0">
+              <p className="px-3 py-1 text-[9.5px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                {section}
+              </p>
+              {list.map((item) => {
+                const idx = flat.indexOf(item);
+                const selected = idx === selectedIdx;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      if (item.href) {
+                        router.push(item.href);
+                        onClose();
+                      }
+                    }}
+                    onMouseEnter={() => setSelectedIdx(idx)}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-all",
+                      selected ? "bg-purple-500/15 text-white" : "text-slate-400 hover:bg-white/[0.03]"
+                    )}
+                  >
+                    <item.icon className={cn("w-4 h-4 flex-shrink-0", selected ? "text-purple-300" : "text-slate-500")} />
+                    <span className="flex-1 text-left truncate">{item.label}</span>
+                    {item.shortcut && (
+                      <kbd className="text-[10px] text-slate-500 font-mono px-1.5 py-0.5 rounded"
+                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.1)" }}>
+                        {item.shortcut}
+                      </kbd>
+                    )}
+                    {selected && <ArrowRight className="w-3 h-3 text-purple-300" />}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-4 py-2.5 border-t border-purple-500/[0.08]">
+          <div className="flex items-center gap-3 text-[10px] text-slate-500">
+            <span className="flex items-center gap-1">
+              <kbd className="px-1 rounded font-mono" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.08)" }}>↑↓</kbd> navigate
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1 rounded font-mono" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.08)" }}>↵</kbd> open
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1 rounded font-mono" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.08)" }}>ESC</kbd> close
+            </span>
+          </div>
+          <div className="flex items-center gap-1 text-[10px] text-slate-500">
+            <Sparkles className="w-2.5 h-2.5 text-purple-400" />
+            <span>Powered by Transilience</span>
+          </div>
+        </div>
       </div>
     </div>
   );

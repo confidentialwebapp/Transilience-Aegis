@@ -408,7 +408,7 @@ function TypingIndicator() {
   );
 }
 
-export default function NexusAIPage() {
+export default function TransilienceAIPage() {
   const [messages, setMessages] = useState<Message[]>(DEMO_CONVERSATION);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -498,7 +498,7 @@ export default function NexusAIPage() {
               <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" style={{ boxShadow: "0 0 10px #10b981" }} />
             </div>
             <div>
-              <h1 className="text-[22px] font-bold tracking-tight text-gradient-brand">Nexus AI</h1>
+              <h1 className="text-[22px] font-bold tracking-tight text-gradient-brand">Transilience AI</h1>
               <p className="text-[11px] text-slate-500">Your threat intelligence analyst — ask me anything</p>
             </div>
           </div>
@@ -617,7 +617,7 @@ export default function NexusAIPage() {
             </div>
           </div>
           <p className="text-center text-[10px] text-slate-700 mt-2">
-            Nexus AI may produce inaccurate information — always verify critical findings with primary sources.
+            Transilience AI may produce inaccurate information — always verify critical findings with primary sources.
           </p>
         </div>
       </div>

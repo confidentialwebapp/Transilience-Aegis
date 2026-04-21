@@ -436,16 +436,16 @@ export default function DashboardPage() {
               <Brain className="w-4 h-4 text-purple-300" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white">Nexus AI Insights</h3>
+              <h3 className="text-sm font-semibold text-white">Transilience AI Insights</h3>
               <p className="text-[10px] text-slate-500">
                 Auto-generated · {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </p>
             </div>
             <Link
-              href="/nexus-ai"
+              href="/transilience-ai"
               className="ml-auto flex items-center gap-1 text-[11px] text-purple-300 hover:text-purple-200 font-semibold"
             >
-              Ask Nexus <ArrowUpRight className="w-3 h-3" />
+              Ask Transilience <ArrowUpRight className="w-3 h-3" />
             </Link>
           </div>
           <div className="relative space-y-3">
@@ -702,7 +702,7 @@ export default function DashboardPage() {
             { t: "Attack Surface", i: Radar, c: "#06b6d4", h: "/attack-surface", s: `${infraStats?.subdomains?.total ?? 0} subdomains` },
             { t: "Supply Chain", i: Building2, c: "#10b981", h: "/vendors", s: `${vendorStats?.total ?? 0} vendors` },
             { t: "Exposure", i: BarChart3, c: "#ec4899", h: "/exposure", s: `Score ${exposureScore}` },
-            { t: "Nexus AI", i: Brain, c: "#f59e0b", h: "/nexus-ai", s: "Intel analyst", b: "AI" },
+            { t: "Transilience AI", i: Brain, c: "#f59e0b", h: "/transilience-ai", s: "Intel analyst", b: "AI" },
           ].map((m) => (
             <Link
               key={m.t}

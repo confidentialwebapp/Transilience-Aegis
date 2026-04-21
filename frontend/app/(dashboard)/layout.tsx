@@ -49,7 +49,7 @@ const NAV_SECTIONS = [
       { href: "/credentials", label: "Credentials", icon: KeyRound, badge: "99+" },
       { href: "/exposure", label: "Exposure", icon: BarChart3, badge: null },
       { href: "/vendors", label: "Supply Chain", icon: Building2, badge: null },
-      { href: "/nexus-ai", label: "Nexus AI", icon: Brain, badge: "AI" },
+      { href: "/transilience-ai", label: "Transilience AI", icon: Brain, badge: "AI" },
     ],
   },
   {

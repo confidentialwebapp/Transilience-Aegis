@@ -12,7 +12,7 @@ import {
   LayoutDashboard, AlertTriangle, Box, Bell, Search as SearchIcon,
   Settings, ChevronLeft, ChevronRight, Database, Menu, Scan,
   Bug, Building2, Network, Eye, Skull, Fingerprint, Brain, Activity,
-  Radio, FileText, Radar, LogOut, User, ChevronDown, BarChart3,
+  Radio, FileText, Radar, LogOut, User, ChevronDown, BarChart3, KeyRound,
 } from "lucide-react";
 
 const NAV_SECTIONS = [
@@ -46,6 +46,7 @@ const NAV_SECTIONS = [
     title: "DIGITAL RISK",
     items: [
       { href: "/alerts", label: "Alert Center", icon: AlertTriangle, badge: null },
+      { href: "/credentials", label: "Credentials", icon: KeyRound, badge: "99+" },
       { href: "/exposure", label: "Exposure", icon: BarChart3, badge: null },
       { href: "/vendors", label: "Supply Chain", icon: Building2, badge: null },
       { href: "/nexus-ai", label: "Nexus AI", icon: Brain, badge: "AI" },
@@ -188,6 +189,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           {item.badge === "AI" && (
                             <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
                               AI
+                            </span>
+                          )}
+                          {item.badge === "99+" && (
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-red-500/15 text-red-300 border border-red-500/25">
+                              99+
                             </span>
                           )}
                         </>

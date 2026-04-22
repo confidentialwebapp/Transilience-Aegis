@@ -59,11 +59,12 @@ ENV VIRTUAL_ENV=/opt/venv \
     PATH="/opt/venv/bin:${PATH}"
 RUN python3 -m venv "${VIRTUAL_ENV}" \
  && /opt/venv/bin/pip install --no-cache-dir --upgrade pip
-COPY backend/requirements.txt ./requirements.txt
+# Build context = backend/ (matches render.yaml rootDir + dockerContext).
+COPY requirements.txt ./requirements.txt
 RUN /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
 # Application code
-COPY backend/ ./
+COPY . ./
 
 # Render injects PORT (typically 10000); default to 8000 for local docker run.
 ENV PORT=8000 \

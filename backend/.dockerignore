@@ -1,0 +1,12 @@
+# Build context = backend/ (Render rootDir + dockerContext both point here).
+.env
+.env.local
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
+.DS_Store

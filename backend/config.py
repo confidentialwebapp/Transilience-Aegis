@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     # Maltego TRX
     MALTEGO_TRX_AUTH_TOKEN: str = ""
 
+    # Modal — for calling the scanner workers (Kali tools as serverless functions)
+    MODAL_TOKEN_ID: str = ""
+    MODAL_TOKEN_SECRET: str = ""
+
     # App
     APP_ENV: str = "development"
     LOG_LEVEL: str = "info"

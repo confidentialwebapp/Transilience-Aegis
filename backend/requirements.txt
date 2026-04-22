@@ -14,11 +14,6 @@ tldextract>=5.1.0
 lxml>=5.1.0
 python-multipart>=0.0.6
 geoip2>=4.8.0,<5.0
-# Note: theHarvester is intentionally NOT pinned here.
-#   - The `theHarvester` package on PyPI is a broken stub (v0.0.1 only).
-#   - The real tool is at github.com/laramies/theHarvester and pulls a
-#     heavy dependency tree that conflicts with our pins on cloud builds.
-#   - Install locally via your distro (Kali ships it at /usr/bin/theHarvester)
-#     or from git in your own venv. modules/harvester.py degrades gracefully
-#     when the binary isn't on PATH and the /api/v1/recon/harvest endpoint
-#     will return a clear error message in that case.
+# Modal SDK — backend uses it to invoke Kali/OSINT tool functions hosted on
+# Modal. Authentication via MODAL_TOKEN_ID / MODAL_TOKEN_SECRET env vars.
+modal>=0.66.0

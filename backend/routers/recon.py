@@ -106,3 +106,68 @@ async def threatminer_lookup(
     if not result:
         raise HTTPException(404, "no ThreatMiner data")
     return result
+
+
+# =============================================================================
+# Modal-powered Kali tool endpoints. Each calls a Modal serverless function so
+# Render doesn't need the binaries installed.
+# =============================================================================
+@router.get("/subdomains")
+async def subdomains(domain: str = Query(...), x_org_id: str = Header(...)):
+    """Composite: subfinder → dnsx → httpx. Returns alive hosts with status/title/tech."""
+    if "." not in domain:
+        raise HTTPException(400, "invalid domain")
+    from modules import modal_recon
+    return await modal_recon.attack_surface(domain)
+
+
+@router.get("/typosquats")
+async def typosquats(
+    domain: str = Query(...),
+    registered_only: bool = Query(True, description="Only return domains that resolve"),
+    x_org_id: str = Header(...),
+):
+    """Find lookalike/typo/IDN domains using dnstwist."""
+    if "." not in domain:
+        raise HTTPException(400, "invalid domain")
+    from modules import modal_recon
+    return await modal_recon.dnstwist(domain, registered_only=registered_only)
+
+
+@router.post("/nmap")
+async def nmap_scan(
+    target: str = Query(...),
+    args: str = Query("-sV -F -T4", description="nmap CLI args (no -iL)"),
+    x_org_id: str = Header(...),
+):
+    """Run nmap against a single target. Caller is responsible for authorization."""
+    if not target:
+        raise HTTPException(400, "target required")
+    from modules import modal_recon
+    return await modal_recon.nmap(target, args=args)
+
+
+@router.post("/nuclei")
+async def nuclei_scan(
+    target: str = Query(..., description="URL or host"),
+    severity: str = Query("critical,high,medium"),
+    x_org_id: str = Header(...),
+):
+    """Run nuclei templates against a target. Returns a list of findings."""
+    if not target:
+        raise HTTPException(400, "target required")
+    from modules import modal_recon
+    return await modal_recon.nuclei(target, severity=severity)
+
+
+@router.post("/httpx")
+async def httpx_probe(
+    targets: list[str] | None = None,
+    x_org_id: str = Header(...),
+):
+    """Probe a list of hosts for status/title/tech. Body: JSON list of strings."""
+    if not targets:
+        raise HTTPException(400, "targets list required")
+    from modules import modal_recon
+    return await modal_recon.httpx_probe(targets)
+

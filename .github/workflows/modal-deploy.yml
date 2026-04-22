@@ -1,0 +1,41 @@
+name: Deploy Modal scanner app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'modal_app/**'
+      - '.github/workflows/modal-deploy.yml'
+  workflow_dispatch:  # also runnable manually from the Actions tab
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Modal
+        run: pip install --upgrade modal
+
+      - name: Deploy app to Modal
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          if [ -z "$MODAL_TOKEN_ID" ] || [ -z "$MODAL_TOKEN_SECRET" ]; then
+            echo "::error::MODAL_TOKEN_ID / MODAL_TOKEN_SECRET secrets not set on this repo"
+            exit 1
+          fi
+          modal deploy modal_app/main.py
+
+      - name: Print deployed function list
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          modal app list || true

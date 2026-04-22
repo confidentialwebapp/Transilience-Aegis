@@ -52,7 +52,7 @@ def create_app():
         from routers import cve, vendors, infrastructure, ioc_watchlist, threat_actors
         from routers import settings as settings_router  # alias to avoid shadowing
         from routers import recon, maltego_router
-        from routers import customer_profiles, researcher_feed
+        from routers import customer_profiles, researcher_feed, osint
         app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
         app.include_router(assets.router, prefix="/api/v1/assets", tags=["Assets"])
         app.include_router(alerts.router, prefix="/api/v1/alerts", tags=["Alerts"])
@@ -69,6 +69,7 @@ def create_app():
         app.include_router(maltego_router.router, prefix="/api/v1/maltego", tags=["Maltego Transforms"])
         app.include_router(customer_profiles.router, prefix="/api/v1/customer-profiles", tags=["Customer Profiles"])
         app.include_router(researcher_feed.router, prefix="/api/v1/researcher-feed", tags=["Researcher Feed"])
+        app.include_router(osint.router, prefix="/api/v1/osint", tags=["OSINT"])
         logger.info("All routers loaded successfully.")
     except Exception as e:
         import traceback

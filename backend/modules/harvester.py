@@ -1,8 +1,8 @@
-"""theHarvester subprocess wrapper.
+"""theHarvester wrapper — calls Modal `aegis-scanners.run_theharvester` so we
+don't need the Kali toolchain on the Render container.
 
-Runs theHarvester out-of-process, captures the JSON output it writes
-when given `-f <basename>`, normalizes the result, and persists it to
-the `recon_runs` table.
+Falls back to local subprocess if the binary is on PATH AND Modal isn't
+configured (useful for dev on a Kali laptop).
 """
 
 from __future__ import annotations
@@ -43,6 +43,43 @@ def _normalize(raw: dict) -> dict:
     }
 
 
+async def _run_local(domain: str, sources: str, limit: int, timeout: int, binary: str) -> tuple[dict, Optional[str], str]:
+    """Local subprocess execution. Returns (raw_json, error, status)."""
+    binary_path = shutil.which(binary) or binary
+    workdir = tempfile.mkdtemp(prefix="harvester-")
+    out_base = os.path.join(workdir, f"th-{uuid.uuid4().hex[:8]}")
+    json_path = f"{out_base}.json"
+    raw: dict = {}
+    error: Optional[str] = None
+    status = "failed"
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            binary_path, "-d", domain, "-b", sources, "-l", str(limit), "-f", out_base,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        except asyncio.TimeoutError:
+            proc.kill(); await proc.wait()
+            return raw, f"timeout after {timeout}s", "failed"
+        if os.path.isfile(json_path):
+            try:
+                with open(json_path) as f:
+                    raw = json.load(f)
+                status = "success" if proc.returncode == 0 else "partial"
+            except Exception as e:
+                error = f"json parse failed: {e}"
+        else:
+            error = (stderr.decode("utf-8", errors="ignore")[:500]) or "no JSON output"
+    except FileNotFoundError:
+        error = f"theHarvester binary not found at {binary_path}"
+    except Exception as e:
+        error = f"subprocess failed: {e}"
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+    return raw, error, status
+
+
 async def run(
     domain: str,
     *,
@@ -52,63 +89,46 @@ async def run(
     org_id: Optional[str] = None,
     binary: str = "theHarvester",
 ) -> dict:
-    """Execute theHarvester and return a normalized result dict.
-
-    The result is also written to `recon_runs` (best-effort).
+    """Execute theHarvester (Modal preferred, local subprocess fallback) and
+    persist to `recon_runs`. Returns a normalized response dict.
     """
     started = datetime.now(timezone.utc)
-    binary_path = shutil.which(binary) or binary
-    workdir = tempfile.mkdtemp(prefix="harvester-")
-    out_base = os.path.join(workdir, f"th-{uuid.uuid4().hex[:8]}")
-    json_path = f"{out_base}.json"
 
-    cmd = [
-        binary_path,
-        "-d", domain,
-        "-b", sources,
-        "-l", str(limit),
-        "-f", out_base,
-    ]
-
-    proc = None
-    error: Optional[str] = None
+    # Prefer Modal — works on Render where there's no Kali toolchain
     raw: dict = {}
+    error: Optional[str] = None
     status = "failed"
+    used = "unknown"
 
     try:
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        try:
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-        except asyncio.TimeoutError:
-            proc.kill()
-            await proc.wait()
-            error = f"timeout after {timeout}s"
-            status = "failed"
+        from modules import modal_recon
+        modal_result = await modal_recon.theharvester(domain=domain, sources=sources, limit=limit)
+        if modal_result.get("ok"):
+            r = modal_result.get("results", {}) or {}
+            # Modal already returns the same normalized shape; keep raw too
+            raw = {
+                "emails": r.get("emails", []),
+                "hosts": r.get("hosts", []),
+                "ips": r.get("ips", []),
+                "asns": r.get("asns", []),
+                "urls": r.get("urls", []),
+                "linkedin": r.get("linkedin", []),
+            }
+            status = "success"
+            used = "modal"
         else:
-            if os.path.isfile(json_path):
-                try:
-                    with open(json_path, "r", encoding="utf-8") as f:
-                        raw = json.load(f)
-                    status = "success" if proc.returncode == 0 else "partial"
-                except Exception as e:
-                    error = f"json parse failed: {e}"
-                    status = "failed"
+            err_msg = modal_result.get("error") or "modal call failed"
+            # Fall back to local subprocess if Modal isn't configured
+            if "MODAL_TOKEN" in err_msg or "not configured" in err_msg:
+                raw, error, status = await _run_local(domain, sources, limit, timeout, binary)
+                used = "local"
             else:
-                error = (stderr.decode("utf-8", errors="ignore")[:500]) or "no JSON output"
-                status = "failed"
-    except FileNotFoundError:
-        error = f"theHarvester binary not found at {binary_path}"
+                error = f"modal: {err_msg}"
+                used = "modal"
     except Exception as e:
-        error = f"subprocess failed: {e}"
-    finally:
-        try:
-            shutil.rmtree(workdir, ignore_errors=True)
-        except Exception:
-            pass
+        logger.warning("Modal harvester call failed, falling back to local: %s", e)
+        raw, error, status = await _run_local(domain, sources, limit, timeout, binary)
+        used = "local"
 
     normalized = _normalize(raw) if raw else {
         "emails": [], "hosts": [], "ips": [], "asns": [],
@@ -119,6 +139,7 @@ async def run(
     response = {
         "domain": domain,
         "tool": "theHarvester",
+        "executor": used,
         "status": status,
         "sources": sources.split(","),
         "started_at": started.isoformat(),
@@ -144,7 +165,7 @@ async def run(
             "ips": normalized["ips"][:1000],
             "asns": normalized["asns"][:1000],
             "urls": normalized["urls"][:1000],
-            "raw": raw,
+            "raw": {**raw, "_executor": used},
             "started_at": started.isoformat(),
             "completed_at": completed.isoformat(),
             "error": error,

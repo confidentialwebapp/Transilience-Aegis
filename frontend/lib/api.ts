@@ -267,6 +267,18 @@ export const api = {
     apiFetch<{ channels: number; results: { channel: string; status: string; items: number; inserted: number }[] }>(
       "/api/v1/researcher-feed/poll", { method: "POST", orgId }
     ),
+
+  // Modal-powered Kali scanners
+  scanSubdomains: (orgId: string, domain: string) =>
+    apiFetch<AttackSurfaceResult>(`/api/v1/recon/subdomains?domain=${encodeURIComponent(domain)}`, { orgId }),
+  scanTyposquats: (orgId: string, domain: string, registeredOnly = true) =>
+    apiFetch<TyposquatResult>(`/api/v1/recon/typosquats?domain=${encodeURIComponent(domain)}&registered_only=${registeredOnly}`, { orgId }),
+  scanNmap: (orgId: string, target: string, args = "-sV -F -T4") =>
+    apiFetch<NmapResult>(`/api/v1/recon/nmap?target=${encodeURIComponent(target)}&args=${encodeURIComponent(args)}`, { method: "POST", orgId }),
+  scanNuclei: (orgId: string, target: string, severity = "critical,high,medium") =>
+    apiFetch<NucleiResult>(`/api/v1/recon/nuclei?target=${encodeURIComponent(target)}&severity=${encodeURIComponent(severity)}`, { method: "POST", orgId }),
+  scanUsername: (orgId: string, username: string, topSites = 100) =>
+    apiFetch<UsernameSearchResult>(`/api/v1/osint/username?username=${encodeURIComponent(username)}&top_sites=${topSites}`, { orgId }),
 };
 
 // Types
@@ -496,4 +508,65 @@ export interface ResearcherPost {
   published_at: string | null;
   extracted_iocs: Record<string, string[]>;
   ingested_at: string;
+}
+
+// ----- Modal scanner result shapes -----
+export interface AttackSurfaceResult {
+  tool: "attack_surface";
+  domain: string;
+  subdomains: string[];
+  subdomain_count: number;
+  resolved: string[];
+  alive: Array<{
+    url?: string; host?: string; status_code?: number; title?: string;
+    tech?: string[]; webserver?: string;
+  }>;
+  alive_count: number;
+}
+
+export interface TyposquatResult {
+  tool: "dnstwist";
+  ok: boolean;
+  count: number;
+  results: Array<{
+    domain: string;
+    fuzzer: string;
+    dns_a?: string[];
+    dns_aaaa?: string[];
+    dns_mx?: string[];
+    dns_ns?: string[];
+    geoip?: string;
+    whois_created?: string;
+    whois_registrar?: string;
+  }>;
+}
+
+export interface NmapResult {
+  tool: "nmap";
+  ok: boolean;
+  target: string;
+  args: string;
+  output: string;
+  stderr: string;
+}
+
+export interface NucleiResult {
+  tool: "nuclei";
+  ok: boolean;
+  target: string;
+  severity_filter: string;
+  count: number;
+  findings: Array<{
+    "template-id"?: string;
+    info?: { name?: string; severity?: string; tags?: string[]; description?: string };
+    "matched-at"?: string;
+  }>;
+}
+
+export interface UsernameSearchResult {
+  tool: "maigret";
+  ok: boolean;
+  username: string;
+  count: number;
+  found: Array<{ site: string; url: string; tags?: string[] }>;
 }

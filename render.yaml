@@ -1,12 +1,12 @@
 services:
   - type: web
     name: tai-aegis-api
-    env: docker
+    env: python
     region: oregon
     plan: free
     rootDir: backend
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn start:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: SUPABASE_URL
@@ -41,7 +41,7 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
-      # New providers (set in dashboard or via API)
+      # Tier-1 enrichment providers
       - key: ABUSEIPDB_API_KEY
         sync: false
       - key: IPQS_API_KEY
@@ -57,11 +57,11 @@ services:
         sync: false
       - key: ENRICHMENT_CACHE_TTL
         sync: false
-      # theHarvester
-      - key: HARVESTER_BIN
-        sync: false
-      - key: HARVESTER_TIMEOUT_SECONDS
-        sync: false
       # Maltego TRX shared secret (optional)
       - key: MALTEGO_TRX_AUTH_TOKEN
+        sync: false
+      # Modal — backend uses these to invoke Kali tool functions on Modal
+      - key: MODAL_TOKEN_ID
+        sync: false
+      - key: MODAL_TOKEN_SECRET
         sync: false

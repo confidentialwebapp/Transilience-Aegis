@@ -50,6 +50,8 @@ const NAV_SECTIONS = [
     title: "DIGITAL RISK",
     items: [
       { href: "/alerts", label: "Alert Center", icon: AlertTriangle, badge: null },
+      { href: "/profile", label: "Customer Watchlist", icon: Skull, badge: "NEW" },
+      { href: "/researcher-feed", label: "Researcher Feed", icon: Radio, badge: "NEW" },
       { href: "/credentials", label: "Credentials", icon: KeyRound, badge: "99+" },
       { href: "/exposure", label: "Exposure", icon: BarChart3, badge: null },
       { href: "/vendors", label: "Supply Chain", icon: Building2, badge: null },
@@ -79,6 +81,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/assets": "Asset Inventory",
   "/scan-review": "Scan Review",
   "/alerts": "Alert Center",
+  "/profile": "Customer Watchlist",
+  "/researcher-feed": "Researcher Feed",
   "/credentials": "Credentials",
   "/exposure": "Exposure",
   "/vendors": "Supply Chain",

@@ -250,6 +250,41 @@ export const api = {
   // Maltego transform listing (read-only — actual transforms hit per-name endpoints from Maltego desktop)
   listMaltegoTransforms: (orgId: string) =>
     apiFetch<{ transforms: MaltegoTransform[] }>("/api/v1/maltego/transforms", { orgId }),
+
+  // Customer watchlist profiles (ransomware + dark-web matching)
+  listCustomerProfiles: (orgId: string) =>
+    apiFetch<{ data: CustomerProfile[] }>("/api/v1/customer-profiles/", { orgId }),
+  createCustomerProfile: (orgId: string, body: Partial<CustomerProfile>) =>
+    apiFetch<CustomerProfile>("/api/v1/customer-profiles/", { method: "POST", body, orgId }),
+  updateCustomerProfile: (orgId: string, id: string, body: Partial<CustomerProfile>) =>
+    apiFetch<CustomerProfile>(`/api/v1/customer-profiles/${id}`, { method: "PATCH", body, orgId }),
+  deleteCustomerProfile: (orgId: string, id: string) =>
+    apiFetch<{ deleted: string }>(`/api/v1/customer-profiles/${id}`, { method: "DELETE", orgId }),
+  matchProfilesNow: (orgId: string) =>
+    apiFetch<{ victims_checked: number; profiles?: number; matches: number; alerts_created: number; note?: string }>(
+      "/api/v1/customer-profiles/match-now", { method: "POST", orgId }
+    ),
+  recentProfileMatches: (orgId: string, limit = 20) =>
+    apiFetch<{ data: ProfileMatchAlert[] }>(`/api/v1/customer-profiles/recent-matches?limit=${limit}`, { orgId }),
+
+  // Researcher feed (curated public Telegram via t.me/s preview)
+  listResearcherChannels: (orgId: string) =>
+    apiFetch<{ data: ResearcherChannel[] }>("/api/v1/researcher-feed/channels", { orgId }),
+  listResearcherPosts: (orgId: string, params?: { channel?: string; q?: string; has_iocs?: boolean; per_page?: number; page?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.channel) sp.set("channel", params.channel);
+    if (params?.q) sp.set("q", params.q);
+    if (params?.has_iocs) sp.set("has_iocs", "true");
+    sp.set("page", String(params?.page ?? 1));
+    sp.set("per_page", String(params?.per_page ?? 50));
+    return apiFetch<{ data: ResearcherPost[]; total: number; page: number; per_page: number }>(
+      `/api/v1/researcher-feed/posts?${sp.toString()}`, { orgId }
+    );
+  },
+  pollResearcherFeed: (orgId: string) =>
+    apiFetch<{ channels: number; results: { channel: string; status: string; items: number; inserted: number }[] }>(
+      "/api/v1/researcher-feed/poll", { method: "POST", orgId }
+    ),
 };
 
 // Types
@@ -450,4 +485,57 @@ export interface MaltegoTransform {
   name: string;
   input_entities: string[];
   endpoint: string;
+}
+
+export interface CustomerProfile {
+  id: string;
+  org_id: string;
+  display_name: string;
+  sectors: string[];
+  countries: string[];
+  domains: string[];
+  brand_keywords: string[];
+  notify_in_app: boolean;
+  notify_email: string | null;
+  notify_telegram_chat_id: number | null;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProfileMatchAlert {
+  id: string;
+  title: string;
+  description: string;
+  severity: string;
+  risk_score: number;
+  source_url: string;
+  raw_data: { victim?: any; reasons?: string[]; profile_id?: string };
+  created_at: string;
+  status: string;
+}
+
+export interface ResearcherChannel {
+  id: string;
+  handle: string;
+  name: string;
+  source_kind: string;
+  feed_url: string;
+  category: string | null;
+  enabled: boolean;
+  last_polled_at: string | null;
+  last_post_at: string | null;
+  last_error: string | null;
+}
+
+export interface ResearcherPost {
+  id: string;
+  channel: string;
+  external_id: string | null;
+  title: string | null;
+  text: string | null;
+  link: string | null;
+  published_at: string | null;
+  extracted_iocs: Record<string, string[]>;
+  ingested_at: string;
 }

@@ -57,12 +57,31 @@ async def _credential_scan_job():
 
 
 async def _ransomware_sync_job():
-    """Pull fresh ransomware group + victim data from ransomware.live into DB."""
+    """Pull fresh ransomware group + victim data from ransomware.live into DB,
+    then run the customer-profile matcher to surface alerts."""
     try:
         from routers.threat_actors import sync_ransomware_to_db
         await sync_ransomware_to_db()
     except Exception as e:
         logger.error("Ransomware sync job failed: %s", e)
+    # Always run the matcher even if the group sync failed — victims come
+    # from the same API and are useful independently.
+    try:
+        from modules.ransomware_matcher import run_sync_and_match
+        result = await run_sync_and_match(limit=100)
+        logger.info("Ransomware matcher: %s", result)
+    except Exception as e:
+        logger.error("Ransomware matcher failed: %s", e)
+
+
+async def _researcher_feed_job():
+    """Ingest curated public Telegram researcher channels via RSSHub."""
+    try:
+        from modules.researcher_feed import run_all
+        result = await run_all()
+        logger.info("Researcher feed sync: %s channels", result.get("channels", 0))
+    except Exception as e:
+        logger.error("Researcher feed job failed: %s", e)
 
 
 async def _blocklist_sync_job():
@@ -131,6 +150,8 @@ def start_scheduler():
     _scheduler.add_job(_start_telegram_loop, IntervalTrigger(minutes=5), id="telegram_loop", replace_existing=True, next_run_time=None, misfire_grace_time=60)
     # Enrichment cache cleanup — Postgres audit trail prune
     _scheduler.add_job(_enrichment_cache_cleanup, IntervalTrigger(hours=6), id="enrichment_cleanup", replace_existing=True, misfire_grace_time=300)
+    # Curated researcher-channel feed (RSSHub bridges) — every 30 minutes
+    _scheduler.add_job(_researcher_feed_job, IntervalTrigger(minutes=30), id="researcher_feed", replace_existing=True, misfire_grace_time=300)
 
     _scheduler.start()
     # Kick the Telegram loop immediately rather than waiting for the first scheduled tick.

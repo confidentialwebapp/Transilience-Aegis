@@ -69,6 +69,7 @@ from routers import assets, alerts, scans, intel, dashboard, investigate
 from routers import cve, vendors, infrastructure, ioc_watchlist, threat_actors
 from routers import settings as settings_router  # alias — `settings` is the Settings() instance from line 14
 from routers import recon, telegram, maltego_router
+from routers import customer_profiles, researcher_feed
 
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
 app.include_router(assets.router, prefix="/api/v1/assets", tags=["Assets"])
@@ -85,6 +86,8 @@ app.include_router(settings_router.router, prefix="/api/v1/settings", tags=["Set
 app.include_router(recon.router, prefix="/api/v1/recon", tags=["Recon (theHarvester)"])
 app.include_router(telegram.router, prefix="/api/v1/telegram", tags=["Telegram Bot"])
 app.include_router(maltego_router.router, prefix="/api/v1/maltego", tags=["Maltego Transforms"])
+app.include_router(customer_profiles.router, prefix="/api/v1/customer-profiles", tags=["Customer Profiles"])
+app.include_router(researcher_feed.router, prefix="/api/v1/researcher-feed", tags=["Researcher Feed"])
 
 
 @app.get("/health")

@@ -46,7 +46,9 @@ export async function middleware(request: NextRequest) {
       path.startsWith("/pricing") ||
       path.startsWith("/security") ||
       path.startsWith("/privacy") ||
-      path.startsWith("/terms");
+      path.startsWith("/terms") ||
+      path.startsWith("/status") ||
+      path.startsWith("/changelog");
 
     const isPublicAsset =
       path === "/logo.png" ||
@@ -79,5 +81,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api).*)"],
+  // Note: `api/` with a trailing slash so /api-keys (the dashboard page) is
+  // still middleware-gated. Without the slash, anything starting with "api"
+  // — including /api-keys — would skip auth.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/).*)"],
 };

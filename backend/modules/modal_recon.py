@@ -32,7 +32,11 @@ def _is_configured() -> bool:
 
 @lru_cache(maxsize=32)
 def _lookup(fn_name: str):
-    """Cache Modal Function objects so we don't re-resolve each call."""
+    """Cache Modal Function objects so we don't re-resolve each call.
+
+    Modal 1.x renamed `Function.lookup` to `Function.from_name`. Use the
+    new API; fall back to the old one for older SDK versions just in case.
+    """
     import os
     from config import get_settings
     s = get_settings()
@@ -42,6 +46,8 @@ def _lookup(fn_name: str):
     if s.MODAL_TOKEN_SECRET:
         os.environ.setdefault("MODAL_TOKEN_SECRET", s.MODAL_TOKEN_SECRET)
     import modal
+    if hasattr(modal.Function, "from_name"):
+        return modal.Function.from_name(APP_NAME, fn_name)
     return modal.Function.lookup(APP_NAME, fn_name)
 
 

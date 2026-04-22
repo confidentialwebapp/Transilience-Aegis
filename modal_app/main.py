@@ -37,31 +37,22 @@ import modal
 kali_image = (
     modal.Image.from_registry("kalilinux/kali-rolling", add_python="3.11")
     .run_commands(
-        # Refresh Kali archive signing keys. -o flags allow the first update
-        # to proceed even though the existing key is missing/expired.
+        # 1. Refresh Kali archive signing keys. -o flags allow the first update
+        #    to proceed even though the existing key is missing/expired.
         "apt-get update -o Acquire::AllowInsecureRepositories=true "
         "        -o Acquire::AllowDowngradeToInsecureRepositories=true || true",
         "apt-get install -y --allow-unauthenticated kali-archive-keyring",
         "apt-get update",
-    )
-    # OS tools available via apt — Kali ships these in main repos
-    .apt_install(
-        "theharvester",
-        "nmap",
-        "masscan",
-        "whois",
-        "dnsutils",
-        "dnsrecon",
-        "whatweb",
-        "nikto",
-        "wpscan",
-        "amass",
-        "subfinder",
-        "dnstwist",
-        "ca-certificates",
-        "curl",
-        "wget",
-        "git",
+        # 2. Standard Docker trick: stop any package post-install scripts from
+        #    trying to start services (systemd refuses to run in containers).
+        "printf '#!/bin/sh\\nexit 101\\n' > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d",
+        # 3. Install the recon toolchain. --no-install-recommends keeps the
+        #    image small and avoids pulling in things like systemd/dbus.
+        "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "
+        "    theharvester nmap subfinder dnstwist dnsutils whois "
+        "    ca-certificates curl wget git unzip",
+        # 4. Restore normal policy.
+        "rm -f /usr/sbin/policy-rc.d",
     )
     # Tools that don't have stable apt packages yet
     .pip_install(

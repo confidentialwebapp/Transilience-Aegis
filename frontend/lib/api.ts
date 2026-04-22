@@ -285,7 +285,97 @@ export const api = {
     apiFetch<DigestSendResult>(`/api/v1/digest/send-now/${profileId}`, { method: "POST", orgId }),
   digestLog: (orgId: string, limit = 30) =>
     apiFetch<{ data: Array<{ id: string; profile_id: string; email: string; frequency: string; status: string; error: string | null; alerts_count: number; posts_count: number; sent_at: string }> }>(`/api/v1/digest/log?limit=${limit}`, { orgId }),
+
+  // Audit log
+  auditList: (orgId: string, params?: { action?: string; entity_type?: string; page?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.action) sp.set("action", params.action);
+    if (params?.entity_type) sp.set("entity_type", params.entity_type);
+    sp.set("page", String(params?.page ?? 1));
+    sp.set("per_page", "50");
+    return apiFetch<{ data: AuditEvent[]; total: number; page: number; per_page: number }>(
+      `/api/v1/audit/?${sp.toString()}`, { orgId }
+    );
+  },
+  auditStats: (orgId: string) =>
+    apiFetch<{ total_events_7d: number; unique_users_7d: number; top_actions: Array<{ action: string; count: number }> }>("/api/v1/audit/stats", { orgId }),
+
+  // Webhooks
+  listWebhooks: (orgId: string) =>
+    apiFetch<{ data: Webhook[] }>("/api/v1/webhooks/", { orgId }),
+  createWebhook: (orgId: string, body: Partial<Webhook>) =>
+    apiFetch<Webhook>("/api/v1/webhooks/", { method: "POST", body, orgId }),
+  updateWebhook: (orgId: string, id: string, body: Partial<Webhook>) =>
+    apiFetch<Webhook>(`/api/v1/webhooks/${id}`, { method: "PATCH", body, orgId }),
+  deleteWebhook: (orgId: string, id: string) =>
+    apiFetch<{ deleted: string }>(`/api/v1/webhooks/${id}`, { method: "DELETE", orgId }),
+  testWebhook: (orgId: string, id: string) =>
+    apiFetch<{ ok: boolean; http_status: number | null; error: string | null; response_body: string }>(`/api/v1/webhooks/${id}/test`, { method: "POST", orgId }),
+  webhookDeliveries: (orgId: string, limit = 30) =>
+    apiFetch<{ data: WebhookDelivery[] }>(`/api/v1/webhooks/deliveries?limit=${limit}`, { orgId }),
+
+  // API keys
+  listApiKeys: (orgId: string) =>
+    apiFetch<{ data: ApiKey[] }>("/api/v1/api-keys/", { orgId }),
+  createApiKey: (orgId: string, body: { name: string; scopes: string[]; expires_in_days?: number | null }) =>
+    apiFetch<ApiKey & { key: string; warning: string }>("/api/v1/api-keys/", { method: "POST", body, orgId }),
+  revokeApiKey: (orgId: string, id: string) =>
+    apiFetch<{ revoked: string }>(`/api/v1/api-keys/${id}`, { method: "DELETE", orgId }),
 };
+
+export interface AuditEvent {
+  id: string;
+  org_id: string;
+  user_id: string | null;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  details: Record<string, unknown>;
+  ip: string | null;
+  user_agent: string | null;
+  created_at: string;
+}
+
+export interface Webhook {
+  id: string;
+  org_id: string;
+  name: string;
+  url: string;
+  kind: "slack" | "teams" | "discord" | "generic";
+  secret: string | null;
+  events: string[];
+  min_severity: "low" | "medium" | "high" | "critical";
+  enabled: boolean;
+  last_delivery_at: string | null;
+  last_delivery_status: number | null;
+  last_delivery_error: string | null;
+  failure_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  webhook_id: string;
+  alert_id: string | null;
+  http_status: number | null;
+  ok: boolean;
+  response_body: string | null;
+  error: string | null;
+  attempt: number;
+  delivered_at: string;
+}
+
+export interface ApiKey {
+  id: string;
+  name: string;
+  prefix: string;
+  scopes: string[];
+  last_used_at: string | null;
+  expires_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+}
 
 // Types
 export interface DashboardSummary {

@@ -129,6 +129,80 @@ export default function ScanPage() {
         </div>
       )}
 
+      {/* Empty state — shown before first scan */}
+      {!result && !running && (
+        <div className="card-enterprise p-10 flex flex-col items-center text-center animate-fade-up">
+          {/* Icon ring */}
+          <div className="relative w-28 h-28 mb-6">
+            <div className="absolute inset-0 rounded-full opacity-10 animate-ping"
+              style={{ background: "radial-gradient(circle, rgba(59,130,246,0.4), transparent 70%)" }} />
+            {[
+              { Icon: Network,       angle: 0,   color: "#3b82f6", label: "Subdomains" },
+              { Icon: Globe,         angle: 90,  color: "#a855f7", label: "Typosquats" },
+              { Icon: Server,        angle: 180, color: "#f97316", label: "Nmap" },
+              { Icon: Bug,           angle: 270, color: "#ef4444", label: "Nuclei" },
+            ].map(({ Icon, angle, color, label }) => {
+              const rad = (angle * Math.PI) / 180;
+              const x = 50 + 38 * Math.cos(rad);
+              const y = 50 + 38 * Math.sin(rad);
+              return (
+                <div key={angle}
+                  className="absolute flex flex-col items-center -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${x}%`, top: `${y}%` }}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={{ background: `${color}12`, border: `1px solid ${color}30` }}>
+                    <Icon className="w-4 h-4" style={{ color }} />
+                  </div>
+                </div>
+              );
+            })}
+            <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg,rgba(59,130,246,0.15),rgba(168,85,247,0.1))", border: "1px solid rgba(59,130,246,0.25)" }}>
+              <Shield className="w-6 h-6 text-blue-300" />
+            </div>
+          </div>
+
+          <h2 className="text-xl font-bold text-white tracking-tight">Run your first Kali scan</h2>
+          <p className="text-[13px] text-slate-400 mt-2 max-w-sm leading-relaxed">
+            Enumerate subdomains, hunt typosquats, port-scan a target, or check vulnerabilities —{" "}
+            <span className="text-blue-300 font-semibold">all on Modal serverless</span>, no infra required.
+          </p>
+
+          <button
+            onClick={() => {
+              setTarget("example.com");
+              setActive("subdomains");
+            }}
+            className="mt-5 h-9 px-5 rounded-lg flex items-center gap-2 text-sm font-semibold text-white btn-brand">
+            <Network className="w-4 h-4" />
+            Try with example.com
+          </button>
+
+          <div className="mt-6 w-full max-w-xs">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex-1 h-px" style={{ background: "rgba(59,130,246,0.08)" }} />
+              <span className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">How it works</span>
+              <div className="flex-1 h-px" style={{ background: "rgba(59,130,246,0.08)" }} />
+            </div>
+            <ol className="space-y-2 text-left">
+              {[
+                { n: "1", text: "Pick a tool above — Subdomains, Typosquats, Nmap, or Nuclei" },
+                { n: "2", text: "Enter your target domain or IP and click Run" },
+                { n: "3", text: "Modal cold-starts in ~5s and runs the scan — results appear instantly" },
+              ].map(({ n, text }) => (
+                <li key={n} className="flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-blue-300"
+                    style={{ background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.2)", marginTop: "1px" }}>
+                    {n}
+                  </span>
+                  <span className="text-[11px] text-slate-500 leading-relaxed">{text}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      )}
+
       {result && !running && (
         <div className="space-y-3">
           {result.ok === false && result.error && (

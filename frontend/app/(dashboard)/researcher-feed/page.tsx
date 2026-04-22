@@ -157,8 +157,75 @@ export default function ResearcherFeedPage() {
           <div className="card-enterprise p-8 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-purple-400" /></div>
         )}
         {!loading && posts.length === 0 && (
-          <div className="card-enterprise p-8 text-center text-sm text-slate-500">
-            No posts yet. Try clicking "Poll all channels" above.
+          <div className="card-enterprise p-10 flex flex-col items-center text-center animate-fade-up">
+            {/* Icon ring */}
+            <div className="relative w-28 h-28 mb-6">
+              <div className="absolute inset-0 rounded-full opacity-10 animate-ping"
+                style={{ background: "radial-gradient(circle, rgba(168,85,247,0.4), transparent 70%)" }} />
+              {[
+                { label: "vx",    angle: 0,   color: "#a855f7" },
+                { label: "THN",   angle: 51,  color: "#3b82f6" },
+                { label: "CISA",  angle: 102, color: "#ef4444" },
+                { label: "DF",    angle: 153, color: "#f97316" },
+                { label: "CRU",   angle: 204, color: "#10b981" },
+                { label: "RT",    angle: 255, color: "#eab308" },
+                { label: "KR",    angle: 306, color: "#06b6d4" },
+              ].map(({ label, angle, color }) => {
+                const rad = (angle * Math.PI) / 180;
+                const x = 50 + 38 * Math.cos(rad);
+                const y = 50 + 38 * Math.sin(rad);
+                return (
+                  <div key={angle}
+                    className="absolute w-7 h-7 rounded-full flex items-center justify-center -translate-x-1/2 -translate-y-1/2"
+                    style={{ left: `${x}%`, top: `${y}%`, background: `${color}12`, border: `1px solid ${color}30` }}>
+                    <span className="text-[8px] font-bold" style={{ color }}>{label}</span>
+                  </div>
+                );
+              })}
+              <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-xl flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg,rgba(168,85,247,0.15),rgba(56,189,248,0.1))", border: "1px solid rgba(168,85,247,0.25)" }}>
+                <Radio className="w-6 h-6 text-purple-300" />
+              </div>
+            </div>
+
+            <h2 className="text-xl font-bold text-white tracking-tight">Pull threat intel from 8 curated channels</h2>
+            <p className="text-[13px] text-slate-400 mt-2 max-w-sm leading-relaxed">
+              vx-underground, The Hacker News, CISA, DarkFeed and more —{" "}
+              <span className="text-purple-300 font-semibold">IOCs auto-extracted</span> from every post.
+            </p>
+
+            <div className="flex flex-wrap gap-2 mt-5 justify-center">
+              <button
+                onClick={handlePoll}
+                disabled={polling}
+                className="h-9 px-5 rounded-lg flex items-center gap-2 text-sm font-semibold text-white btn-brand disabled:opacity-40">
+                {polling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                Poll all channels now
+              </button>
+            </div>
+
+            <div className="mt-6 w-full max-w-xs">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex-1 h-px" style={{ background: "rgba(168,85,247,0.08)" }} />
+                <span className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">How it works</span>
+                <div className="flex-1 h-px" style={{ background: "rgba(168,85,247,0.08)" }} />
+              </div>
+              <ol className="space-y-2 text-left">
+                {[
+                  { n: "1", text: "Click poll — we scrape t.me/s/<handle> for each curated channel" },
+                  { n: "2", text: "Posts are stored and IOCs (IPs, domains, hashes) are auto-extracted" },
+                  { n: "3", text: "IOCs surface as searchable, filterable posts — pivotable to IOC Lookup" },
+                ].map(({ n, text }) => (
+                  <li key={n} className="flex items-start gap-2.5">
+                    <span className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-purple-300"
+                      style={{ background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.2)", marginTop: "1px" }}>
+                      {n}
+                    </span>
+                    <span className="text-[11px] text-slate-500 leading-relaxed">{text}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </div>
         )}
         {!loading && posts.map((p) => {

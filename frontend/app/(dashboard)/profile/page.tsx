@@ -246,8 +246,90 @@ export default function ProfilePage() {
         {loading && profiles.length === 0 ? (
           <div className="py-6 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-rose-400" /></div>
         ) : profiles.length === 0 ? (
-          <div className="text-[12px] text-slate-500 p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
-            No profiles yet. Create one to start matching ransomware leak-site victims (and other intel sources) against your sectors, countries, domains, or brand keywords.
+          <div className="py-8 flex flex-col items-center text-center animate-fade-up">
+            {/* Icon ring */}
+            <div className="relative w-28 h-28 mb-6">
+              <div className="absolute inset-0 rounded-full opacity-10 animate-ping"
+                style={{ background: "radial-gradient(circle, rgba(244,63,94,0.4), transparent 70%)" }} />
+              {[
+                { Icon: Building2, angle: 0,   color: "#f43f5e" },
+                { Icon: Globe,     angle: 72,  color: "#a855f7" },
+                { Icon: Tag,       angle: 144, color: "#3b82f6" },
+                { Icon: MapPin,    angle: 216, color: "#10b981" },
+                { Icon: Skull,     angle: 288, color: "#ef4444" },
+              ].map(({ Icon, angle, color }) => {
+                const rad = (angle * Math.PI) / 180;
+                const x = 50 + 38 * Math.cos(rad);
+                const y = 50 + 38 * Math.sin(rad);
+                return (
+                  <div key={angle}
+                    className="absolute w-7 h-7 rounded-lg flex items-center justify-center -translate-x-1/2 -translate-y-1/2"
+                    style={{ left: `${x}%`, top: `${y}%`, background: `${color}12`, border: `1px solid ${color}30` }}>
+                    <Icon className="w-3.5 h-3.5" style={{ color }} />
+                  </div>
+                );
+              })}
+              <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-xl flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg,rgba(244,63,94,0.15),rgba(217,70,239,0.1))", border: "1px solid rgba(244,63,94,0.25)" }}>
+                <Skull className="w-6 h-6 text-rose-300" />
+              </div>
+            </div>
+
+            <h2 className="text-xl font-bold text-white tracking-tight">Set up your first watchlist</h2>
+            <p className="text-[13px] text-slate-400 mt-2 max-w-xs leading-relaxed">
+              Tell us your sectors, brands, and domains. AEGIS matches them against{" "}
+              <span className="text-rose-300 font-semibold">ransomware leak sites</span> and dark web mentions 24/7.
+            </p>
+
+            <div className="flex flex-wrap gap-2 mt-5 justify-center">
+              <button
+                onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setShowForm(true); }}
+                className="h-9 px-5 rounded-lg flex items-center gap-2 text-sm font-semibold text-white btn-brand">
+                <Plus className="w-4 h-4" />
+                Create your watchlist
+              </button>
+              <button
+                onClick={() => {
+                  setForm({
+                    display_name: "Acme Corp",
+                    sectors: "Healthcare",
+                    countries: "US",
+                    domains: "acme.com",
+                    brand_keywords: "acme, AcmeCorp",
+                    notify_email: "",
+                    notify_telegram_chat_id: "",
+                    digest_frequency: "daily",
+                  });
+                  setEditingId(null);
+                  setShowForm(true);
+                }}
+                className="h-9 px-4 rounded-lg flex items-center gap-2 text-sm font-medium text-slate-400 bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.05] hover:text-white transition-all">
+                Use sample watchlist
+              </button>
+            </div>
+
+            <div className="mt-6 w-full max-w-xs">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex-1 h-px" style={{ background: "rgba(244,63,94,0.08)" }} />
+                <span className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">How it works</span>
+                <div className="flex-1 h-px" style={{ background: "rgba(244,63,94,0.08)" }} />
+              </div>
+              <ol className="space-y-2 text-left">
+                {[
+                  { n: "1", text: "Add your assets — sectors, brands, domains, countries" },
+                  { n: "2", text: "AEGIS monitors ransomware leak sites and dark web forums 24/7" },
+                  { n: "3", text: "Get instant email + Telegram alerts when a match is found" },
+                ].map(({ n, text }) => (
+                  <li key={n} className="flex items-start gap-2.5">
+                    <span className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-rose-300"
+                      style={{ background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.2)", marginTop: "1px" }}>
+                      {n}
+                    </span>
+                    <span className="text-[11px] text-slate-500 leading-relaxed">{text}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </div>
         ) : (
           <div className="space-y-2">
@@ -301,8 +383,16 @@ export default function ProfilePage() {
           <AlertTriangle className="w-3.5 h-3.5" /> Recent matches (ransomware module)
         </h3>
         {matches.length === 0 ? (
-          <div className="text-[12px] text-slate-500 p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
-            No matches yet. The matcher runs every 15 minutes — give it some time, or click "Check now" above.
+          <div className="py-5 flex flex-col items-center text-center gap-2 rounded-xl"
+            style={{ background: "rgba(255,255,255,0.01)", border: "1px dashed rgba(244,63,94,0.1)" }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: "rgba(244,63,94,0.06)", border: "1px solid rgba(244,63,94,0.12)" }}>
+              <AlertTriangle className="w-4 h-4 text-rose-400 opacity-50" />
+            </div>
+            <p className="text-[12px] text-slate-500 font-medium">No matches yet</p>
+            <p className="text-[11px] text-slate-600 max-w-xs">
+              The matcher runs every 15 minutes. Once you have a watchlist profile, matches will appear here.
+            </p>
           </div>
         ) : (
           <div className="space-y-2">

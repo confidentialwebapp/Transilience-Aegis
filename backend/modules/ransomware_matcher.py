@@ -197,7 +197,7 @@ async def run_match(victims: list[dict]) -> dict:
                     f"Discovered: {v.get('discovered','—')}\n"
                     f"Match reasons: {', '.join(reasons)}"
                 )
-                client.table("alerts").insert({
+                insert_result = client.table("alerts").insert({
                     "org_id": org_id,
                     "module": "ransomware",
                     "severity": "high",
@@ -209,6 +209,7 @@ async def run_match(victims: list[dict]) -> dict:
                     "tags": ["ransomware", v.get("group", ""), *reasons],
                 }).execute()
                 alerts_created += 1
+                created_alert = (insert_result.data or [{}])[0]
 
                 # Optional Telegram delivery
                 chat_id = p.get("notify_telegram_chat_id")
@@ -222,6 +223,13 @@ async def run_match(victims: list[dict]) -> dict:
                         f"{v.get('post_url','')}"
                     )
                     asyncio.create_task(_send_telegram(int(chat_id), msg))
+
+                # Fan out to all configured webhooks for this org (Slack/Teams/Discord/generic)
+                try:
+                    from routers.webhooks import fire_for_alert
+                    asyncio.create_task(fire_for_alert(created_alert))
+                except Exception as e:
+                    logger.warning("webhook fan-out scheduling failed: %s", e)
             except Exception as e:
                 logger.warning("alert insert failed: %s", e)
 

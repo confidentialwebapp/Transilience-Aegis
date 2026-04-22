@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { getOrgId } from "@/lib/api";
 import { useAlerts } from "@/hooks/useAlerts";
 import { createClient } from "@/lib/supabase/client";
+import { CommandPalette } from "@/components/CommandPalette";
 import {
   LayoutDashboard, AlertTriangle, Box, Bell, Search as SearchIcon,
   Settings, ChevronLeft, ChevronRight, Menu, Scan,
@@ -60,8 +61,17 @@ const NAV_SECTIONS = [
     ],
   },
   {
+    title: "DEVELOPER",
+    items: [
+      { href: "/docs", label: "API Docs", icon: FileText, badge: "NEW" },
+      { href: "/api-keys", label: "API Keys", icon: KeyRound, badge: "NEW" },
+      { href: "/webhooks", label: "Webhooks", icon: Zap, badge: "NEW" },
+    ],
+  },
+  {
     title: "SYSTEM",
     items: [
+      { href: "/audit", label: "Audit Log", icon: HelpCircle, badge: "NEW" },
       { href: "/settings", label: "Settings", icon: Settings, badge: null },
     ],
   },
@@ -89,12 +99,12 @@ const PAGE_TITLES: Record<string, string> = {
   "/exposure": "Exposure",
   "/vendors": "Supply Chain",
   "/transilience-ai": "Transilience AI",
+  "/docs": "API Docs",
+  "/api-keys": "API Keys",
+  "/webhooks": "Webhooks",
+  "/audit": "Audit Log",
   "/settings": "Settings",
 };
-
-interface CommandPaletteItem {
-  id: string; label: string; section: string; icon: any; href?: string; shortcut?: string;
-}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -108,13 +118,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifTab, setNotifTab] = useState<"all" | "unread" | "mentions">("all");
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [cmdQuery, setCmdQuery] = useState("");
   const [pipelineRate, setPipelineRate] = useState(14);
   const [liveEventCount, setLiveEventCount] = useState(0);
   const [now, setNow] = useState<Date>(new Date());
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notifMenuRef = useRef<HTMLDivElement>(null);
-  const cmdInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setOrgIdState(getOrgId()); }, []);
   const { unreadCount, clearUnread } = useAlerts(orgId);
@@ -171,11 +179,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
-
-  useEffect(() => {
-    if (cmdOpen) setTimeout(() => cmdInputRef.current?.focus(), 30);
-    else setCmdQuery("");
-  }, [cmdOpen]);
 
   // Pipeline live rate + clock
   useEffect(() => {
@@ -624,15 +627,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Command Palette — Cmd+K overlay */}
-        {cmdOpen && (
-          <CommandPalette
-            query={cmdQuery}
-            setQuery={setCmdQuery}
-            onClose={() => setCmdOpen(false)}
-            router={router}
-            cmdInputRef={cmdInputRef}
-          />
-        )}
+        <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto bg-grid-pattern">
@@ -645,173 +640,3 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
 }
 
-/* --- Command Palette (Cmd+K) --- */
-function CommandPalette({
-  query, setQuery, onClose, router, cmdInputRef,
-}: {
-  query: string;
-  setQuery: (q: string) => void;
-  onClose: () => void;
-  router: ReturnType<typeof useRouter>;
-  cmdInputRef: React.RefObject<HTMLInputElement>;
-}) {
-  const [selectedIdx, setSelectedIdx] = useState(0);
-
-  const items: CommandPaletteItem[] = [
-    { id: "nav-1", label: "Go to Dashboard", section: "Navigate", icon: LayoutDashboard, href: "/", shortcut: "G D" },
-    { id: "nav-2", label: "Open Threat Feed", section: "Navigate", icon: Radio, href: "/threats", shortcut: "G T" },
-    { id: "nav-3", label: "Open Alerts", section: "Navigate", icon: AlertTriangle, href: "/alerts", shortcut: "G A" },
-    { id: "nav-4", label: "Open CVE Intelligence", section: "Navigate", icon: Bug, href: "/cve" },
-    { id: "nav-5", label: "Open Threat Actors", section: "Navigate", icon: Skull, href: "/threat-actors" },
-    { id: "nav-6", label: "Open Dark Web Monitor", section: "Navigate", icon: Eye, href: "/dark-web" },
-    { id: "nav-7", label: "Open IOC Lookup", section: "Navigate", icon: Fingerprint, href: "/intel" },
-    { id: "nav-8", label: "Open Credentials", section: "Navigate", icon: KeyRound, href: "/credentials" },
-    { id: "nav-9", label: "Open Attack Surface", section: "Navigate", icon: Radar, href: "/attack-surface" },
-    { id: "nav-10", label: "Open Exposure Score", section: "Navigate", icon: BarChart3, href: "/exposure" },
-    { id: "nav-11", label: "Open Supply Chain", section: "Navigate", icon: Building2, href: "/vendors" },
-    { id: "nav-12", label: "Open Transilience AI", section: "Navigate", icon: Brain, href: "/transilience-ai" },
-    { id: "nav-13", label: "Open Settings", section: "Navigate", icon: Settings, href: "/settings", shortcut: "⌘ ," },
-    { id: "act-1", label: "New investigation", section: "Actions", icon: Plus, href: "/investigate" },
-    { id: "act-2", label: "Trigger scan", section: "Actions", icon: Scan, href: "/settings" },
-    { id: "act-3", label: "Ask Transilience AI", section: "Actions", icon: Sparkles, href: "/transilience-ai" },
-    { id: "act-4", label: "Export report", section: "Actions", icon: FileText, href: "/exposure" },
-    { id: "q-1", label: "Show critical alerts", section: "Quick queries", icon: Zap, href: "/alerts" },
-    { id: "q-2", label: "Top exploited CVEs this week", section: "Quick queries", icon: Target, href: "/cve" },
-    { id: "q-3", label: "Active ransomware groups", section: "Quick queries", icon: Skull, href: "/threat-actors" },
-    { id: "q-4", label: "Dark web mentions (24h)", section: "Quick queries", icon: Eye, href: "/dark-web" },
-    { id: "help-1", label: "Keyboard shortcuts", section: "Help", icon: Keyboard },
-    { id: "help-2", label: "Contact support", section: "Help", icon: MessageSquare },
-  ];
-
-  const filtered = query
-    ? items.filter((i) => i.label.toLowerCase().includes(query.toLowerCase()) || i.section.toLowerCase().includes(query.toLowerCase()))
-    : items;
-
-  const grouped: Record<string, CommandPaletteItem[]> = {};
-  filtered.forEach((i) => {
-    if (!grouped[i.section]) grouped[i.section] = [];
-    grouped[i.section].push(i);
-  });
-
-  const flat = filtered;
-
-  useEffect(() => { setSelectedIdx(0); }, [query]);
-
-  const handleKey = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setSelectedIdx((i) => Math.min(flat.length - 1, i + 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setSelectedIdx((i) => Math.max(0, i - 1));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      const item = flat[selectedIdx];
-      if (item?.href) {
-        router.push(item.href);
-        onClose();
-      }
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4"
-      style={{ background: "rgba(5,3,10,0.7)", backdropFilter: "blur(4px)" }}
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-[620px] rounded-2xl overflow-hidden shadow-2xl animate-fade-up"
-        style={{
-          background: "linear-gradient(180deg,#16112a 0%,#0c0817 100%)",
-          border: "1px solid rgba(139,92,246,0.3)",
-          boxShadow: "0 20px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.15)",
-        }}
-      >
-        {/* Input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-purple-500/[0.12]">
-          <SearchIcon className="w-4 h-4 text-purple-300" />
-          <input
-            ref={cmdInputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKey}
-            placeholder="Type a command or search…"
-            className="flex-1 bg-transparent text-[14px] text-white placeholder-slate-600 focus:outline-none"
-          />
-          <kbd className="text-[10px] text-slate-500 font-mono px-1.5 py-0.5 rounded"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.12)" }}>
-            ESC
-          </kbd>
-        </div>
-
-        {/* Results */}
-        <div className="max-h-[50vh] overflow-y-auto p-2">
-          {flat.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-10 gap-2">
-              <HelpCircle className="w-8 h-8 text-slate-700" />
-              <p className="text-xs text-slate-500">No results for &ldquo;{query}&rdquo;</p>
-            </div>
-          )}
-          {Object.entries(grouped).map(([section, list]) => (
-            <div key={section} className="mb-3 last:mb-0">
-              <p className="px-3 py-1 text-[9.5px] font-bold uppercase tracking-[0.15em] text-slate-500">
-                {section}
-              </p>
-              {list.map((item) => {
-                const idx = flat.indexOf(item);
-                const selected = idx === selectedIdx;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      if (item.href) {
-                        router.push(item.href);
-                        onClose();
-                      }
-                    }}
-                    onMouseEnter={() => setSelectedIdx(idx)}
-                    className={cn(
-                      "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-all",
-                      selected ? "bg-purple-500/15 text-white" : "text-slate-400 hover:bg-white/[0.03]"
-                    )}
-                  >
-                    <item.icon className={cn("w-4 h-4 flex-shrink-0", selected ? "text-purple-300" : "text-slate-500")} />
-                    <span className="flex-1 text-left truncate">{item.label}</span>
-                    {item.shortcut && (
-                      <kbd className="text-[10px] text-slate-500 font-mono px-1.5 py-0.5 rounded"
-                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.1)" }}>
-                        {item.shortcut}
-                      </kbd>
-                    )}
-                    {selected && <ArrowRight className="w-3 h-3 text-purple-300" />}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-2.5 border-t border-purple-500/[0.08]">
-          <div className="flex items-center gap-3 text-[10px] text-slate-500">
-            <span className="flex items-center gap-1">
-              <kbd className="px-1 rounded font-mono" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.08)" }}>↑↓</kbd> navigate
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1 rounded font-mono" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.08)" }}>↵</kbd> open
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1 rounded font-mono" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.08)" }}>ESC</kbd> close
-            </span>
-          </div>
-          <div className="flex items-center gap-1 text-[10px] text-slate-500">
-            <Sparkles className="w-2.5 h-2.5 text-purple-400" />
-            <span>Powered by Transilience</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}

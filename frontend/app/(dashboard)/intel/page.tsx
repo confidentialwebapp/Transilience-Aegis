@@ -505,20 +505,86 @@ export default function IntelPage() {
 
           {/* Empty state */}
           {!results && !loading && (
-            <div className="card-enterprise p-12 text-center">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.12)" }}>
-                <Fingerprint className="w-8 h-8 text-blue-400 opacity-50" />
+            <div className="card-enterprise p-10 flex flex-col items-center text-center animate-fade-up">
+              {/* Icon ring illustration */}
+              <div className="relative w-28 h-28 mb-6">
+                {/* Outer pulse ring */}
+                <div className="absolute inset-0 rounded-full animate-ping opacity-10"
+                  style={{ background: "radial-gradient(circle, rgba(59,130,246,0.4), transparent 70%)" }} />
+                {/* Orbit icons */}
+                {[
+                  { Icon: Server,        angle: 0,   color: "#3b82f6" },
+                  { Icon: Globe,         angle: 60,  color: "#a855f7" },
+                  { Icon: Hash,          angle: 120, color: "#f97316" },
+                  { Icon: Link2,         angle: 180, color: "#eab308" },
+                  { Icon: Mail,          angle: 240, color: "#ec4899" },
+                  { Icon: AlertTriangle, angle: 300, color: "#ef4444" },
+                ].map(({ Icon, angle, color }) => {
+                  const rad = (angle * Math.PI) / 180;
+                  const x = 50 + 38 * Math.cos(rad);
+                  const y = 50 + 38 * Math.sin(rad);
+                  return (
+                    <div key={angle}
+                      className="absolute w-7 h-7 rounded-lg flex items-center justify-center -translate-x-1/2 -translate-y-1/2"
+                      style={{ left: `${x}%`, top: `${y}%`, background: `${color}12`, border: `1px solid ${color}30` }}>
+                      <Icon className="w-3.5 h-3.5" style={{ color }} />
+                    </div>
+                  );
+                })}
+                {/* Center core */}
+                <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-xl flex items-center justify-center"
+                  style={{ background: "linear-gradient(135deg,rgba(59,130,246,0.15),rgba(168,85,247,0.12))", border: "1px solid rgba(59,130,246,0.25)" }}>
+                  <Fingerprint className="w-6 h-6 text-blue-300" />
+                </div>
               </div>
-              <p className="text-sm text-slate-400 font-medium">Enter an IOC to begin investigation</p>
-              <p className="text-xs text-slate-600 mt-1">Supports IP, Domain, Hash (MD5/SHA1/SHA256), URL, Email, CVE</p>
-              <div className="flex flex-wrap justify-center gap-2 mt-4">
-                {Object.keys(DEMO_RESULTS).map((ex) => (
-                  <button key={ex} onClick={() => { handleInputChange(ex); setTimeout(() => handleLookup(ex), 50); }}
-                    className="px-3 py-1.5 rounded-lg text-xs text-purple-300 font-mono bg-purple-500/[0.06] border border-purple-500/15 hover:bg-purple-500/[0.1] transition-all">
-                    {ex.length > 20 ? ex.slice(0, 20) + "…" : ex}
-                  </button>
-                ))}
+
+              {/* Headline */}
+              <h2 className="text-xl font-bold text-white tracking-tight">Investigate your first IOC</h2>
+              <p className="text-[13px] text-slate-400 mt-2 max-w-xs leading-relaxed">
+                Look up an IP, domain, hash, URL, email, or CVE across{" "}
+                <span className="text-blue-300 font-semibold">12 threat-intel sources</span> in one query.
+              </p>
+
+              {/* CTAs */}
+              <div className="flex flex-wrap gap-2 mt-5 justify-center">
+                <button
+                  onClick={() => { handleInputChange("8.8.8.8"); setIocType("ip"); setTimeout(() => handleLookup("8.8.8.8"), 50); }}
+                  className="h-9 px-5 rounded-lg flex items-center gap-2 text-sm font-semibold text-white btn-brand">
+                  <TrendingUp className="w-4 h-4" />
+                  Try the demo IOCs
+                </button>
+                <div className="flex flex-wrap justify-center gap-1.5 mt-1 w-full">
+                  {Object.keys(DEMO_RESULTS).map((ex) => (
+                    <button key={ex} onClick={() => { handleInputChange(ex); setTimeout(() => handleLookup(ex), 50); }}
+                      className="px-3 py-1.5 rounded-lg text-xs text-purple-300 font-mono bg-purple-500/[0.06] border border-purple-500/15 hover:bg-purple-500/[0.1] transition-all">
+                      {ex.length > 20 ? ex.slice(0, 20) + "…" : ex}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* How it works */}
+              <div className="mt-6 w-full max-w-xs">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="flex-1 h-px" style={{ background: "rgba(139,92,246,0.08)" }} />
+                  <span className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">How it works</span>
+                  <div className="flex-1 h-px" style={{ background: "rgba(139,92,246,0.08)" }} />
+                </div>
+                <ol className="space-y-2 text-left">
+                  {[
+                    { n: "1", text: "Paste an IOC — IP, domain, hash, URL, email, or CVE" },
+                    { n: "2", text: "We query 12 sources in parallel (VT, AbuseIPDB, OTX…)" },
+                    { n: "3", text: "Get a unified verdict and raw source breakdowns in seconds" },
+                  ].map(({ n, text }) => (
+                    <li key={n} className="flex items-start gap-2.5">
+                      <span className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-blue-300"
+                        style={{ background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.2)", marginTop: "1px" }}>
+                        {n}
+                      </span>
+                      <span className="text-[11px] text-slate-500 leading-relaxed">{text}</span>
+                    </li>
+                  ))}
+                </ol>
               </div>
             </div>
           )}

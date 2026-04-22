@@ -53,6 +53,7 @@ def create_app():
         from routers import settings as settings_router  # alias to avoid shadowing
         from routers import recon, maltego_router
         from routers import customer_profiles, researcher_feed, osint, digest
+        from routers import audit, webhooks, api_keys
         app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
         app.include_router(assets.router, prefix="/api/v1/assets", tags=["Assets"])
         app.include_router(alerts.router, prefix="/api/v1/alerts", tags=["Alerts"])
@@ -71,6 +72,9 @@ def create_app():
         app.include_router(researcher_feed.router, prefix="/api/v1/researcher-feed", tags=["Researcher Feed"])
         app.include_router(osint.router, prefix="/api/v1/osint", tags=["OSINT"])
         app.include_router(digest.router, prefix="/api/v1/digest", tags=["Email Digest"])
+        app.include_router(audit.router, prefix="/api/v1/audit", tags=["Audit Log"])
+        app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
+        app.include_router(api_keys.router, prefix="/api/v1/api-keys", tags=["API Keys"])
         logger.info("All routers loaded successfully.")
     except Exception as e:
         import traceback

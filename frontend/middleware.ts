@@ -35,29 +35,39 @@ export async function middleware(request: NextRequest) {
       data: { session },
     } = await supabase.auth.getSession();
 
-    const isAuthPage =
-      request.nextUrl.pathname.startsWith("/login") ||
-      request.nextUrl.pathname.startsWith("/register");
+    const path = request.nextUrl.pathname;
+
+    const isAuthPage = path.startsWith("/login") || path.startsWith("/register");
+
+    // Public marketing routes — accessible without auth
+    const isPublicMarketing =
+      path === "/" ||
+      path.startsWith("/about") ||
+      path.startsWith("/pricing") ||
+      path.startsWith("/security") ||
+      path.startsWith("/privacy") ||
+      path.startsWith("/terms");
 
     const isPublicAsset =
-      request.nextUrl.pathname === "/logo.png" ||
-      request.nextUrl.pathname === "/favicon.ico";
+      path === "/logo.png" ||
+      path === "/favicon.ico" ||
+      path.startsWith("/_next");
 
     if (isPublicAsset) {
       return response;
     }
 
-    // No session and not on auth page → redirect to login
-    if (!session && !isAuthPage) {
+    // No session and trying to access a protected page → login
+    if (!session && !isAuthPage && !isPublicMarketing) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/login";
       return NextResponse.redirect(redirectUrl);
     }
 
-    // Logged in and on auth page → redirect to dashboard
-    if (session && isAuthPage) {
+    // Logged in and visiting auth pages or the marketing landing → dashboard
+    if (session && (isAuthPage || path === "/")) {
       const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/";
+      redirectUrl.pathname = "/dashboard";
       return NextResponse.redirect(redirectUrl);
     }
   } catch {

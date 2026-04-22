@@ -47,7 +47,7 @@ export default function LoginPage() {
         }
       }
 
-      router.push("/");
+      router.push("/dashboard");
       router.refresh();
     } catch {
       setError("An unexpected error occurred. Please try again.");
@@ -81,12 +81,12 @@ export default function LoginPage() {
         }
       }
       setOrgId(DEMO_ORG_ID);
-      router.push("/");
+      router.push("/dashboard");
       router.refresh();
     } catch {
       // Last resort: just proceed with demo org
       setOrgId(DEMO_ORG_ID);
-      router.push("/");
+      router.push("/dashboard");
     } finally {
       setDemoLoading(false);
     }

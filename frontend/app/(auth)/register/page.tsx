@@ -67,7 +67,7 @@ export default function RegisterPage() {
 
         // Check if email confirmation is required
         if (data.session) {
-          router.push("/");
+          router.push("/dashboard");
           router.refresh();
         } else {
           setSuccess(true);

@@ -21,7 +21,7 @@ const NAV_SECTIONS = [
   {
     title: "COMMAND CENTER",
     items: [
-      { href: "/", label: "Dashboard", icon: LayoutDashboard, badge: null },
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: null },
       { href: "/investigate", label: "Investigate", icon: Scan, badge: null },
     ],
   },
@@ -68,7 +68,7 @@ const NAV_SECTIONS = [
 ];
 
 const PAGE_TITLES: Record<string, string> = {
-  "/": "Command Center",
+  "/dashboard": "Command Center",
   "/investigate": "Investigate",
   "/threats": "Threat Feed",
   "/cve": "CVE Intelligence",
@@ -325,7 +325,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Breadcrumbs */}
           <nav className="hidden md:flex items-center gap-1.5 text-[12px] min-w-0">
-            <Link href="/" className="flex items-center gap-1 text-slate-500 hover:text-purple-300 transition-colors shrink-0">
+            <Link href="/dashboard" className="flex items-center gap-1 text-slate-500 hover:text-purple-300 transition-colors shrink-0">
               <LayoutDashboard className="w-3 h-3" /> Dashboard
             </Link>
             {pathname !== "/" && (

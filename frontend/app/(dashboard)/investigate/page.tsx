@@ -4,6 +4,7 @@ import { InfinityLoader } from "@/components/InfinityLoader";
 
 import { useState, useEffect } from "react";
 import { api, getOrgId, type Investigation } from "@/lib/api";
+import { modelLabel } from "@/lib/ai-models";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -180,7 +181,7 @@ function AIAnalysisCard({
           <div>
             <div className="text-[11px] font-bold tracking-wider text-violet-300 uppercase">Transilience AI Analysis</div>
             <div className="text-[10px] text-slate-500">
-              {summary._meta?.cached ? "cached" : summary._meta?.model ?? "claude"} · {summary._meta?.duration_ms ? `${Math.round(summary._meta.duration_ms / 100) / 10}s` : ""}
+              {summary._meta?.cached ? "cached" : modelLabel(summary._meta?.model)} · {summary._meta?.duration_ms ? `${Math.round(summary._meta.duration_ms / 100) / 10}s` : ""}
             </div>
           </div>
         </div>

@@ -62,6 +62,12 @@ const ALL_SOURCES = [
   { key: "theharvester",       label: "theHarvester",      icon: Mail,          desc: "Emails/hosts/ASNs via OSINT",      color: "#ec4899" },
   { key: "nmap",               label: "nmap",              icon: Wifi,          desc: "Port + service detection",         color: "#ef4444" },
   { key: "nuclei",             label: "nuclei",            icon: Shield,        desc: "Templated vulnerability scan",     color: "#dc2626" },
+  { key: "sherlock",           label: "sherlock",          icon: User,          desc: "Username across 400+ sites",       color: "#0ea5e9" },
+  { key: "holehe",             label: "holehe",            icon: Mail,          desc: "Email → sites it's registered on", color: "#06b6d4" },
+  { key: "amass",              label: "amass",             icon: Server,        desc: "Comprehensive DNS enum",           color: "#65a30d" },
+  { key: "whatweb",            label: "WhatWeb",           icon: Globe,         desc: "Web tech fingerprinting",          color: "#d97706" },
+  { key: "waybackurls",        label: "waybackurls",       icon: Clock,         desc: "Archived URLs from Wayback",       color: "#9333ea" },
+  { key: "naabu",              label: "naabu",             icon: Wifi,          desc: "Fast top-ports scanner",           color: "#b91c1c" },
 ];
 
 type SourceStatus = "idle" | "pending" | "running" | "done" | "failed" | "skipped";

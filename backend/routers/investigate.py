@@ -900,16 +900,18 @@ async def _check_phone(phone: str) -> Dict[str, Any]:
 # frontend/AI treat them identically to an API provider.
 # ---------------------------------------------------------------------------
 async def _modal_domain_tools(domain: str) -> Dict[str, Dict[str, Any]]:
-    """subfinder + dnstwist + theHarvester. nuclei runs only when asked for URL."""
+    """subfinder + dnstwist + theHarvester + amass + waybackurls (Phase B)."""
     try:
         from modules import modal_recon
     except Exception as e:
         return {"modal_error": {"source": "modal", "status": "error", "detail": str(e)[:150]}}
 
-    sf, tw, th = await asyncio.gather(
+    sf, tw, th, am, wb = await asyncio.gather(
         modal_recon.subfinder(domain),
         modal_recon.dnstwist(domain, registered_only=True),
         modal_recon.theharvester(domain),
+        modal_recon.amass(domain),
+        modal_recon.waybackurls(domain, limit=300),
         return_exceptions=True,
     )
 
@@ -959,7 +961,30 @@ async def _modal_domain_tools(domain: str) -> Dict[str, Dict[str, Any]]:
             "asns": (rr.get("asns") or [])[:10],
         }
 
-    return {"subfinder": sf_wrap, "dnstwist": tw_wrap, "theharvester": th_wrap}
+    am_wrap = _wrap(am, "amass")
+    if am_wrap.get("status") != "error":
+        subs = am_wrap.get("subdomains") or []
+        am_wrap = {
+            "source": "amass",
+            "status": "found" if subs else "clean",
+            "subdomain_count": len(subs),
+            "subdomains": subs[:40],
+        }
+
+    wb_wrap = _wrap(wb, "waybackurls")
+    if wb_wrap.get("status") != "error":
+        urls = wb_wrap.get("urls") or []
+        wb_wrap = {
+            "source": "waybackurls",
+            "status": "found" if urls else "clean",
+            "url_count": len(urls),
+            "sample": urls[:20],
+        }
+
+    return {
+        "subfinder": sf_wrap, "dnstwist": tw_wrap, "theharvester": th_wrap,
+        "amass": am_wrap, "waybackurls": wb_wrap,
+    }
 
 
 async def _modal_ip_tools(ip: str) -> Dict[str, Dict[str, Any]]:
@@ -967,23 +992,40 @@ async def _modal_ip_tools(ip: str) -> Dict[str, Dict[str, Any]]:
         from modules import modal_recon
     except Exception as e:
         return {"modal_error": {"source": "modal", "status": "error", "detail": str(e)[:150]}}
-    r = await modal_recon.nmap(ip, args="-sT -Pn -sV -F -T4")
-    if r.get("error") or not r.get("ok", True):
-        return {"nmap": {"source": "nmap", "status": "error",
-                         "detail": (r.get("error") or r.get("stderr") or "failed")[:200]}}
-    out = r.get("output") or ""
-    open_ports: List[Dict[str, str]] = []
-    for line in out.splitlines():
-        line = line.strip()
-        m = re.match(r"^(\d+)/tcp\s+(\S+)\s+(\S+)(?:\s+(.+))?$", line)
-        if m and m.group(2) == "open":
-            open_ports.append({"port": m.group(1), "service": m.group(3), "version": (m.group(4) or "").strip()})
-    return {"nmap": {
-        "source": "nmap", "status": "found" if open_ports else "clean",
-        "open_ports_count": len(open_ports),
-        "open_ports": open_ports[:30],
-        "args": r.get("args", ""),
-    }}
+    r, nb = await asyncio.gather(
+        modal_recon.nmap(ip, args="-sT -Pn -sV -F -T4"),
+        modal_recon.naabu(ip, top_ports=1000),
+        return_exceptions=True,
+    )
+    out: Dict[str, Any] = {}
+    if isinstance(r, Exception) or (isinstance(r, dict) and (r.get("error") or not r.get("ok", True))):
+        detail = str(r) if isinstance(r, Exception) else (r.get("error") or r.get("stderr") or "failed")
+        out["nmap"] = {"source": "nmap", "status": "error", "detail": str(detail)[:200]}
+    else:
+        raw = r.get("output") or ""
+        open_ports: List[Dict[str, str]] = []
+        for line in raw.splitlines():
+            line = line.strip()
+            m = re.match(r"^(\d+)/tcp\s+(\S+)\s+(\S+)(?:\s+(.+))?$", line)
+            if m and m.group(2) == "open":
+                open_ports.append({"port": m.group(1), "service": m.group(3), "version": (m.group(4) or "").strip()})
+        out["nmap"] = {
+            "source": "nmap", "status": "found" if open_ports else "clean",
+            "open_ports_count": len(open_ports),
+            "open_ports": open_ports[:30],
+            "args": r.get("args", ""),
+        }
+    if isinstance(nb, Exception) or (isinstance(nb, dict) and nb.get("error")):
+        out["naabu"] = {"source": "naabu", "status": "error",
+                        "detail": str(nb if isinstance(nb, Exception) else nb.get("error"))[:200]}
+    else:
+        out["naabu"] = {
+            "source": "naabu",
+            "status": "found" if nb.get("open_ports_count") else "clean",
+            "open_ports_count": nb.get("open_ports_count", 0),
+            "open_ports": nb.get("open_ports", [])[:50],
+        }
+    return out
 
 
 async def _modal_url_tools(url: str) -> Dict[str, Dict[str, Any]]:
@@ -991,24 +1033,79 @@ async def _modal_url_tools(url: str) -> Dict[str, Dict[str, Any]]:
         from modules import modal_recon
     except Exception as e:
         return {"modal_error": {"source": "modal", "status": "error", "detail": str(e)[:150]}}
-    r = await modal_recon.nuclei(url, severity="critical,high,medium")
-    if r.get("error"):
-        return {"nuclei": {"source": "nuclei", "status": "error", "detail": str(r["error"])[:200]}}
-    findings = r.get("findings") or []
-    by_sev: Dict[str, int] = {}
-    for f in findings:
-        sev = ((f.get("info") or {}).get("severity") or "unknown").lower()
-        by_sev[sev] = by_sev.get(sev, 0) + 1
-    return {"nuclei": {
-        "source": "nuclei",
-        "status": "found" if findings else "clean",
-        "total_findings": len(findings),
-        "by_severity": by_sev,
-        "top_findings": [
-            {"template": f.get("template-id"), "severity": (f.get("info") or {}).get("severity"),
-             "name": (f.get("info") or {}).get("name"), "matched": f.get("matched-at")}
-            for f in findings[:10]
-        ],
+    nuc, ww = await asyncio.gather(
+        modal_recon.nuclei(url, severity="critical,high,medium"),
+        modal_recon.whatweb(url),
+        return_exceptions=True,
+    )
+    out: Dict[str, Any] = {}
+    if isinstance(nuc, Exception) or (isinstance(nuc, dict) and nuc.get("error")):
+        out["nuclei"] = {"source": "nuclei", "status": "error",
+                         "detail": str(nuc if isinstance(nuc, Exception) else nuc.get("error"))[:200]}
+    else:
+        findings = nuc.get("findings") or []
+        by_sev: Dict[str, int] = {}
+        for f in findings:
+            sev = ((f.get("info") or {}).get("severity") or "unknown").lower()
+            by_sev[sev] = by_sev.get(sev, 0) + 1
+        out["nuclei"] = {
+            "source": "nuclei",
+            "status": "found" if findings else "clean",
+            "total_findings": len(findings),
+            "by_severity": by_sev,
+            "top_findings": [
+                {"template": f.get("template-id"),
+                 "severity": (f.get("info") or {}).get("severity"),
+                 "name": (f.get("info") or {}).get("name"),
+                 "matched": f.get("matched-at")}
+                for f in findings[:10]
+            ],
+        }
+    if isinstance(ww, Exception) or (isinstance(ww, dict) and ww.get("error")):
+        out["whatweb"] = {"source": "whatweb", "status": "error",
+                          "detail": str(ww if isinstance(ww, Exception) else ww.get("error"))[:200]}
+    else:
+        out["whatweb"] = {
+            "source": "whatweb",
+            "status": "found" if ww.get("plugin_count") else "clean",
+            "http_status": ww.get("status"),
+            "target_url": ww.get("target_url"),
+            "plugin_count": ww.get("plugin_count", 0),
+            "plugins": ww.get("plugins", [])[:20],
+        }
+    return out
+
+
+async def _modal_username_tools(username: str) -> Dict[str, Dict[str, Any]]:
+    try:
+        from modules import modal_recon
+    except Exception as e:
+        return {"sherlock": {"source": "sherlock", "status": "error", "detail": str(e)[:150]}}
+    r = await modal_recon.sherlock(username, timeout=20)
+    if isinstance(r, dict) and r.get("error"):
+        return {"sherlock": {"source": "sherlock", "status": "error", "detail": str(r["error"])[:200]}}
+    return {"sherlock": {
+        "source": "sherlock",
+        "status": "found" if r.get("found_count") else "clean",
+        "found_count": r.get("found_count", 0),
+        "found_on": [f.get("site") for f in (r.get("found") or [])[:30]],
+        "details": (r.get("found") or [])[:30],
+    }}
+
+
+async def _modal_email_tools(email: str) -> Dict[str, Dict[str, Any]]:
+    try:
+        from modules import modal_recon
+    except Exception as e:
+        return {"holehe": {"source": "holehe", "status": "error", "detail": str(e)[:150]}}
+    r = await modal_recon.holehe(email)
+    if isinstance(r, dict) and r.get("error"):
+        return {"holehe": {"source": "holehe", "status": "error", "detail": str(r["error"])[:200]}}
+    return {"holehe": {
+        "source": "holehe",
+        "status": "found" if r.get("registered_count") else "clean",
+        "registered_count": r.get("registered_count", 0),
+        "registered_on": (r.get("registered_on") or [])[:50],
     }}
 
 
@@ -1091,6 +1188,11 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
                 sources_checked.append("otx")
             results["intelx"] = await _check_intelx(target)
             sources_checked.append("intelx")
+            # Modal Phase-B: holehe (which sites the email is registered on)
+            modal_res = await _modal_email_tools(target)
+            for k, v in modal_res.items():
+                results[k] = v
+                sources_checked.append(k)
             if results["hibp"].get("status") == "breached":
                 scoring_factors["in_breach_db"] = True
                 scoring_factors["exposed_credentials"] = True
@@ -1099,6 +1201,8 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
                 scoring_factors["exposed_credentials"] = True
             if (results.get("otx") or {}).get("pulse_count", 0) > 0:
                 scoring_factors["virustotal_flagged"] = True
+            if (results.get("holehe") or {}).get("registered_count", 0) > 0:
+                scoring_factors["exposed_credentials"] = True
 
         elif body.target_type == "domain":
             # Free sources (no key required)
@@ -1254,7 +1358,14 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("github")
             results["intelx"] = await _check_intelx(target)
             sources_checked.append("intelx")
+            # Modal Phase-B: sherlock across 400+ sites
+            modal_res = await _modal_username_tools(target)
+            for k, v in modal_res.items():
+                results[k] = v
+                sources_checked.append(k)
             if (results.get("github") or {}).get("total_count", 0) > 0:
+                scoring_factors["exposed_credentials"] = True
+            if (results.get("sherlock") or {}).get("found_count", 0) >= 5:
                 scoring_factors["exposed_credentials"] = True
 
         elif body.target_type == "phone":

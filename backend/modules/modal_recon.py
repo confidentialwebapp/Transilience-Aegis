@@ -117,3 +117,28 @@ async def nuclei(target: str, severity: str = "critical,high,medium") -> dict:
 
 async def attack_surface(domain: str) -> dict:
     return await _call("attack_surface", domain=domain)
+
+
+# Phase-B additions: sherlock, holehe, amass, whatweb, waybackurls, naabu
+async def sherlock(username: str, timeout: int = 20) -> dict:
+    return await _call("run_sherlock", username=username, timeout=timeout)
+
+
+async def holehe(email: str) -> dict:
+    return await _call("run_holehe", email=email)
+
+
+async def amass(domain: str) -> dict:
+    return await _call("run_amass", domain=domain)
+
+
+async def whatweb(url: str) -> dict:
+    return await _call("run_whatweb", url=url)
+
+
+async def waybackurls(domain: str, limit: int = 500) -> dict:
+    return await _call("run_waybackurls", domain=domain, limit=limit)
+
+
+async def naabu(target: str, top_ports: int = 1000) -> dict:
+    return await _call("run_naabu", target=target, top_ports=top_ports)

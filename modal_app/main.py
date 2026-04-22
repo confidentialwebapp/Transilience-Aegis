@@ -47,17 +47,23 @@ kali_image = (
         #    trying to start services (systemd refuses to run in containers).
         "printf '#!/bin/sh\\nexit 101\\n' > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d",
         # 3. Install the recon toolchain. --no-install-recommends keeps the
-        #    image small; no compile-time deps needed since we removed
-        #    the only Python tool that required them (maigret/pycairo).
+        #    image small; python3-pip needed so we can pip install tools that
+        #    don't ship as binaries (sherlock, holehe).
         "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "
         "    theharvester nmap subfinder dnstwist dnsutils whois "
+        "    amass whatweb wafw00f sslscan python3-pip "
         "    ca-certificates curl wget git unzip",
         # 4. Restore normal policy.
         "rm -f /usr/sbin/policy-rc.d",
     )
-    # python httpx for any HTTP we do directly inside Modal functions.
-    .pip_install("httpx")
-    # projectdiscovery binaries that aren't in Kali apt repos — install via Go releases
+    # python httpx + username/email OSINT via pip
+    .pip_install(
+        "httpx",
+        "sherlock-project",   # 400+ social platform username check
+        "holehe",              # email -> which services it's registered on
+    )
+    # projectdiscovery + tomnomnom binaries — installed from GitHub releases.
+    # Each zip is ~10-30 MB; keeping all in one layer for cache efficiency.
     .run_commands(
         "wget -qO- https://github.com/projectdiscovery/httpx/releases/download/v1.6.10/httpx_1.6.10_linux_amd64.zip > /tmp/httpx.zip "
         "&& cd /usr/local/bin && unzip -o /tmp/httpx.zip httpx && mv httpx httpx-pd && rm /tmp/httpx.zip || true",
@@ -65,6 +71,14 @@ kali_image = (
         "&& cd /usr/local/bin && unzip -o /tmp/dnsx.zip dnsx && rm /tmp/dnsx.zip || true",
         "wget -qO- https://github.com/projectdiscovery/nuclei/releases/download/v3.3.7/nuclei_3.3.7_linux_amd64.zip > /tmp/nuclei.zip "
         "&& cd /usr/local/bin && unzip -o /tmp/nuclei.zip nuclei && rm /tmp/nuclei.zip || true",
+        "wget -qO- https://github.com/projectdiscovery/katana/releases/download/v1.1.0/katana_1.1.0_linux_amd64.zip > /tmp/katana.zip "
+        "&& cd /usr/local/bin && unzip -o /tmp/katana.zip katana && rm /tmp/katana.zip || true",
+        "wget -qO- https://github.com/projectdiscovery/naabu/releases/download/v2.3.2/naabu_2.3.2_linux_amd64.zip > /tmp/naabu.zip "
+        "&& cd /usr/local/bin && unzip -o /tmp/naabu.zip naabu && rm /tmp/naabu.zip || true",
+        # Tomnomnom tools are shipped as plain tarballs
+        "wget -qO- https://github.com/tomnomnom/waybackurls/releases/download/v0.1.0/waybackurls-linux-amd64-0.1.0.tgz | tar -xz -C /usr/local/bin waybackurls || true",
+        "wget -qO- https://github.com/tomnomnom/assetfinder/releases/download/v0.1.1/assetfinder-linux-amd64-0.1.1.tgz | tar -xz -C /usr/local/bin assetfinder || true",
+        "wget -qO- https://github.com/lc/gau/releases/download/v2.2.4/gau_2.2.4_linux_amd64.tar.gz | tar -xz -C /usr/local/bin gau || true",
     )
 )
 
@@ -364,6 +378,157 @@ def daily_digest_tick() -> dict:
         return {"http": e.code, "error": e.read().decode("utf-8", errors="ignore")[:500]}
     except Exception as e:
         return {"http": 0, "error": f"{type(e).__name__}: {e}"}
+
+
+# ---------------------------------------------------------------------------
+# sherlock — username presence across 400+ social/SaaS sites
+# ---------------------------------------------------------------------------
+@app.function(image=kali_image, timeout=300, memory=1024)
+def run_sherlock(username: str, timeout: int = 20) -> dict:
+    """Check which platforms a username exists on. Returns a list of sites
+    where the account was found."""
+    out_dir = tempfile.mkdtemp(prefix="sherlock-")
+    res = _run(
+        ["sherlock", username, "--timeout", str(timeout),
+         "--folderoutput", out_dir, "--no-color", "--print-found"],
+        timeout=290,
+    )
+    found: list[dict[str, str]] = []
+    import os
+    path = os.path.join(out_dir, f"{username}.txt")
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("*"):
+                    continue
+                # lines look like "[+] Site: https://..."
+                if line.startswith("[+]") and ":" in line:
+                    parts = line[3:].strip().split(":", 1)
+                    if len(parts) == 2:
+                        found.append({"site": parts[0].strip(), "url": parts[1].strip()})
+    except Exception:
+        pass
+    return {
+        "tool": "sherlock",
+        "ok": res["ok"],
+        "username": username,
+        "found_count": len(found),
+        "found": found[:50],
+        "stderr": res["stderr"],
+    }
+
+
+# ---------------------------------------------------------------------------
+# holehe — which sites is this email registered on?
+# ---------------------------------------------------------------------------
+@app.function(image=kali_image, timeout=300, memory=1024)
+def run_holehe(email: str) -> dict:
+    res = _run(["holehe", "--only-used", "--no-color", email], timeout=290)
+    used: list[str] = []
+    for line in _lines(res["stdout"]):
+        # lines like "[+] amazon.com"
+        if line.startswith("[+]"):
+            used.append(line[3:].strip())
+    return {
+        "tool": "holehe",
+        "ok": res["ok"],
+        "email": email,
+        "registered_count": len(used),
+        "registered_on": used[:100],
+        "stderr": res["stderr"],
+    }
+
+
+# ---------------------------------------------------------------------------
+# amass — passive DNS / subdomain enumeration (broader than subfinder)
+# ---------------------------------------------------------------------------
+@app.function(image=kali_image, timeout=360, memory=1024)
+def run_amass(domain: str) -> dict:
+    res = _run(
+        ["amass", "enum", "-passive", "-d", domain, "-silent", "-timeout", "5"],
+        timeout=350,
+    )
+    subs = sorted(set(_lines(res["stdout"])))
+    return {
+        "tool": "amass",
+        "ok": res["ok"],
+        "subdomains": subs,
+        "count": len(subs),
+        "stderr": res["stderr"],
+    }
+
+
+# ---------------------------------------------------------------------------
+# whatweb — web technology fingerprinting
+# ---------------------------------------------------------------------------
+@app.function(image=kali_image, timeout=180, memory=512)
+def run_whatweb(url: str) -> dict:
+    res = _run(
+        ["whatweb", "-a", "3", "--no-errors", "--log-json=-", "--quiet", url],
+        timeout=170,
+    )
+    rows = []
+    for line in _lines(res["stdout"]):
+        try:
+            rows.append(json.loads(line))
+        except Exception:
+            continue
+    plugins = []
+    if rows:
+        for name, data in (rows[0].get("plugins") or {}).items():
+            plugins.append({"name": name, "version": data.get("version"), "string": data.get("string")})
+    return {
+        "tool": "whatweb",
+        "ok": res["ok"],
+        "url": url,
+        "status": rows[0].get("http_status") if rows else None,
+        "target_url": rows[0].get("target") if rows else None,
+        "plugin_count": len(plugins),
+        "plugins": plugins[:40],
+    }
+
+
+# ---------------------------------------------------------------------------
+# waybackurls / gau — historical URL corpus for a domain
+# ---------------------------------------------------------------------------
+@app.function(image=kali_image, timeout=240, memory=1024)
+def run_waybackurls(domain: str, limit: int = 500) -> dict:
+    res = _run(["waybackurls", domain], timeout=230)
+    urls = sorted(set(_lines(res["stdout"])))[:limit]
+    return {
+        "tool": "waybackurls",
+        "ok": res["ok"],
+        "domain": domain,
+        "count": len(urls),
+        "urls": urls,
+        "stderr": res["stderr"],
+    }
+
+
+# ---------------------------------------------------------------------------
+# naabu — fast port scanner (top ports, syn-less alt to nmap)
+# ---------------------------------------------------------------------------
+@app.function(image=kali_image, timeout=240, memory=512)
+def run_naabu(target: str, top_ports: int = 1000) -> dict:
+    res = _run(
+        ["naabu", "-host", target, "-silent", "-json", "-top-ports", str(top_ports),
+         "-rate", "500"],
+        timeout=230,
+    )
+    rows = []
+    for line in _lines(res["stdout"]):
+        try:
+            rows.append(json.loads(line))
+        except Exception:
+            continue
+    return {
+        "tool": "naabu",
+        "ok": res["ok"],
+        "target": target,
+        "open_ports_count": len(rows),
+        "open_ports": [r.get("port") for r in rows][:200],
+    }
 
 
 # ---------------------------------------------------------------------------

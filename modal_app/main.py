@@ -336,7 +336,7 @@ def run_nuclei(target: str, severity: str = "critical,high,medium") -> dict:
 # actually due for a digest based on their digest_frequency. Modal cron runs
 # even when Render is sleeping, which guarantees alerts get delivered.
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, schedule=modal.Cron("17 3 * * *"), timeout=600, memory=512, scaledown_window=2)
+@app.function(image=kali_image, timeout=600, memory=512, scaledown_window=2)
 def nightly_attack_surface_diff() -> dict:
     """Once per night: ask the Render backend to scan every customer profile's
     domains, diff against last snapshot, and create alerts for new subdomains
@@ -357,7 +357,7 @@ def nightly_attack_surface_diff() -> dict:
         return {"http": 0, "error": f"{type(e).__name__}: {e}"}
 
 
-@app.function(image=kali_image, schedule=modal.Cron("0 * * * *"), timeout=600, memory=512, scaledown_window=2)
+@app.function(image=kali_image, timeout=600, memory=512, scaledown_window=2)
 def daily_digest_tick() -> dict:
     """Hourly tick that asks the Render backend to fan out all due digests.
 

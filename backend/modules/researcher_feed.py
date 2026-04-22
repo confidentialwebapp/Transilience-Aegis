@@ -27,8 +27,7 @@ from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
-# Reuse the IOC regex from the bot module — same patterns, different ingestion source.
-from modules.telegram_monitor import IOC_PATTERNS  # noqa: E402
+from utils.ioc_patterns import IOC_PATTERNS  # noqa: E402
 
 # Mimic a real browser since t.me serves a different (lighter) page to bots.
 USER_AGENT = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "

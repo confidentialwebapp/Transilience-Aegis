@@ -229,24 +229,6 @@ export const api = {
   netlas: (orgId: string, type: "ip" | "domain", value: string) =>
     apiFetch<Record<string, unknown>>(`/api/v1/recon/netlas?type=${type}&value=${encodeURIComponent(value)}`, { orgId }),
 
-  // Telegram bot
-  listTelegramChannels: (orgId: string) =>
-    apiFetch<{ data: TelegramChannel[] }>("/api/v1/telegram/channels", { orgId }),
-  listTelegramMessages: (orgId: string, params?: { chat_id?: number; q?: string; has_iocs?: boolean; page?: number }) => {
-    const sp = new URLSearchParams();
-    if (params?.chat_id !== undefined) sp.set("chat_id", String(params.chat_id));
-    if (params?.q) sp.set("q", params.q);
-    if (params?.has_iocs) sp.set("has_iocs", "true");
-    sp.set("page", String(params?.page ?? 1));
-    sp.set("per_page", "50");
-    return apiFetch<{ data: TelegramMessage[]; total: number; page: number; per_page: number }>(
-      `/api/v1/telegram/messages?${sp.toString()}`,
-      { orgId }
-    );
-  },
-  pollTelegram: (orgId: string) =>
-    apiFetch<{ updates_processed: number }>("/api/v1/telegram/poll", { method: "POST", orgId }),
-
   // Maltego transform listing (read-only — actual transforms hit per-name endpoints from Maltego desktop)
   listMaltegoTransforms: (orgId: string) =>
     apiFetch<{ transforms: MaltegoTransform[] }>("/api/v1/maltego/transforms", { orgId }),
@@ -455,30 +437,6 @@ export interface HarvesterRun {
   ips: string[];
   asns: string[];
   urls: string[];
-}
-
-export interface TelegramChannel {
-  id: string;
-  chat_id: number;
-  chat_type: string;
-  title: string | null;
-  username: string | null;
-  added_at: string;
-  enabled: boolean;
-}
-
-export interface TelegramMessage {
-  id: string;
-  chat_id: number;
-  message_id: number;
-  sender_id: number | null;
-  sender_name: string | null;
-  message_date: string;
-  text: string | null;
-  has_media: boolean;
-  media_type: string | null;
-  extracted_iocs: Record<string, string[]>;
-  ingested_at: string;
 }
 
 export interface MaltegoTransform {

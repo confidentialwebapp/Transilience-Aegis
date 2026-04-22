@@ -46,19 +46,21 @@ kali_image = (
         # 2. Standard Docker trick: stop any package post-install scripts from
         #    trying to start services (systemd refuses to run in containers).
         "printf '#!/bin/sh\\nexit 101\\n' > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d",
-        # 3. Install the recon toolchain. --no-install-recommends keeps the
-        #    image small and avoids pulling in things like systemd/dbus.
+        # 3. Install the recon toolchain + compile-time deps for the pip layer.
+        #    `pycairo` (transitively required by maigret) needs a C compiler
+        #    and cairo headers — hence build-essential + libcairo2-dev.
+        #    --no-install-recommends keeps the image lean.
         "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "
         "    theharvester nmap subfinder dnstwist dnsutils whois "
-        "    ca-certificates curl wget git unzip",
+        "    ca-certificates curl wget git unzip "
+        "    build-essential python3-dev libcairo2-dev pkg-config",
         # 4. Restore normal policy.
         "rm -f /usr/sbin/policy-rc.d",
     )
     # Tools that don't have stable apt packages yet
     .pip_install(
         "maigret",        # username OSINT across 500+ sites
-        "holehe",         # email registration check
-        "httpx",          # HTTP client (also for our own use — not the projectdiscovery tool)
+        "httpx",          # python HTTP client (separate from projectdiscovery's httpx tool)
     )
     # projectdiscovery binaries that aren't in Kali apt repos — install via Go releases
     .run_commands(

@@ -128,6 +128,39 @@ async def _query_shodan(ip: str) -> dict:
     return {}
 
 
+async def _query_shodan_internetdb(ip: str) -> dict:
+    """Free Shodan InternetDB — no API key required.
+
+    Returns open ports, detected CPEs, CVEs, and hostnames. Good fallback when
+    SHODAN_API_KEY is absent, and additive when it's present (InternetDB is a
+    separate dataset aggregated from Shodan's scans).
+    """
+    rate_limiter = _get_rate_limiter()
+    await rate_limiter.wait("shodan_internetdb", min_interval=0.5)
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"https://internetdb.shodan.io/{ip}",
+                timeout=20,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return {
+                    "source": "shodan_internetdb",
+                    "ports": data.get("ports", []),
+                    "cpes": data.get("cpes", []),
+                    "hostnames": data.get("hostnames", []),
+                    "vulns": data.get("vulns", []),
+                    "tags": data.get("tags", []),
+                    "data": data,
+                }
+            if resp.status_code == 404:
+                return {"source": "shodan_internetdb", "status": "clean"}
+    except Exception as e:
+        logger.warning("Shodan InternetDB lookup failed for %s: %s", ip, e)
+    return {}
+
+
 @router.get("/lookup")
 async def lookup_ioc(
     type: str = Query(..., description="IOC type: ip, domain, hash, url, email"),
@@ -138,6 +171,23 @@ async def lookup_ioc(
         raise HTTPException(400, "Invalid IOC type")
 
     results = {}
+
+    # Local blocklist cross-check — free, no HTTP, populated by scheduler.
+    if type in ("ip", "domain", "url", "hash"):
+        try:
+            from modules.blocklist_sync import lookup_blocklist
+            hits = lookup_blocklist(type, value)
+            if hits:
+                results["blocklist"] = {
+                    "source": "open_blocklists",
+                    "hit_count": len(hits),
+                    "sources": sorted({h["source"] for h in hits}),
+                    "categories": sorted({h.get("category") for h in hits if h.get("category")}),
+                    "max_confidence": max((h.get("confidence") or 0) for h in hits),
+                    "hits": hits,
+                }
+        except Exception as e:
+            logger.warning("Blocklist lookup failed: %s", e)
 
     try:
         vt = await _query_virustotal(type, value)
@@ -168,6 +218,13 @@ async def lookup_ioc(
         except Exception as e:
             logger.warning("Shodan lookup failed: %s", e)
 
+        try:
+            idb = await _query_shodan_internetdb(value)
+            if idb:
+                results["shodan_internetdb"] = idb
+        except Exception as e:
+            logger.warning("Shodan InternetDB lookup failed: %s", e)
+
     # Cache the result - best effort
     try:
         db = get_client()
@@ -186,6 +243,41 @@ async def lookup_ioc(
         logger.warning("Failed to cache intel results: %s", e)
 
     return {"ioc_type": type, "ioc_value": value, "results": results}
+
+
+# ---------------------------------------------------------------------------
+# Open-blocklist endpoints (powered by modules.blocklist_sync)
+# ---------------------------------------------------------------------------
+@router.get("/blocklist/check")
+async def blocklist_check(
+    type: str = Query(..., description="ip, domain, url, or hash"),
+    value: str = Query(...),
+    x_org_id: str = Header(...),
+):
+    if type not in {"ip", "domain", "url", "hash"}:
+        raise HTTPException(400, "Invalid type for blocklist check")
+    from modules.blocklist_sync import lookup_blocklist
+    hits = lookup_blocklist(type, value)
+    return {
+        "ioc_type": type,
+        "ioc_value": value,
+        "on_blocklist": bool(hits),
+        "hit_count": len(hits),
+        "hits": hits,
+    }
+
+
+@router.get("/blocklist/stats")
+async def blocklist_stats_endpoint(x_org_id: str = Header(...)):
+    from modules.blocklist_sync import blocklist_stats
+    return blocklist_stats()
+
+
+@router.post("/blocklist/sync")
+async def blocklist_sync_trigger(x_org_id: str = Header(...)):
+    """Manually kick off a blocklist refresh. Scheduler also runs this hourly."""
+    from modules.blocklist_sync import run_all_blocklists
+    return await run_all_blocklists()
 
 
 @router.get("/feed")

@@ -28,6 +28,15 @@ def calculate_risk_score(findings: dict) -> int:
     if findings.get("active_dns"):
         score += 10
 
+    if findings.get("on_blocklist"):
+        score += 35
+
+    if findings.get("tor_exit_node"):
+        score += 15
+
+    if findings.get("malware_hash_match"):
+        score += 60
+
     return min(score, 100)
 
 

@@ -56,6 +56,24 @@ async def _credential_scan_job():
     await _run_module_for_all_orgs(run_credential_scan, "credential")
 
 
+async def _ransomware_sync_job():
+    """Pull fresh ransomware group + victim data from ransomware.live into DB."""
+    try:
+        from routers.threat_actors import sync_ransomware_to_db
+        await sync_ransomware_to_db()
+    except Exception as e:
+        logger.error("Ransomware sync job failed: %s", e)
+
+
+async def _blocklist_sync_job():
+    """Pull open blocklists (Feodo, OpenPhish, PhishStats, ET, Tor) into DB."""
+    try:
+        from modules.blocklist_sync import run_all_blocklists
+        await run_all_blocklists()
+    except Exception as e:
+        logger.error("Blocklist sync job failed: %s", e)
+
+
 def start_scheduler():
     global _scheduler
     _scheduler = AsyncIOScheduler()
@@ -66,9 +84,13 @@ def start_scheduler():
     _scheduler.add_job(_data_leak_job, IntervalTrigger(hours=12), id="data_leak", replace_existing=True, misfire_grace_time=300)
     _scheduler.add_job(_surface_scan_job, IntervalTrigger(hours=24), id="surface_web", replace_existing=True, misfire_grace_time=300)
     _scheduler.add_job(_credential_scan_job, IntervalTrigger(hours=8), id="credential", replace_existing=True, misfire_grace_time=300)
+    # Ransomware.live — refresh every 15 minutes; leak-site posts move fast
+    _scheduler.add_job(_ransomware_sync_job, IntervalTrigger(minutes=15), id="ransomware_live", replace_existing=True, misfire_grace_time=120)
+    # Open blocklists — hourly refresh is plenty for these feeds
+    _scheduler.add_job(_blocklist_sync_job, IntervalTrigger(hours=1), id="blocklist_sync", replace_existing=True, misfire_grace_time=300)
 
     _scheduler.start()
-    logger.info("APScheduler started with 6 scan jobs")
+    logger.info("APScheduler started with 8 scan jobs (ransomware @15min, blocklists @60min)")
 
 
 def stop_scheduler():

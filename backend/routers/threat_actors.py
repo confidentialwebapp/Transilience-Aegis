@@ -9,10 +9,37 @@ from typing import Optional
 import httpx
 from fastapi import APIRouter, HTTPException, Header, Query, BackgroundTasks
 
+from config import get_settings
 from db import get_client
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Ransomware.live PRO API (api-pro.ransomware.live) — authenticated
+RANSOMWARE_LIVE_BASE = "https://api-pro.ransomware.live"
+
+
+def _rl_headers() -> dict:
+    """Headers for ransomware.live pro API (X-API-KEY auth)."""
+    key = get_settings().RANSOMWARE_LIVE_API_KEY
+    h: dict[str, str] = {"User-Agent": "Transilience-Aegis/1.0", "Accept": "application/json"}
+    if key:
+        h["X-API-KEY"] = key
+    return h
+
+
+async def _rl_get(path: str, params: Optional[dict] = None, timeout: int = 30) -> Optional[dict | list]:
+    """Shared ransomware.live GET helper. Returns parsed JSON or None on failure."""
+    url = f"{RANSOMWARE_LIVE_BASE}{path}"
+    try:
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+            resp = await client.get(url, headers=_rl_headers(), params=params)
+            if resp.status_code == 200:
+                return resp.json()
+            logger.warning("ransomware.live %s returned %s", path, resp.status_code)
+    except Exception as e:
+        logger.error("ransomware.live %s failed: %s", path, e)
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -142,61 +169,155 @@ async def sync_mitre_actors():
 
 
 # ---------------------------------------------------------------------------
-# Ransomware.live — Free
+# Ransomware.live Pro — Authenticated API
 # ---------------------------------------------------------------------------
 async def fetch_ransomware_groups() -> list:
-    """Fetch active ransomware groups from ransomwatch GitHub data."""
+    """Fetch active ransomware groups + recent-victim counts."""
+    groups_envelope = await _rl_get("/groups")
+    groups_list = (groups_envelope or {}).get("groups", []) if isinstance(groups_envelope, dict) else []
+    if not groups_list:
+        return []
+
+    # Pull the most recent victims and aggregate last_seen + 30d counts per group.
+    recent_env = await _rl_get("/victims/recent", params={"limit": 200})
+    recent = (recent_env or {}).get("victims", []) if isinstance(recent_env, dict) else []
+
+    recent_counts: dict[str, int] = {}
+    last_seen: dict[str, str] = {}
+    for v in recent:
+        g = (v.get("group") or v.get("group_name") or "").strip()
+        if not g:
+            continue
+        recent_counts[g] = recent_counts.get(g, 0) + 1
+        ts = v.get("discovered") or v.get("published") or ""
+        if ts and (g not in last_seen or ts > last_seen[g]):
+            last_seen[g] = ts
+
+    result = []
+    for g in groups_list:
+        name = (g.get("group") or g.get("name") or "").strip()
+        if not name:
+            continue
+        total_victims = int(g.get("victims") or 0)
+        alt = g.get("altname") or ""
+        url = g.get("url") or ""
+        # Pro API often includes more fields — pick up what's there
+        result.append({
+            "name": name,
+            "altname": alt,
+            "url": url,
+            "last_seen": last_seen.get(name, ""),
+            "victim_count": total_victims,
+            "recent_victims": recent_counts.get(name, 0),
+            "status": "active" if recent_counts.get(name, 0) > 0 else "dormant",
+            "description": g.get("description") or f"Tracked ransomware operator · {total_victims} known victims",
+            "country": g.get("country") or "",
+            "source": "ransomware.live",
+        })
+
+    # Sort: active first, then by total victims desc
+    result.sort(key=lambda x: (0 if x["status"] == "active" else 1, -int(x.get("victim_count") or 0)))
+    return result
+
+
+async def fetch_recent_victims(limit: int = 50) -> list:
+    """Recent victims across all groups — normalized for frontend cards."""
+    envelope = await _rl_get("/victims/recent", params={"limit": min(limit, 200)})
+    victims = (envelope or {}).get("victims", []) if isinstance(envelope, dict) else []
+    out = []
+    for v in victims[:limit]:
+        out.append({
+            "victim": v.get("victim") or v.get("post_title") or v.get("website") or "Unknown",
+            "website": v.get("website") or "",
+            "group": v.get("group") or v.get("group_name") or "",
+            "country": v.get("country") or "",
+            "activity": v.get("activity") or v.get("sector") or "",
+            "description": (v.get("description") or v.get("summary") or "")[:800],
+            "discovered": v.get("discovered") or v.get("published") or "",
+            "post_url": v.get("post_url") or v.get("claim_url") or v.get("url") or "",
+            "screenshot": v.get("screenshot") or v.get("image") or "",
+            "id": v.get("id") or "",
+            "source": "ransomware.live",
+        })
+    return out
+
+
+async def fetch_country_victims(country: str) -> list:
+    """Victims in a given country — uses /victims/search with country filter."""
+    envelope = await _rl_get("/victims/search", params={"country": country.upper(), "limit": 200})
+    if not isinstance(envelope, dict):
+        return []
+    return envelope.get("victims", []) or envelope.get("results", []) or []
+
+
+async def fetch_group_victims(group: str) -> list:
+    """All tracked victims for a single group."""
+    envelope = await _rl_get("/victims/", params={"group": group, "limit": 500})
+    if not isinstance(envelope, dict):
+        return []
+    return envelope.get("victims", []) or envelope.get("results", []) or []
+
+
+async def fetch_ransomware_stats() -> dict:
+    """Aggregate statistics — total victims, groups, press releases."""
+    data = await _rl_get("/stats")
+    if not data or not isinstance(data, dict):
+        return {}
+    return data
+
+
+async def fetch_recent_press(limit: int = 50) -> list:
+    """Recent public press releases / SEC 8-K filings announcing breaches."""
+    envelope = await _rl_get("/press/recent", params={"limit": min(limit, 200)})
+    if not isinstance(envelope, dict):
+        return []
+    return envelope.get("results", []) or envelope.get("press", []) or []
+
+
+async def fetch_ransomware_iocs(group: Optional[str] = None) -> list:
+    """IOCs for all groups or a specific group — hashes, IPs, BTC addresses."""
+    path = f"/iocs/{group}" if group else "/iocs"
+    envelope = await _rl_get(path)
+    if not isinstance(envelope, dict):
+        return []
+    return envelope.get("iocs", []) or envelope.get("groups", []) or []
+
+
+async def fetch_yara_rules(group: Optional[str] = None) -> list:
+    """YARA rules associated with ransomware families."""
+    path = f"/yara/{group}" if group else "/yara"
+    envelope = await _rl_get(path)
+    if not isinstance(envelope, dict):
+        return []
+    return envelope.get("rules", []) or envelope.get("yara", []) or []
+
+
+async def sync_ransomware_to_db():
+    """Scheduled task: pull groups + recent victims into Supabase for offline queries."""
     try:
-        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-            # Fetch groups
-            groups_resp = await client.get(
-                "https://raw.githubusercontent.com/joshhighet/ransomwatch/main/groups.json"
-            )
-            # Fetch recent posts for victim counts
-            posts_resp = await client.get(
-                "https://raw.githubusercontent.com/joshhighet/ransomwatch/main/posts.json"
-            )
-
-            groups_data = groups_resp.json() if groups_resp.status_code == 200 else []
-            posts_data = posts_resp.json() if posts_resp.status_code == 200 else []
-
-            # Count victims per group
-            victim_counts: dict[str, int] = {}
-            last_seen_map: dict[str, str] = {}
-            for post in posts_data:
-                gname = post.get("group_name", "")
-                if gname:
-                    victim_counts[gname] = victim_counts.get(gname, 0) + 1
-                    post_date = post.get("discovered", post.get("published", ""))
-                    if post_date and (gname not in last_seen_map or post_date > last_seen_map[gname]):
-                        last_seen_map[gname] = post_date
-
-            result = []
-            for g in groups_data:
-                name = g.get("name", "")
-                if not name:
-                    continue
-                locations = g.get("locations", [])
-                # Determine status from locations
-                is_available = any(loc.get("available", False) for loc in locations) if locations else False
-                # Get onion URLs
-                urls = [loc.get("slug", "") for loc in locations if loc.get("slug")]
-
-                result.append({
-                    "name": name,
-                    "url": urls[0] if urls else "",
-                    "last_seen": last_seen_map.get(name, ""),
-                    "victim_count": victim_counts.get(name, 0),
-                    "status": "active" if is_available else "inactive",
-                    "description": f"Ransomware group with {victim_counts.get(name, 0)} known victims",
-                })
-
-            # Sort by victim count descending
-            result.sort(key=lambda x: x["victim_count"], reverse=True)
-            return result
+        db = get_client()
+        groups = await fetch_ransomware_groups()
+        for g in groups:
+            try:
+                record = {
+                    "name": g["name"],
+                    "url": g.get("url", ""),
+                    "last_seen": g.get("last_seen") or None,
+                    "victim_count": g.get("victim_count", 0),
+                    "status": g.get("status", "inactive"),
+                    "description": g.get("description", ""),
+                }
+                existing = db.table("ransomware_groups").select("id").eq("name", g["name"]).execute()
+                if existing.data:
+                    db.table("ransomware_groups").update(record).eq("id", existing.data[0]["id"]).execute()
+                else:
+                    db.table("ransomware_groups").insert(record).execute()
+            except Exception as e:
+                # Table might not exist yet — log and keep going
+                logger.warning("upsert ransomware group %s: %s", g["name"], e)
+        logger.info("Synced %d ransomware groups from ransomware.live", len(groups))
     except Exception as e:
-        logger.error("Ransomware data fetch failed: %s", e)
-    return []
+        logger.error("ransomware sync failed: %s", e)
 
 
 # ---------------------------------------------------------------------------
@@ -232,16 +353,81 @@ async def list_threat_actors(
 
 @router.get("/ransomware")
 async def get_ransomware_groups(x_org_id: str = Header(...)):
-    """Get active ransomware groups from Ransomware.live."""
+    """Active ransomware groups — live from ransomware.live."""
     groups = await fetch_ransomware_groups()
-    return {"data": groups, "total": len(groups)}
+    return {"data": groups, "total": len(groups), "source": "ransomware.live"}
+
+
+@router.get("/ransomware/victims/recent")
+async def get_recent_victims(
+    x_org_id: str = Header(...),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """Most recent ransomware victim posts across all groups."""
+    victims = await fetch_recent_victims(limit=limit)
+    return {"data": victims, "total": len(victims), "source": "ransomware.live"}
+
+
+@router.get("/ransomware/victims/country/{country}")
+async def get_country_victims(
+    country: str,
+    x_org_id: str = Header(...),
+):
+    """Ransomware victims in a given country (ISO code)."""
+    victims = await fetch_country_victims(country)
+    return {"data": victims, "total": len(victims), "country": country.upper()}
+
+
+@router.get("/ransomware/group/{group}/victims")
+async def get_group_victims(group: str, x_org_id: str = Header(...)):
+    """All known victims for a specific ransomware group."""
+    victims = await fetch_group_victims(group)
+    return {"data": victims, "total": len(victims), "group": group}
+
+
+@router.get("/ransomware/stats")
+async def get_ransomware_stats(x_org_id: str = Header(...)):
+    """Ransomware.live aggregate statistics."""
+    stats = await fetch_ransomware_stats()
+    return stats
+
+
+@router.get("/ransomware/press")
+async def get_recent_press(
+    x_org_id: str = Header(...),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """Recent press releases + SEC 8-K breach disclosures."""
+    press = await fetch_recent_press(limit=limit)
+    return {"data": press, "total": len(press), "source": "ransomware.live"}
+
+
+@router.get("/ransomware/iocs")
+async def get_ransomware_iocs(
+    x_org_id: str = Header(...),
+    group: Optional[str] = Query(None, description="Filter by group name"),
+):
+    """IOCs published by ransomware groups (hashes, IPs, BTC addresses)."""
+    iocs = await fetch_ransomware_iocs(group=group)
+    return {"data": iocs, "total": len(iocs), "group": group, "source": "ransomware.live"}
+
+
+@router.get("/ransomware/yara")
+async def get_yara_rules(
+    x_org_id: str = Header(...),
+    group: Optional[str] = Query(None, description="Filter by group name"),
+):
+    """YARA detection rules for ransomware families."""
+    rules = await fetch_yara_rules(group=group)
+    return {"data": rules, "total": len(rules), "group": group, "source": "ransomware.live"}
 
 
 @router.get("/sync")
 async def trigger_sync(background_tasks: BackgroundTasks, x_org_id: str = Header(...)):
-    """Sync threat actors from MITRE ATT&CK."""
+    """Sync threat actors from MITRE ATT&CK + ransomware.live."""
     background_tasks.add_task(sync_mitre_actors)
-    return {"status": "sync_started"}
+    background_tasks.add_task(sync_ransomware_to_db)
+    return {"status": "sync_started", "sources": ["mitre_attack", "ransomware.live"]}
 
 
 @router.get("/stats")

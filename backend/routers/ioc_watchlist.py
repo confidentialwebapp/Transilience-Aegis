@@ -152,7 +152,13 @@ async def enhanced_ioc_lookup(
 ):
     """Enhanced IOC lookup with WHOIS data included."""
     # Import the existing IOC lookup functions
-    from routers.intel import _query_virustotal, _query_otx, _query_greynoise, _query_shodan
+    from routers.intel import (
+        _query_virustotal,
+        _query_otx,
+        _query_greynoise,
+        _query_shodan,
+        _query_shodan_internetdb,
+    )
 
     results = {}
 
@@ -191,6 +197,29 @@ async def enhanced_ioc_lookup(
                 results["shodan"] = shodan
         except Exception:
             pass
+        try:
+            idb = await _query_shodan_internetdb(value)
+            if idb:
+                results["shodan_internetdb"] = idb
+        except Exception:
+            pass
+
+    # Blocklist cross-check (ip / domain / url / hash)
+    if type in ("ip", "domain", "url", "hash"):
+        try:
+            from modules.blocklist_sync import lookup_blocklist
+            hits = lookup_blocklist(type, value)
+            if hits:
+                results["blocklist"] = {
+                    "source": "open_blocklists",
+                    "hit_count": len(hits),
+                    "sources": sorted({h["source"] for h in hits}),
+                    "categories": sorted({h.get("category") for h in hits if h.get("category")}),
+                    "max_confidence": max((h.get("confidence") or 0) for h in hits),
+                    "hits": hits,
+                }
+        except Exception as e:
+            logger.warning("Blocklist lookup failed: %s", e)
 
     # URLScan for domains/URLs
     if type in ("domain", "url"):

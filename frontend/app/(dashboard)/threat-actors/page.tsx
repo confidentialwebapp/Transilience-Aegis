@@ -439,6 +439,8 @@ function ActorDrawer({ actor, onClose }: { actor: ThreatActor; onClose: () => vo
 export default function ThreatActorsPage() {
   const [apiActors, setApiActors] = useState<ThreatActor[]>([]);
   const [apiRansomware, setApiRansomware] = useState<RansomwareGroup[]>([]);
+  const [recentVictims, setRecentVictims] = useState<any[]>([]);
+  const [ransomStats, setRansomStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [search, setSearch] = useState("");
@@ -461,9 +463,19 @@ export default function ThreatActorsPage() {
 
   const fetchRansomware = useCallback(async () => {
     try {
-      const data = await apiFetch("/api/v1/threat-actors/ransomware");
-      setApiRansomware(data.data || []);
-    } catch { setApiRansomware([]); }
+      const [groups, victims, stats] = await Promise.all([
+        apiFetch("/api/v1/threat-actors/ransomware"),
+        apiFetch("/api/v1/threat-actors/ransomware/victims/recent?limit=30"),
+        apiFetch("/api/v1/threat-actors/ransomware/stats"),
+      ]);
+      setApiRansomware(groups?.data || []);
+      setRecentVictims(victims?.data || []);
+      setRansomStats(stats || null);
+    } catch {
+      setApiRansomware([]);
+      setRecentVictims([]);
+      setRansomStats(null);
+    }
   }, []);
 
   const syncActors = async () => {
@@ -687,7 +699,80 @@ export default function ThreatActorsPage() {
               <p className="text-xs text-slate-500">Loading threat intelligence…</p>
             </div>
           ) : activeTab === "ransomware" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-4">
+              {/* Ransomware.live realtime strip */}
+              {(ransomStats?.stats || recentVictims.length > 0) && (
+                <div className="card-enterprise p-4 relative overflow-hidden"
+                  style={{ background: "linear-gradient(135deg,rgba(239,68,68,0.06),rgba(236,72,153,0.04))" }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/25">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                      <span className="text-[10px] font-bold text-red-300 tracking-wider">LIVE · ransomware.live</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500">refreshed every 15 min</span>
+                  </div>
+                  {ransomStats?.stats && (
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      <div>
+                        <p className="text-[10px] text-slate-500 uppercase tracking-wider">Tracked victims</p>
+                        <p className="text-xl font-bold font-mono text-red-300 mt-0.5">
+                          {(ransomStats.stats.victims || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-500 uppercase tracking-wider">Active groups</p>
+                        <p className="text-xl font-bold font-mono text-orange-300 mt-0.5">
+                          {(ransomStats.stats.groups || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-500 uppercase tracking-wider">Press releases</p>
+                        <p className="text-xl font-bold font-mono text-pink-300 mt-0.5">
+                          {(ransomStats.stats.press || 0).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {recentVictims.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+                          Latest victim posts
+                        </p>
+                        <span className="text-[10px] text-slate-600">{recentVictims.length} new</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                        {recentVictims.slice(0, 12).map((v, i) => (
+                          <a
+                            key={i}
+                            href={v.post_url || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block p-2.5 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] hover:border-red-500/20 transition-all"
+                          >
+                            <div className="flex items-start gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-slate-200 truncate">{v.victim}</p>
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  <span className="text-[9.5px] font-bold text-red-300 uppercase tracking-wider">{v.group}</span>
+                                  {v.country && (
+                                    <span className="text-[9.5px] text-slate-500 font-mono">{v.country}</span>
+                                  )}
+                                  {v.activity && (
+                                    <span className="text-[9.5px] text-slate-500 truncate">{v.activity}</span>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="text-[9px] text-slate-600 whitespace-nowrap">{timeAgo(v.discovered)}</span>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {ransomware.map((group, i) => (
                 <div key={i} className="card-enterprise p-4 group cursor-pointer relative overflow-hidden transition-all"
                   style={{ "--hover-border": "rgba(239,68,68,0.25)" } as React.CSSProperties}
@@ -730,6 +815,7 @@ export default function ThreatActorsPage() {
                     style={{ background: "linear-gradient(90deg,transparent,#ef4444,transparent)" }} />
                 </div>
               ))}
+              </div>
             </div>
           ) : filteredActors.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3 card-enterprise">

@@ -24,7 +24,21 @@ class InvestigateRequest(BaseModel):
     target_value: str
 
 
-VALID_TYPES = {"url", "email", "ip", "domain", "username", "phone"}
+VALID_TYPES = {"url", "email", "ip", "domain", "username", "phone", "hash"}
+
+_HASH_RE = {
+    "md5":    re.compile(r"^[a-fA-F0-9]{32}$"),
+    "sha1":   re.compile(r"^[a-fA-F0-9]{40}$"),
+    "sha256": re.compile(r"^[a-fA-F0-9]{64}$"),
+}
+
+
+def _classify_hash(value: str) -> str:
+    v = value.strip()
+    for kind, pat in _HASH_RE.items():
+        if pat.match(v):
+            return kind
+    return "unknown"
 
 
 async def _check_whois(domain: str) -> Dict[str, Any]:
@@ -86,7 +100,17 @@ async def _check_dns(domain: str) -> Dict[str, Any]:
 
 
 async def _check_ip_geolocation(ip: str) -> Dict[str, Any]:
-    """IP geolocation via ip-api.com — free, no key, 45 req/min."""
+    """IP geolocation — GeoLite2 MMDB if present, else ip-api.com."""
+    # Prefer GeoLite2 (offline, no rate limit, accurate).
+    try:
+        from utils.geolite import lookup_geolite2
+        local = lookup_geolite2(ip)
+        if local:
+            return local
+    except Exception as e:
+        logger.debug("GeoLite2 lookup fell through: %s", e)
+
+    # Fallback: ip-api.com (free, no key, 45 req/min).
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(f"http://ip-api.com/json/{ip}?fields=status,message,country,regionName,city,zip,lat,lon,timezone,isp,org,as,query")
@@ -95,6 +119,7 @@ async def _check_ip_geolocation(ip: str) -> Dict[str, Any]:
                 if data.get("status") == "success":
                     return {
                         "source": "geolocation",
+                        "provider": "ip-api",
                         "status": "found",
                         "country": data.get("country", ""),
                         "region": data.get("regionName", ""),
@@ -140,6 +165,26 @@ async def _check_threatfox(ioc: str) -> Dict[str, Any]:
                 return {"source": "threatfox", "status": "clean", "detail": "Not found in ThreatFox"}
     except Exception as e:
         return {"source": "threatfox", "status": "error", "detail": str(e)[:200]}
+
+
+async def _check_blocklist(ioc_type: str, value: str) -> Dict[str, Any]:
+    """Check the locally-synced open blocklists (no outbound HTTP)."""
+    try:
+        from modules.blocklist_sync import lookup_blocklist
+        hits = lookup_blocklist(ioc_type, value)
+        if not hits:
+            return {"source": "blocklist", "status": "clean", "detail": "No blocklist hits"}
+        return {
+            "source": "blocklist",
+            "status": "found",
+            "hit_count": len(hits),
+            "sources": sorted({h["source"] for h in hits}),
+            "categories": sorted({h.get("category") for h in hits if h.get("category")}),
+            "max_confidence": max((h.get("confidence") or 0) for h in hits),
+            "hits": hits[:20],
+        }
+    except Exception as e:
+        return {"source": "blocklist", "status": "error", "detail": str(e)[:200]}
 
 
 async def _check_urlhaus(ioc: str) -> Dict[str, Any]:
@@ -291,6 +336,74 @@ async def _check_shodan(ip: str) -> Dict[str, Any]:
                 return {"source": "shodan", "status": "error", "detail": f"HTTP {resp.status_code}"}
     except Exception as e:
         return {"source": "shodan", "status": "error", "detail": str(e)[:200]}
+
+
+async def _check_malwarebazaar(hash_value: str) -> Dict[str, Any]:
+    """Abuse.ch MalwareBazaar — free hash lookup (md5/sha1/sha256)."""
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.post(
+                "https://mb-api.abuse.ch/api/v1/",
+                data={"query": "get_info", "hash": hash_value},
+            )
+            if resp.status_code != 200:
+                return {"source": "malwarebazaar", "status": "error", "detail": f"HTTP {resp.status_code}"}
+            data = resp.json()
+            status = data.get("query_status")
+            if status == "hash_not_found":
+                return {"source": "malwarebazaar", "status": "clean", "detail": "Not seen in MalwareBazaar"}
+            if status != "ok":
+                return {"source": "malwarebazaar", "status": "error", "detail": status or "unknown"}
+            entries = data.get("data", []) or []
+            if not entries:
+                return {"source": "malwarebazaar", "status": "clean"}
+            top = entries[0]
+            return {
+                "source": "malwarebazaar",
+                "status": "found",
+                "md5":      top.get("md5_hash"),
+                "sha1":     top.get("sha1_hash"),
+                "sha256":   top.get("sha256_hash"),
+                "file_name": top.get("file_name"),
+                "file_type": top.get("file_type"),
+                "file_size": top.get("file_size"),
+                "signature": top.get("signature"),
+                "first_seen": top.get("first_seen"),
+                "last_seen": top.get("last_seen"),
+                "tags":     top.get("tags", []) or [],
+                "yara_rules": [
+                    {"rule": y.get("rule_name"), "author": y.get("author")}
+                    for y in (top.get("yara_rules") or [])[:10]
+                ],
+                "delivery_method": top.get("delivery_method"),
+                "reporter": top.get("reporter"),
+            }
+    except Exception as e:
+        return {"source": "malwarebazaar", "status": "error", "detail": str(e)[:200]}
+
+
+async def _check_shodan_internetdb(ip: str) -> Dict[str, Any]:
+    """Free Shodan InternetDB lookup — no API key required."""
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.get(f"https://internetdb.shodan.io/{ip}")
+            if resp.status_code == 200:
+                data = resp.json()
+                return {
+                    "source": "shodan_internetdb",
+                    "status": "found",
+                    "ports": data.get("ports", []),
+                    "open_ports_count": len(data.get("ports", [])),
+                    "cpes": data.get("cpes", []),
+                    "hostnames": data.get("hostnames", []),
+                    "vulns": data.get("vulns", []),
+                    "tags": data.get("tags", []),
+                }
+            if resp.status_code == 404:
+                return {"source": "shodan_internetdb", "status": "clean", "detail": "No InternetDB record"}
+            return {"source": "shodan_internetdb", "status": "error", "detail": f"HTTP {resp.status_code}"}
+    except Exception as e:
+        return {"source": "shodan_internetdb", "status": "error", "detail": str(e)[:200]}
 
 
 async def _check_greynoise(ip: str) -> Dict[str, Any]:
@@ -606,6 +719,8 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("threatfox")
             results["urlhaus"] = await _check_urlhaus(target)
             sources_checked.append("urlhaus")
+            results["blocklist"] = await _check_blocklist("domain", target)
+            sources_checked.append("blocklist")
             results["github"] = await _check_github_leaks(target)
             sources_checked.append("github")
             results["intelx"] = await _check_intelx(target)
@@ -623,6 +738,8 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
                 scoring_factors["virustotal_flagged"] = True
             if (results.get("urlhaus") or {}).get("status") == "found":
                 scoring_factors["urlscan_phishing"] = True
+            if (results.get("blocklist") or {}).get("status") == "found":
+                scoring_factors["on_blocklist"] = True
 
         elif body.target_type == "ip":
             # Free sources
@@ -632,6 +749,11 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("threatfox")
             results["urlhaus"] = await _check_urlhaus(target)
             sources_checked.append("urlhaus")
+            results["blocklist"] = await _check_blocklist("ip", target)
+            sources_checked.append("blocklist")
+            # Free port/CPE intelligence (no key)
+            results["shodan_internetdb"] = await _check_shodan_internetdb(target)
+            sources_checked.append("shodan_internetdb")
             # Keyed sources
             results["virustotal"] = await _check_virustotal("ip", target)
             sources_checked.append("virustotal")
@@ -639,12 +761,22 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("shodan")
             results["greynoise"] = await _check_greynoise(target)
             sources_checked.append("greynoise")
+            idb = results.get("shodan_internetdb") or {}
+            if idb.get("open_ports_count", 0) > 10:
+                scoring_factors["exposed_credentials"] = True
+            if idb.get("vulns"):
+                scoring_factors["virustotal_flagged"] = True
             if (results.get("virustotal") or {}).get("malicious", 0) > 0:
                 scoring_factors["virustotal_flagged"] = True
             if (results.get("shodan") or {}).get("open_ports_count", 0) > 10:
                 scoring_factors["exposed_credentials"] = True
             if (results.get("threatfox") or {}).get("status") == "found":
                 scoring_factors["virustotal_flagged"] = True
+            bl = results.get("blocklist") or {}
+            if bl.get("status") == "found":
+                scoring_factors["on_blocklist"] = True
+                if "tor_exit" in (bl.get("sources") or []):
+                    scoring_factors["tor_exit_node"] = True
 
         elif body.target_type == "url":
             from urllib.parse import urlparse
@@ -656,6 +788,8 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("threatfox")
             results["urlhaus"] = await _check_urlhaus(target)
             sources_checked.append("urlhaus")
+            results["blocklist"] = await _check_blocklist("url", target)
+            sources_checked.append("blocklist")
             results["virustotal"] = await _check_virustotal("url", target)
             sources_checked.append("virustotal")
             results["urlscan"] = await _check_urlscan(target)
@@ -666,6 +800,8 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
                 scoring_factors["urlscan_phishing"] = True
             if (results.get("threatfox") or {}).get("status") == "found":
                 scoring_factors["virustotal_flagged"] = True
+            if (results.get("blocklist") or {}).get("status") == "found":
+                scoring_factors["on_blocklist"] = True
 
         elif body.target_type == "username":
             results["username"] = await _check_username(target)
@@ -676,6 +812,55 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
         elif body.target_type == "phone":
             results["phone"] = await _check_phone(target)
             sources_checked.append("phone_check")
+
+        elif body.target_type == "hash":
+            kind = _classify_hash(target)
+            if kind == "unknown":
+                raise HTTPException(400, "Hash must be md5, sha1, or sha256 hex")
+            results["malwarebazaar"] = await _check_malwarebazaar(target)
+            sources_checked.append("malwarebazaar")
+            results["threatfox"] = await _check_threatfox(target)
+            sources_checked.append("threatfox")
+            results["blocklist"] = await _check_blocklist("hash", target)
+            sources_checked.append("blocklist")
+            # VirusTotal file lookup — keyed
+            settings = get_settings()
+            if settings.VIRUSTOTAL_API_KEY:
+                try:
+                    async with httpx.AsyncClient(timeout=30) as client:
+                        resp = await client.get(
+                            f"https://www.virustotal.com/api/v3/files/{target}",
+                            headers={"x-apikey": settings.VIRUSTOTAL_API_KEY},
+                        )
+                        if resp.status_code == 200:
+                            attr = resp.json().get("data", {}).get("attributes", {})
+                            stats = attr.get("last_analysis_stats", {})
+                            results["virustotal"] = {
+                                "source": "virustotal",
+                                "status": "found",
+                                "malicious": stats.get("malicious", 0),
+                                "suspicious": stats.get("suspicious", 0),
+                                "harmless": stats.get("harmless", 0),
+                                "meaningful_name": attr.get("meaningful_name"),
+                                "type_description": attr.get("type_description"),
+                                "size": attr.get("size"),
+                                "popular_threat_classification": attr.get("popular_threat_classification"),
+                            }
+                            sources_checked.append("virustotal")
+                        elif resp.status_code == 404:
+                            results["virustotal"] = {"source": "virustotal", "status": "clean", "detail": "Unknown to VT"}
+                            sources_checked.append("virustotal")
+                except Exception as e:
+                    logger.warning("VT file lookup failed: %s", e)
+            if (results.get("malwarebazaar") or {}).get("status") == "found":
+                scoring_factors["malware_hash_match"] = True
+                scoring_factors["virustotal_flagged"] = True
+            if (results.get("threatfox") or {}).get("status") == "found":
+                scoring_factors["malware_hash_match"] = True
+            if (results.get("virustotal") or {}).get("malicious", 0) > 0:
+                scoring_factors["virustotal_flagged"] = True
+            if (results.get("blocklist") or {}).get("status") == "found":
+                scoring_factors["on_blocklist"] = True
 
         # Filter out None results
         results = {k: v for k, v in results.items() if v is not None}

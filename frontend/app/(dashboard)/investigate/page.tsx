@@ -33,16 +33,22 @@ const TARGET_TYPES = [
 ];
 
 const ALL_SOURCES = [
-  { key: "shodan",          label: "Shodan",         icon: Wifi,       desc: "Ports, services, banners",     color: "#ef4444" },
-  { key: "censys",          label: "Censys",          icon: Eye,        desc: "Certificate & host intel",     color: "#f97316" },
-  { key: "haveibeenpwned",  label: "HaveIBeenPwned",  icon: Shield,     desc: "Data breach lookup",           color: "#3b82f6" },
-  { key: "hunter",          label: "Hunter.io",       icon: Mail,       desc: "Email discovery",              color: "#ec4899" },
-  { key: "github",          label: "GitHub",          icon: Database,   desc: "Leaked code & secrets",        color: "#64748b" },
-  { key: "whois",           label: "WHOIS",           icon: Globe,      desc: "Registration details",         color: "#a855f7" },
-  { key: "dns",             label: "DNS",             icon: Server,     desc: "A/AAAA/MX/TXT records",        color: "#10b981" },
-  { key: "virustotal",      label: "VirusTotal",      icon: AlertTriangle, desc: "Malware & reputation",     color: "#eab308" },
-  { key: "urlscan",         label: "URLScan",         icon: Link2,      desc: "URL/screenshot analysis",      color: "#f97316" },
-  { key: "greynoise",       label: "GreyNoise",       icon: Activity,   desc: "Internet noise classification",color: "#8b5cf6" },
+  { key: "shodan",             label: "Shodan",            icon: Wifi,          desc: "Ports, services, banners",         color: "#ef4444" },
+  { key: "shodan_internetdb",  label: "InternetDB",        icon: Database,      desc: "Free Shodan CPE/CVE lookup",       color: "#f43f5e" },
+  { key: "blocklist",          label: "Blocklists",        icon: Shield,        desc: "Feodo/OpenPhish/ET/Tor feeds",     color: "#6366f1" },
+  { key: "malwarebazaar",      label: "MalwareBazaar",     icon: Hash,          desc: "Hash → malware family + YARA",     color: "#eab308" },
+  { key: "haveibeenpwned",     label: "HaveIBeenPwned",    icon: Shield,        desc: "Data breach lookup",               color: "#3b82f6" },
+  { key: "github",             label: "GitHub",            icon: Database,      desc: "Leaked code & secrets",            color: "#64748b" },
+  { key: "whois",              label: "WHOIS",             icon: Globe,         desc: "Registration details",             color: "#a855f7" },
+  { key: "dns",                label: "DNS",               icon: Server,        desc: "A/AAAA/MX/TXT records",            color: "#10b981" },
+  { key: "virustotal",         label: "VirusTotal",        icon: AlertTriangle, desc: "Malware & reputation",             color: "#eab308" },
+  { key: "urlscan",            label: "URLScan",           icon: Link2,         desc: "URL/screenshot analysis",          color: "#f97316" },
+  { key: "greynoise",          label: "GreyNoise",         icon: Activity,      desc: "Internet noise classification",    color: "#8b5cf6" },
+  { key: "threatfox",          label: "ThreatFox",         icon: AlertTriangle, desc: "Abuse.ch IOC database",            color: "#dc2626" },
+  { key: "urlhaus",            label: "URLhaus",           icon: Link2,         desc: "Abuse.ch malicious URLs",          color: "#e11d48" },
+  { key: "crtsh",              label: "crt.sh",            icon: Eye,           desc: "Certificate transparency logs",    color: "#0ea5e9" },
+  { key: "geolocation",        label: "Geolocation",       icon: Globe,         desc: "IP country/ISP/ASN",               color: "#14b8a6" },
+  { key: "intelx",             label: "IntelX",            icon: Database,      desc: "Deep/dark web archives",           color: "#a855f7" },
 ];
 
 type SourceStatus = "idle" | "pending" | "running" | "done" | "failed" | "skipped";
@@ -269,6 +275,187 @@ function HibpPanel({ data }: { data: any }) {
   );
 }
 
+function MalwareBazaarPanel({ data }: { data: any }) {
+  if (data?.status !== "found") {
+    return (
+      <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.15)" }}>
+        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <p className="text-sm text-emerald-300">{data?.detail || "Not seen in MalwareBazaar"}</p>
+      </div>
+    );
+  }
+  const fields = [
+    ["File Name", data.file_name],
+    ["File Type", data.file_type],
+    ["Size", data.file_size ? `${data.file_size} bytes` : null],
+    ["Signature", data.signature],
+    ["First Seen", data.first_seen],
+    ["Last Seen", data.last_seen],
+    ["Delivery", data.delivery_method],
+    ["Reporter", data.reporter],
+  ].filter(([, v]) => v);
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.2)" }}>
+        <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" />
+        <p className="text-sm font-semibold text-yellow-300">
+          Known malware sample {data.signature ? `— ${data.signature}` : ""}
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {fields.map(([k, v]) => (
+          <div key={k as string} className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(234,179,8,0.1)" }}>
+            <p className="text-[10px] text-slate-600">{k}</p>
+            <p className="text-xs text-slate-300 mt-0.5">{v}</p>
+          </div>
+        ))}
+      </div>
+      {data.tags?.length > 0 && (
+        <div>
+          <p className="text-[11px] text-slate-500 mb-1.5">Tags</p>
+          <div className="flex flex-wrap gap-1.5">
+            {data.tags.map((t: string) => (
+              <span key={t} className="px-2 py-0.5 rounded text-[10px] font-mono text-yellow-300 bg-yellow-500/10 border border-yellow-500/15">{t}</span>
+            ))}
+          </div>
+        </div>
+      )}
+      {data.yara_rules?.length > 0 && (
+        <div>
+          <p className="text-[11px] text-slate-500 mb-1.5">YARA Rules</p>
+          <div className="space-y-1">
+            {data.yara_rules.map((y: any) => (
+              <p key={y.rule} className="text-xs font-mono text-slate-300 px-3 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.015)" }}>
+                {y.rule} <span className="text-slate-600">by {y.author}</span>
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BlocklistPanel({ data }: { data: any }) {
+  if (data?.status !== "found") {
+    return (
+      <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.15)" }}>
+        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <p className="text-sm text-emerald-300">{data?.detail || "No open-blocklist hits"}</p>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)" }}>
+        <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+        <p className="text-sm font-semibold text-red-300">
+          {data.hit_count} hit{data.hit_count === 1 ? "" : "s"} across {data.sources?.length ?? 0} feed{data.sources?.length === 1 ? "" : "s"}
+        </p>
+      </div>
+      {data.sources?.length > 0 && (
+        <div>
+          <p className="text-[11px] text-slate-500 mb-1.5">Source feeds</p>
+          <div className="flex flex-wrap gap-1.5">
+            {data.sources.map((s: string) => (
+              <span key={s} className="px-2 py-0.5 rounded text-[10px] font-mono text-red-300 bg-red-500/10 border border-red-500/15">{s}</span>
+            ))}
+          </div>
+        </div>
+      )}
+      {data.categories?.length > 0 && (
+        <div>
+          <p className="text-[11px] text-slate-500 mb-1.5">Categories</p>
+          <div className="flex flex-wrap gap-1.5">
+            {data.categories.map((c: string) => (
+              <span key={c} className="px-2 py-0.5 rounded text-[10px] text-slate-300 bg-white/[0.03] border border-white/[0.06]">{c}</span>
+            ))}
+          </div>
+        </div>
+      )}
+      {data.hits?.length > 0 && (
+        <div>
+          <p className="text-[11px] text-slate-500 mb-1.5">Recent entries</p>
+          <div className="space-y-1.5">
+            {data.hits.slice(0, 8).map((h: any, i: number) => (
+              <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(239,68,68,0.08)" }}>
+                <span className="font-mono text-red-300 w-28 truncate">{h.source}</span>
+                <span className="text-slate-400 flex-1">{h.category || "—"}</span>
+                <span className="text-slate-600 text-[10px] font-mono">{h.confidence}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InternetDbPanel({ data }: { data: any }) {
+  if (data?.status !== "found") {
+    return (
+      <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.15)" }}>
+        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <p className="text-sm text-emerald-300">{data?.detail || "No InternetDB record"}</p>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      {data.ports?.length > 0 && (
+        <div>
+          <p className="text-[11px] text-slate-500 mb-1.5">Open Ports ({data.ports.length})</p>
+          <div className="flex flex-wrap gap-1.5">
+            {data.ports.map((p: number) => (
+              <span key={p} className="px-2 py-1 rounded-md text-xs font-mono text-rose-300 bg-rose-500/10 border border-rose-500/15">{p}</span>
+            ))}
+          </div>
+        </div>
+      )}
+      {data.vulns?.length > 0 && (
+        <div>
+          <p className="text-[11px] text-slate-500 mb-1.5">Vulnerabilities</p>
+          <div className="flex flex-wrap gap-1.5">
+            {data.vulns.slice(0, 30).map((v: string) => (
+              <span key={v} className="px-2 py-0.5 rounded text-[10px] font-mono text-red-300 bg-red-500/10 border border-red-500/15">{v}</span>
+            ))}
+          </div>
+        </div>
+      )}
+      {data.cpes?.length > 0 && (
+        <div>
+          <p className="text-[11px] text-slate-500 mb-1.5">Detected CPEs</p>
+          <div className="space-y-1">
+            {data.cpes.slice(0, 10).map((c: string) => (
+              <p key={c} className="text-xs font-mono text-slate-300 px-3 py-1.5 rounded-lg truncate" style={{ background: "rgba(255,255,255,0.015)" }}>{c}</p>
+            ))}
+          </div>
+        </div>
+      )}
+      {data.hostnames?.length > 0 && (
+        <div>
+          <p className="text-[11px] text-slate-500 mb-1.5">Hostnames</p>
+          <div className="flex flex-wrap gap-1.5">
+            {data.hostnames.map((h: string) => (
+              <span key={h} className="px-2 py-0.5 rounded text-[10px] font-mono text-slate-300 bg-white/[0.03] border border-white/[0.06]">{h}</span>
+            ))}
+          </div>
+        </div>
+      )}
+      {data.tags?.length > 0 && (
+        <div>
+          <p className="text-[11px] text-slate-500 mb-1.5">Tags</p>
+          <div className="flex flex-wrap gap-1.5">
+            {data.tags.map((t: string) => (
+              <span key={t} className="px-2 py-0.5 rounded text-[10px] text-rose-300 bg-rose-500/10 border border-rose-500/15">{t}</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function GenericPanel({ data }: { data: any }) {
   return (
     <pre className="text-[11px] text-slate-400 rounded-xl p-4 overflow-x-auto max-h-64 font-mono" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(139,92,246,0.06)" }}>
@@ -279,11 +466,14 @@ function GenericPanel({ data }: { data: any }) {
 
 function SourcePanel({ source, data }: { source: string; data: any }) {
   switch (source) {
-    case "shodan": return <ShodanPanel data={data} />;
-    case "whois":  return <WhoisPanel data={data} />;
-    case "dns":    return <DnsPanel data={data} />;
-    case "haveibeenpwned": return <HibpPanel data={data} />;
-    default:       return <GenericPanel data={data} />;
+    case "shodan":            return <ShodanPanel data={data} />;
+    case "shodan_internetdb": return <InternetDbPanel data={data} />;
+    case "blocklist":         return <BlocklistPanel data={data} />;
+    case "malwarebazaar":     return <MalwareBazaarPanel data={data} />;
+    case "whois":             return <WhoisPanel data={data} />;
+    case "dns":               return <DnsPanel data={data} />;
+    case "haveibeenpwned":    return <HibpPanel data={data} />;
+    default:                  return <GenericPanel data={data} />;
   }
 }
 

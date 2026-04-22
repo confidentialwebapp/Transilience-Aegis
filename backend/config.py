@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     OTX_API_KEY: str = ""
     INTELX_API_KEY: str = ""
     NVD_API_KEY: str = ""
+    RANSOMWARE_LIVE_API_KEY: str = ""
+
+    # MaxMind GeoLite2 — free account required for license key
+    MAXMIND_ACCOUNT_ID: str = ""
+    MAXMIND_LICENSE_KEY: str = ""
+    GEOLITE2_CITY_DB: str = "/tmp/GeoLite2-City.mmdb"
+    GEOLITE2_ASN_DB: str = "/tmp/GeoLite2-ASN.mmdb"
 
     # Notifications
     RESEND_API_KEY: str = ""

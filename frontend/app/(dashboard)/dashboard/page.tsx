@@ -33,6 +33,40 @@ const EXPOSURE_TREND = Array.from({ length: 30 }, (_, i) => ({
   v: 650 + Math.round(80 * Math.sin(i / 4) - i * 2 + Math.random() * 30),
 }));
 
+// Hero "ask Transilience AI" bar — opens the global TransilienceDock with the
+// typed prompt pre-filled (and auto-sent on Enter). The dock lives in
+// app/(dashboard)/layout.tsx, mounted on every authenticated page.
+function HeroAskBar() {
+  const [val, setVal] = useState("");
+  const fire = (autoSend: boolean) => {
+    const detail = val.trim() ? { prompt: val.trim(), autoSend } : {};
+    window.dispatchEvent(new CustomEvent("tai:open", { detail }));
+    if (autoSend) setVal("");
+  };
+  return (
+    <div className="mt-4 flex items-center gap-2 max-w-xl rounded-xl pl-3 pr-1.5 h-11"
+         style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(139,92,246,0.22)" }}>
+      <Sparkles className="w-3.5 h-3.5 text-purple-300 shrink-0" />
+      <input
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); fire(true); } }}
+        placeholder="Ask Transilience AI anything about your threat data…"
+        className="flex-1 bg-transparent outline-none text-[13px] text-slate-100 placeholder:text-slate-500 min-w-0"
+      />
+      <kbd className="hidden md:inline-flex items-center justify-center h-5 px-1.5 rounded text-[10px] font-mono text-slate-500 bg-white/5 border border-white/10">⌘J</kbd>
+      <button
+        onClick={() => fire(true)}
+        disabled={!val.trim()}
+        className="h-8 px-3 rounded-lg text-[11px] font-bold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+        style={{ background: val.trim() ? "linear-gradient(135deg, #7c3aed, #ec4899)" : "rgba(255,255,255,0.05)" }}
+      >
+        Ask <ArrowUpRight className="w-3 h-3" />
+      </button>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [orgId, setOrgIdLocal] = useState("");
   const [cveStats, setCveStats] = useState<any>(null);
@@ -215,6 +249,8 @@ export default function DashboardPage() {
                 ? <><span className="text-red-400 font-bold">{criticalAlerts} critical {criticalAlerts === 1 ? "threat requires" : "threats require"}</span> your attention. Pipeline health nominal.</>
                 : <>All systems nominal. Pipeline ingesting <span className="text-purple-300 font-bold">{totalAlerts.toLocaleString()}</span> signals across {Object.keys(stats?.alerts_by_module ?? {}).length || 7} intel sources.</>}
             </p>
+
+            <HeroAskBar />
           </div>
 
           {/* Exposure score badge */}

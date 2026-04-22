@@ -9,6 +9,7 @@ import { getOrgId } from "@/lib/api";
 import { useAlerts } from "@/hooks/useAlerts";
 import { createClient } from "@/lib/supabase/client";
 import { CommandPalette } from "@/components/CommandPalette";
+import { TransilienceDock } from "@/components/TransilienceDock";
 import {
   LayoutDashboard, AlertTriangle, Box, Bell, Search as SearchIcon,
   Settings, ChevronLeft, ChevronRight, Menu, Scan,
@@ -640,6 +641,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Command Palette — Cmd+K overlay */}
         <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
+
+        {/* Transilience AI Dock — Cmd+J slide-over, available on every page */}
+        <TransilienceDock />
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto bg-grid-pattern">

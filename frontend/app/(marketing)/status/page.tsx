@@ -193,12 +193,11 @@ const SERVICES: ServiceDef[] = [
     description: "Push alerts to Telegram — always-on listener",
     icon: Bot,
     color: "#06b6d4",
-    probe: () =>
-      probeUrl(
-        "https://api.telegram.org/bot8762721977:AAFSV7cR86sPgqwg27_Asj0PEq1Mk4fEE44/getMe",
-        {},
-        (d) => (d as { ok?: boolean }).ok === true
-      ),
+    // Probe via backend proxy — the bot token must never appear in client code.
+    probe: () => {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "https://tai-aegis-api.onrender.com";
+      return probeUrl(`${apiBase}/api/v1/status/telegram`, {}, (d) => (d as { ok?: boolean }).ok === true);
+    },
   },
 ];
 

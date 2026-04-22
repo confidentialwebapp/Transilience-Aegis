@@ -29,12 +29,16 @@ const NAV_SECTIONS = [
   {
     title: "THREAT INTELLIGENCE",
     items: [
+      // IA cleanup per senior engineering review:
+      //   - /cve removed from nav (CVE info embedded contextually in alerts/advisories instead)
+      //   - /intel (IOC Lookup) folded into /investigate as a tab
+      //   - /ioc-watchlist folded into /profile (Customer Watchlist)
+      //   - URLs still resolve for backwards-compat with bookmarks
       { href: "/threats", label: "Threat Feed", icon: Radio, badge: null },
-      { href: "/cve", label: "CVE Intelligence", icon: Bug, badge: null },
       { href: "/threat-actors", label: "Threat Actors", icon: Skull, badge: null },
       { href: "/dark-web", label: "Dark Web Monitor", icon: Eye, badge: "LIVE" },
-      { href: "/intel", label: "IOC Lookup", icon: Fingerprint, badge: null },
-      { href: "/graph", label: "Link Graph", icon: Network, badge: "NEW" },
+      { href: "/advisories", label: "Advisories", icon: FileText, badge: "NEW" },
+      { href: "/graph", label: "Link Graph", icon: Network, badge: null },
     ],
   },
   {
@@ -86,6 +90,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/threat-actors": "Threat Actors",
   "/dark-web": "Dark Web Monitor",
   "/intel": "IOC Lookup",
+  "/advisories": "Advisories",
   "/graph": "Link Graph",
   "/attack-surface": "Surface Map",
   "/infrastructure": "Infra Monitor",
@@ -276,6 +281,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             <span className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                               LIVE
+                            </span>
+                          )}
+                          {item.badge === "NEW" && (
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                              NEW
                             </span>
                           )}
                           {item.badge === "AI" && (

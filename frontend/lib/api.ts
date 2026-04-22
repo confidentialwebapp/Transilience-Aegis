@@ -321,6 +321,34 @@ export const api = {
     apiFetch<ApiKey & { key: string; warning: string }>("/api/v1/api-keys/", { method: "POST", body, orgId }),
   revokeApiKey: (orgId: string, id: string) =>
     apiFetch<{ revoked: string }>(`/api/v1/api-keys/${id}`, { method: "DELETE", orgId }),
+
+  // Advisories
+  getAdvisories: (orgId: string, params?: AdvisoryFilters) => {
+    const sp = new URLSearchParams();
+    if (params?.kind) sp.set("kind", params.kind);
+    if (params?.status) sp.set("status", params.status);
+    if (params?.page) sp.set("page", params.page.toString());
+    const qs = sp.toString();
+    return apiFetch<PaginatedResponse<Advisory>>(`/api/v1/advisories/${qs ? `?${qs}` : ""}`, { orgId });
+  },
+  getAdvisory: (orgId: string, id: string) =>
+    apiFetch<Advisory>(`/api/v1/advisories/${id}`, { orgId }),
+  createAdvisory: (orgId: string, body: AdvisoryCreateBody) =>
+    apiFetch<Advisory>("/api/v1/advisories/", { method: "POST", body, orgId }),
+  updateAdvisory: (orgId: string, id: string, body: Partial<AdvisoryCreateBody>) =>
+    apiFetch<Advisory>(`/api/v1/advisories/${id}`, { method: "PATCH", body, orgId }),
+  deleteAdvisory: (orgId: string, id: string) =>
+    apiFetch<void>(`/api/v1/advisories/${id}`, { method: "DELETE", orgId }),
+  generateAdvisory: (orgId: string, body: AdvisoryGenerateBody) =>
+    apiFetch<{ advisory: Advisory; ai: Record<string, unknown> }>("/api/v1/advisories/generate", { method: "POST", body, orgId }),
+
+  // Skills
+  listSkills: (orgId: string) =>
+    apiFetch<{ data: Skill[] }>("/api/v1/skills/", { orgId }),
+  invokeSkill: (orgId: string, body: SkillInvokeBody) =>
+    apiFetch<SkillInvokeResult>("/api/v1/skills/invoke", { method: "POST", body, orgId }),
+  getSkillUsage: (orgId: string, days = 7) =>
+    apiFetch<SkillUsage>(`/api/v1/skills/usage?days=${days}`, { orgId }),
 };
 
 export interface AuditEvent {
@@ -676,4 +704,94 @@ export interface UsernameSearchResult {
   username: string;
   count: number;
   found: Array<{ site: string; url: string; tags?: string[] }>;
+}
+
+// ----- Advisory types -----
+export type AdvisoryKind = "threat" | "breach" | "product";
+export type AdvisoryStatus = "draft" | "published" | "archived";
+export type AdvisoryTLP = "WHITE" | "GREEN" | "AMBER" | "RED";
+export type AdvisorySeverity = "info" | "low" | "medium" | "high" | "critical";
+
+export interface AdvisoryIOCs {
+  ipv4?: string[];
+  domains?: string[];
+  hashes?: string[];
+  cves?: string[];
+  [key: string]: string[] | undefined;
+}
+
+export interface Advisory {
+  id: string;
+  org_id: string;
+  kind: AdvisoryKind;
+  title: string;
+  summary: string | null;
+  body_markdown: string | null;
+  iocs: AdvisoryIOCs | null;
+  tags: string[];
+  severity: AdvisorySeverity | null;
+  tlp: AdvisoryTLP;
+  status: AdvisoryStatus;
+  generated_by_skill: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdvisoryFilters {
+  kind?: AdvisoryKind | "";
+  status?: AdvisoryStatus | "";
+  page?: number;
+}
+
+export interface AdvisoryCreateBody {
+  kind: AdvisoryKind;
+  title: string;
+  summary?: string;
+  body_markdown?: string;
+  iocs?: AdvisoryIOCs;
+  tags?: string[];
+  severity?: AdvisorySeverity;
+  tlp?: AdvisoryTLP;
+  status?: AdvisoryStatus;
+}
+
+export interface AdvisoryGenerateBody {
+  kind: AdvisoryKind;
+  topic: string;
+  facts?: string[];
+  iocs?: AdvisoryIOCs;
+  model?: string;
+}
+
+// ----- Skill types -----
+export interface Skill {
+  name: string;
+  description?: string;
+  params_schema?: Record<string, unknown>;
+}
+
+export interface SkillInvokeBody {
+  skill: string;
+  params: Record<string, unknown>;
+  model?: string;
+  bypass_cache?: boolean;
+}
+
+export interface SkillInvokeResult {
+  ok: boolean;
+  skill: string;
+  model: string;
+  result: unknown;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+  duration_ms: number;
+  cached: boolean;
+}
+
+export interface SkillUsage {
+  days: number;
+  total_calls: number;
+  total_cost_usd: number;
+  by_skill: Array<{ skill: string; calls: number; cost_usd: number }>;
 }

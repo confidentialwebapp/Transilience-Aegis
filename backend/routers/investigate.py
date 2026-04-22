@@ -920,8 +920,16 @@ async def _modal_domain_tools(domain: str) -> Dict[str, Dict[str, Any]]:
             return {"source": tool, "status": "error", "detail": str(r)[:200]}
         if not r or not isinstance(r, dict):
             return {"source": tool, "status": "error", "detail": "no response"}
-        if r.get("error"):
-            return {"source": tool, "status": "error", "detail": str(r["error"])[:200]}
+        # Some Modal tools set `error` to their banner when the process exit
+        # code is non-zero even though results are valid. Trust the `results`
+        # payload if it's present and non-empty — only escalate to 'error'
+        # when we have nothing usable.
+        err = r.get("error")
+        rr = r.get("results")
+        has_data = (rr is not None and (rr if isinstance(rr, list) else (rr if isinstance(rr, dict) and rr else False))) \
+                   or (r.get("count") or 0) > 0 or (r.get("subdomains") or []) or (r.get("urls") or [])
+        if err and not has_data:
+            return {"source": tool, "status": "error", "detail": str(err)[:200]}
         return r
 
     sf_wrap = _wrap(sf, "subfinder")

@@ -386,36 +386,63 @@ def daily_digest_tick() -> dict:
 @app.function(image=kali_image, timeout=300, memory=1024)
 def run_sherlock(username: str, timeout: int = 20) -> dict:
     """Check which platforms a username exists on. Returns a list of sites
-    where the account was found."""
+    where the account was found.
+
+    Modern sherlock (0.14+) prints each hit to stdout as '[+] <Site>: <URL>'
+    with --print-found, AND writes a text file of URLs (one per line) when
+    --folderoutput is set. Parse both for resilience across versions.
+    """
+    import os, re as _re
     out_dir = tempfile.mkdtemp(prefix="sherlock-")
     res = _run(
         ["sherlock", username, "--timeout", str(timeout),
-         "--folderoutput", out_dir, "--no-color", "--print-found"],
+         "--folderoutput", out_dir, "--print-found"],
         timeout=290,
     )
     found: list[dict[str, str]] = []
-    import os
-    path = os.path.join(out_dir, f"{username}.txt")
-    try:
-        with open(path) as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("*"):
-                    continue
-                # lines look like "[+] Site: https://..."
-                if line.startswith("[+]") and ":" in line:
-                    parts = line[3:].strip().split(":", 1)
-                    if len(parts) == 2:
-                        found.append({"site": parts[0].strip(), "url": parts[1].strip()})
-    except Exception:
-        pass
+    seen_urls: set[str] = set()
+
+    # 1) stdout: strip ANSI codes, look for [+] lines.
+    ansi = _re.compile(r"\x1b\[[0-9;]*[mGKH]")
+    for raw in (res.get("stdout") or "").splitlines():
+        line = ansi.sub("", raw).strip()
+        if not line or not line.startswith("[+]"):
+            continue
+        # Format: "[+] Site: https://..."
+        body = line[3:].strip()
+        # split only on the first colon-after-space to keep URL intact
+        if ": http" in body:
+            site, url = body.split(": http", 1)
+            url = "http" + url
+            if url not in seen_urls:
+                seen_urls.add(url)
+                found.append({"site": site.strip(), "url": url.strip()})
+
+    # 2) folderoutput .txt file — one URL per line in newer versions.
+    txt = os.path.join(out_dir, f"{username}.txt")
+    if os.path.exists(txt):
+        try:
+            with open(txt) as f:
+                for raw in f:
+                    url = raw.strip()
+                    if not url.startswith(("http://", "https://")):
+                        continue
+                    if url in seen_urls:
+                        continue
+                    seen_urls.add(url)
+                    # Derive site from domain
+                    host = url.split("//", 1)[-1].split("/", 1)[0]
+                    found.append({"site": host, "url": url})
+        except Exception:
+            pass
+
     return {
         "tool": "sherlock",
-        "ok": res["ok"],
+        "ok": res["ok"] or bool(found),
         "username": username,
         "found_count": len(found),
-        "found": found[:50],
-        "stderr": res["stderr"],
+        "found": found[:80],
+        "stderr_tail": (res.get("stderr") or "")[-400:],
     }
 
 

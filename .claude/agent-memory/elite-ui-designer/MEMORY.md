@@ -1,1 +1,6 @@
 - [Design System](design-system.md) — TAI-AEGIS enterprise dark theme: tokens, card/input/modal/table/tab patterns, custom CSS classes
+- [Settings Page Patterns](settings-patterns.md) — 9-tab sidebar settings page: primitives, API wiring, dirty/SaveBar pattern, graceful fallbacks
+- [Landing Page Patterns](landing-page-patterns.md) — Public marketing page sections, inline primitives, DashboardPreview mock, routing constraints
+- [Status and Docs Page Patterns](status-docs-patterns.md) — /status probe architecture, Modal zero-cost trick, /docs OpenAPI renderer, try-it-out panel
+- [Empty States and Command Palette](empty-states-and-palette.md) — Icon-ring orbit pattern for empty states; CommandPalette component architecture and layout wiring
+- [Marketing Legal Pages](marketing-legal-pages.md) — Security/Privacy/Terms/Changelog in (marketing) route group; TOC pattern, contact emails, TS icon-style gotcha

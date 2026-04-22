@@ -1,9 +1,12 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState } from "react";
 import {
-  Loader2, Network, Globe, Skull, Shield, AlertTriangle, Server, ExternalLink,
-  ChevronDown, Bug,
+  Network, Globe, Skull, Shield,
+  AlertTriangle, Server, ExternalLink, ChevronDown,
+  Bug
 } from "lucide-react";
 import { api, getOrgId, type AttackSurfaceResult, type TyposquatResult, type NmapResult, type NucleiResult } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -101,7 +104,7 @@ export default function ScanPage() {
             className="flex-1 h-10 px-3 rounded-lg bg-white/[0.02] border border-white/[0.08] text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500/40" />
           <button onClick={handleRun} disabled={running || !target.trim()}
             className="h-10 px-5 rounded-lg flex items-center gap-2 text-sm font-semibold text-white btn-brand disabled:opacity-40">
-            {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <ToolIcon className="w-4 h-4" />}
+            {running ? <InfinityLoader size={16} /> : <ToolIcon className="w-4 h-4" />}
             {running ? "Running…" : `Run ${tool.label}`}
           </button>
         </div>
@@ -123,7 +126,7 @@ export default function ScanPage() {
 
       {running && (
         <div className="card-enterprise p-8 flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+          <InfinityLoader size={32} />
           <p className="text-sm text-slate-300">Running {tool.label} on Modal…</p>
           <p className="text-[11px] text-slate-600">First call has a ~5s cold start; subsequent runs are instant</p>
         </div>

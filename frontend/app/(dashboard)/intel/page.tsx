@@ -1,13 +1,17 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect, useRef } from "react";
 import { getOrgId } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
-  Search, Loader2, Globe, Server, Hash, Mail, Link2, Fingerprint,
-  Eye, Trash2, X, ChevronDown, ExternalLink, Shield, AlertTriangle,
-  CheckCircle2, Clock, Plus, TrendingUp, Activity,
+  Search, Globe, Server, Hash,
+  Mail, Link2, Fingerprint, Eye,
+  Trash2, X, ChevronDown, ExternalLink,
+  Shield, AlertTriangle, CheckCircle2, Clock,
+  Plus, TrendingUp, Activity
 } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://tai-aegis-api.onrender.com";
@@ -387,7 +391,7 @@ export default function IntelPage() {
             <div className="flex items-center gap-2 mt-3">
               <button onClick={() => handleLookup()} disabled={loading || !iocInput.trim()}
                 className="h-10 px-6 rounded-lg flex items-center gap-2 text-sm font-semibold text-white btn-brand disabled:opacity-40 transition-all">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                {loading ? <InfinityLoader size={16} /> : <Search className="w-4 h-4" />}
                 {loading ? "Querying sources…" : "Investigate IOC"}
               </button>
               <span className="text-[11px] text-slate-600">or press Enter</span>
@@ -400,7 +404,7 @@ export default function IntelPage() {
               <div className="flex flex-col items-center gap-4">
                 <div className="relative">
                   <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ border: "2px solid rgba(139,92,246,0.15)" }}>
-                    <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+                    <InfinityLoader size={32} />
                   </div>
                 </div>
                 <div className="text-center">

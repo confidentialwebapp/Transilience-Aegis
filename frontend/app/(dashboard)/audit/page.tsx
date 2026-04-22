@@ -1,7 +1,9 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useEffect, useState } from "react";
-import { History, Search, Loader2, RefreshCw, Filter } from "lucide-react";
+import { History, Search, RefreshCw, Filter } from "lucide-react";
 import { api, getOrgId, type AuditEvent } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -93,7 +95,7 @@ export default function AuditPage() {
 
       <div className="card-enterprise p-4">
         {loading ? (
-          <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-indigo-400" /></div>
+          <div className="flex justify-center py-6"><InfinityLoader size={20} /></div>
         ) : events.length === 0 ? (
           <p className="text-[12px] text-slate-500 p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
             No audit events {actionFilter && `matching "${actionFilter}"`}. Activity will appear as you and your team use the platform.

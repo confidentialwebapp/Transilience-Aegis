@@ -1,8 +1,11 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useEffect, useState } from "react";
 import {
-  Key, Plus, Trash2, Loader2, Copy, Check, X, Save, AlertTriangle,
+  Key, Plus, Trash2, Copy,
+  Check, X, Save, AlertTriangle
 } from "lucide-react";
 import { api, getOrgId, type ApiKey } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -134,7 +137,7 @@ export default function ApiKeysPage() {
           <div className="flex justify-end gap-2 mt-4">
             <button onClick={() => setShowForm(false)} className="h-9 px-4 rounded-lg text-xs font-semibold text-slate-400 bg-white/[0.02] border border-white/[0.06]">Cancel</button>
             <button onClick={handleCreate} disabled={creating} className="h-9 px-4 rounded-lg flex items-center gap-2 text-xs font-semibold text-white btn-brand disabled:opacity-40">
-              {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Create
+              {creating ? <InfinityLoader size={14} /> : <Save className="w-3.5 h-3.5" />} Create
             </button>
           </div>
         </div>
@@ -143,7 +146,7 @@ export default function ApiKeysPage() {
       <div className="card-enterprise p-4">
         <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-[0.1em] mb-3">Active keys</h3>
         {loading && keys.length === 0 ? (
-          <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-amber-400" /></div>
+          <div className="flex justify-center py-6"><InfinityLoader size={20} /></div>
         ) : keys.length === 0 ? (
           <p className="text-[12px] text-slate-500 p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
             No API keys yet. Create one to integrate AEGIS with your SIEM, SOAR, or custom dashboards.

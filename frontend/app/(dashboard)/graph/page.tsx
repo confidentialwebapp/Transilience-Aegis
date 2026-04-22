@@ -1,15 +1,20 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { api, getOrgId, type Investigation } from "@/lib/api";
 import {
-  Search, X, Locate, GitBranch, Focus, LayoutGrid, HelpCircle,
-  Maximize2, Globe, Server, Mail, Phone, MapPin, Bug, Wifi,
-  Facebook, Instagram, MessageSquare, Calendar, ArrowDownUp,
-  Download, ChevronDown, Network, Loader2, Shield, Fingerprint,
-  AlertTriangle, CheckCircle2, Hash as HashIcon, FileLock2, Lock,
+  Search, X, Locate, GitBranch,
+  Focus, LayoutGrid, HelpCircle, Maximize2,
+  Globe, Server, Mail, Phone,
+  MapPin, Bug, Wifi, Facebook,
+  Instagram, MessageSquare, Calendar, ArrowDownUp,
+  Download, ChevronDown, Network, Shield,
+  Fingerprint, AlertTriangle, CheckCircle2, Hash as HashIcon,
+  FileLock2, Lock
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -1271,7 +1276,7 @@ export default function GraphPage() {
                   className="h-10 px-5 rounded-full text-sm font-semibold text-white btn-brand disabled:opacity-40 flex items-center gap-2 min-w-[130px] justify-center"
                 >
                   {running
-                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {doneCount}/{totalSources}</>
+                    ? <><InfinityLoader size={14} /> {doneCount}/{totalSources}</>
                     : <>Pivot</>}
                 </button>
               </form>
@@ -1317,7 +1322,7 @@ export default function GraphPage() {
                     {Object.entries(sourceStatuses).map(([k, st]) => (
                       <div key={k} className="flex items-center gap-1 text-[10px]">
                         {st === "done" && <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />}
-                        {st === "running" && <Loader2 className="w-2.5 h-2.5 animate-spin text-purple-300" />}
+                        {st === "running" && <InfinityLoader size={10} />}
                         {st === "pending" && <div className="w-2.5 h-2.5 rounded-full border border-slate-600" />}
                         {st === "failed" && <AlertTriangle className="w-2.5 h-2.5 text-red-400" />}
                         <span className={cn(
@@ -1402,7 +1407,7 @@ export default function GraphPage() {
                 </svg>
               ) : running ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-8">
-                  <Loader2 className="w-10 h-10 animate-spin text-purple-400" />
+                  <InfinityLoader size={40} />
                   <p className="text-sm text-slate-400">Querying OSINT sources…</p>
                   <p className="text-[11px] text-slate-600 max-w-xs text-center">
                     First call may take 30–90s if the Render backend is cold-starting.

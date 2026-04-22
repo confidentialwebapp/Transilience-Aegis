@@ -1,26 +1,14 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect, useCallback } from "react";
 import {
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
-  Loader2,
-  RefreshCw,
-  Mail,
-  ArrowRight,
-  Clock,
-  Wifi,
-  Server,
-  Database,
-  Cpu,
-  Send,
-  Bot,
-  Globe,
-  Activity,
-  Shield,
-  Bell,
-  Twitter,
+  CheckCircle2, AlertTriangle, XCircle, RefreshCw,
+  Mail, ArrowRight, Clock, Wifi,
+  Server, Database, Cpu, Send,
+  Bot, Globe, Activity, Shield,
+  Bell, Twitter
 } from "lucide-react";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -208,7 +196,7 @@ function StatusPill({ status }: { status: ServiceStatus }) {
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
         style={{ background: "rgba(100,116,139,0.12)", color: "#64748b", border: "1px solid rgba(100,116,139,0.18)" }}>
-        <Loader2 className="w-3 h-3 animate-spin" />
+        <InfinityLoader size={12} />
         Checking
       </span>
     );
@@ -420,7 +408,7 @@ export default function StatusPage() {
                 />
               )}
               {overallStatus === "checking" && (
-                <Loader2 className="w-5 h-5 text-slate-500 animate-spin" />
+                <InfinityLoader size={20} />
               )}
             </div>
 
@@ -467,7 +455,7 @@ export default function StatusPage() {
               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.1)" }}
               title="Refresh now"
             >
-              <RefreshCw className={`w-3 h-3 ${anyChecking ? "animate-spin" : ""}`} />
+              {anyChecking ? <InfinityLoader size={12} /> : <RefreshCw className="w-3 h-3" />}
               <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>

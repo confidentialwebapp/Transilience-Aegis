@@ -1,8 +1,11 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useEffect, useState } from "react";
 import {
-  Radio, Loader2, RefreshCw, Search, ExternalLink, Hash, Filter, Clock,
+  Radio, RefreshCw, Search, ExternalLink,
+  Hash, Filter, Clock
 } from "lucide-react";
 import { api, getOrgId, type ResearcherChannel, type ResearcherPost } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -84,7 +87,7 @@ export default function ResearcherFeedPage() {
         </div>
         <button onClick={handlePoll} disabled={polling}
           className="h-9 px-4 rounded-lg flex items-center gap-2 text-xs font-semibold text-white btn-brand disabled:opacity-40">
-          {polling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+          {polling ? <InfinityLoader size={14} /> : <RefreshCw className="w-3.5 h-3.5" />}
           Poll all channels
         </button>
       </div>
@@ -154,7 +157,7 @@ export default function ResearcherFeedPage() {
       {/* Posts */}
       <div className="space-y-2">
         {loading && (
-          <div className="card-enterprise p-8 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-purple-400" /></div>
+          <div className="card-enterprise p-8 flex items-center justify-center"><InfinityLoader size={24} /></div>
         )}
         {!loading && posts.length === 0 && (
           <div className="card-enterprise p-10 flex flex-col items-center text-center animate-fade-up">
@@ -199,7 +202,7 @@ export default function ResearcherFeedPage() {
                 onClick={handlePoll}
                 disabled={polling}
                 className="h-9 px-5 rounded-lg flex items-center gap-2 text-sm font-semibold text-white btn-brand disabled:opacity-40">
-                {polling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                {polling ? <InfinityLoader size={16} /> : <RefreshCw className="w-4 h-4" />}
                 Poll all channels now
               </button>
             </div>

@@ -1,14 +1,17 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useEffect, useState, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { getOrgId } from "@/lib/api";
 import { toast } from "sonner";
 import {
-  Shield, TrendingUp, TrendingDown, Minus, Download, Share2,
-  AlertTriangle, ChevronRight, RefreshCw, Loader2,
-  Globe, KeyRound, Eye, Cpu, GitBranch, Tag,
-  BarChart3, Info, ExternalLink, ArrowUpRight, ArrowDownRight,
+  Shield, TrendingUp, TrendingDown, Minus,
+  Download, Share2, AlertTriangle, ChevronRight,
+  RefreshCw, Globe, KeyRound, Eye,
+  Cpu, GitBranch, Tag, BarChart3,
+  Info, ExternalLink, ArrowUpRight, ArrowDownRight
 } from "lucide-react";
 import {
   LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -210,7 +213,7 @@ export default function ExposurePage() {
           <Shield className="w-7 h-7 text-purple-400 animate-pulse" />
         </div>
         <p className="text-sm text-slate-400">Computing exposure score…</p>
-        <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+        <InfinityLoader size={16} />
       </div>
     );
   }
@@ -245,7 +248,7 @@ export default function ExposurePage() {
         <div className="flex items-center gap-2">
           <button onClick={refresh} disabled={refreshing}
             className="h-9 w-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-white bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-all disabled:opacity-50">
-            <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
+            {refreshing ? <InfinityLoader size={16} /> : <RefreshCw className="w-4 h-4" />}
           </button>
           <button onClick={() => { navigator.clipboard?.writeText(window.location.href); toast.success("Snapshot link copied"); }}
             className="h-9 w-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-white bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-all">

@@ -1,9 +1,12 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useEffect, useState } from "react";
 import {
-  Building2, Loader2, Plus, Trash2, RefreshCw, AlertTriangle, Skull,
-  Globe, Tag, MapPin, Save, X, ExternalLink,
+  Building2, Plus, Trash2, RefreshCw,
+  AlertTriangle, Skull, Globe, Tag,
+  MapPin, Save, X, ExternalLink
 } from "lucide-react";
 import { api, getOrgId, type CustomerProfile, type ProfileMatchAlert } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -160,7 +163,7 @@ export default function ProfilePage() {
         <div className="flex gap-2">
           <button onClick={handleMatchNow} disabled={matching || profiles.length === 0}
             className="h-9 px-3 rounded-lg flex items-center gap-2 text-xs font-semibold text-white bg-rose-500/15 border border-rose-500/30 hover:bg-rose-500/25 disabled:opacity-40">
-            {matching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            {matching ? <InfinityLoader size={14} /> : <RefreshCw className="w-3.5 h-3.5" />}
             Check now
           </button>
           <button onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setShowForm(!showForm); }}
@@ -244,7 +247,7 @@ export default function ProfilePage() {
       <div className="card-enterprise p-4">
         <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-[0.1em] mb-3">Watchlist profiles</h3>
         {loading && profiles.length === 0 ? (
-          <div className="py-6 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-rose-400" /></div>
+          <div className="py-6 flex justify-center"><InfinityLoader size={20} /></div>
         ) : profiles.length === 0 ? (
           <div className="py-8 flex flex-col items-center text-center animate-fade-up">
             {/* Icon ring */}

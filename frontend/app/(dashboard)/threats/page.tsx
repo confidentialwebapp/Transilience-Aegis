@@ -12,6 +12,7 @@ import {
   ArrowUpRight, Target, Globe, Database, Lock,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { InfinityLoader } from "@/components/InfinityLoader";
 
 // ─── Demo data ────────────────────────────────────────────────────────────────
 
@@ -781,7 +782,7 @@ export default function ThreatsPage() {
 
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <div className="w-10 h-10 rounded-full border-2 border-purple-500/20 border-t-purple-500 animate-spin" />
+              <InfinityLoader size={40} />
               <p className="text-xs text-slate-500">Loading threat intelligence…</p>
             </div>
           ) : filtered.length === 0 ? (

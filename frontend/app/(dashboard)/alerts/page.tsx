@@ -1,16 +1,21 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { api, getOrgId, type Alert } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
 import {
-  Bell, Search, X, RefreshCw, Download, Settings2, Check, Ban,
-  ChevronDown, ArrowUpRight, Users, Shield, Clock, AlertTriangle,
-  Copy, ExternalLink, Loader2, Filter, Keyboard, GitBranch,
-  Database, Target, Activity, Lock, Globe, FileText, Layers,
-  ChevronsUp, TrendingUp, Inbox,
+  Bell, Search, X, RefreshCw,
+  Download, Settings2, Check, Ban,
+  ChevronDown, ArrowUpRight, Users, Shield,
+  Clock, AlertTriangle, Copy, ExternalLink,
+  Filter, Keyboard, GitBranch, Database,
+  Target, Activity, Lock, Globe,
+  FileText, Layers, ChevronsUp, TrendingUp,
+  Inbox
 } from "lucide-react";
 
 // ─── Demo data ────────────────────────────────────────────────────────────────
@@ -814,7 +819,7 @@ export default function AlertsPage() {
           <div className="flex-1 overflow-y-auto divide-y divide-purple-500/[0.04]">
             {loading ? (
               <div className="flex items-center justify-center py-20 gap-2">
-                <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
+                <InfinityLoader size={20} />
                 <span className="text-xs text-slate-500">Loading…</span>
               </div>
             ) : filtered.length === 0 ? (

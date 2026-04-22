@@ -1,14 +1,18 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getOrgId } from "@/lib/api";
 import { toast } from "sonner";
 import {
-  Eye, Search, Loader2, Radio, Globe, FileText, MessageSquare,
-  Lock, Database, Skull, ChevronLeft, ChevronRight, RefreshCw,
-  ExternalLink, Clock, SlidersHorizontal, Download, BookmarkPlus,
-  AlertTriangle, X, ChevronDown, ChevronUp, TrendingUp, Shield,
-  Hash, Zap, ArrowUpRight,
+  Eye, Search, Radio, Globe,
+  FileText, MessageSquare, Lock, Database,
+  Skull, ChevronLeft, ChevronRight, RefreshCw,
+  ExternalLink, Clock, SlidersHorizontal, Download,
+  BookmarkPlus, AlertTriangle, X, ChevronDown,
+  ChevronUp, TrendingUp, Shield, Hash,
+  Zap, ArrowUpRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -591,7 +595,7 @@ export default function DarkWebPage() {
           <div className="card-enterprise overflow-hidden">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
-                <Loader2 className="w-7 h-7 animate-spin text-red-400" />
+                <InfinityLoader size={28} />
                 <p className="text-xs text-slate-500">Scanning dark web sources…</p>
               </div>
             ) : filteredFeed.length === 0 ? (

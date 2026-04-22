@@ -1,11 +1,15 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
-  Sparkles, Send, Paperclip, Plus, MessageSquare, Trash2, Pencil, X,
-  Loader2, Bot, User, Brain, FileText, Image as ImageIcon, ChevronDown,
-  Check, AlertCircle, Menu, DollarSign, Clock, Zap, Shield, Building2,
-  Tag, ChevronRight,
+  Sparkles, Send, Paperclip, Plus,
+  MessageSquare, Trash2, Pencil, X,
+  Bot, User, Brain, FileText,
+  Image as ImageIcon, ChevronDown, Check, AlertCircle,
+  Menu, DollarSign, Clock, Zap,
+  Shield, Building2, Tag, ChevronRight
 } from "lucide-react";
 import { api, getOrgId, type AiConversation, type AiMessage, type AiAttachment } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -822,10 +826,7 @@ export default function TransilienceAIPage() {
             <div className="flex items-center justify-between px-4 py-3 shrink-0"
               style={{ borderBottom: "1px solid rgba(139,92,246,0.06)" }}>
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg,rgba(139,92,246,0.25),rgba(236,72,153,0.15))" }}>
-                  <Sparkles className="w-3.5 h-3.5 text-purple-300" />
-                </div>
+                <img src="/logo.png" alt="Transilience AI" width={24} height={24} className="object-contain shrink-0" draggable={false} />
                 <span className="text-[13px] font-bold text-gradient-brand">Transilience AI</span>
               </div>
               <button
@@ -852,7 +853,7 @@ export default function TransilienceAIPage() {
             <div className="flex-1 overflow-y-auto px-2 py-1">
               {convsLoading ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
+                  <InfinityLoader size={16} />
                 </div>
               ) : filteredConvs.length === 0 ? (
                 <div className="py-6 text-center">
@@ -1038,16 +1039,13 @@ export default function TransilienceAIPage() {
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {messagesLoading ? (
             <div className="flex flex-col items-center justify-center h-full gap-3">
-              <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
+              <InfinityLoader size={24} />
               <p className="text-[12px] text-slate-600">Loading messages…</p>
             </div>
           ) : !activeConvId || messages.length === 0 ? (
             /* ── EMPTY STATE ── */
             <div className="flex flex-col items-center justify-center h-full py-12 animate-fade-up">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 glow-brand"
-                style={{ background: "linear-gradient(135deg,rgba(139,92,246,0.2),rgba(236,72,153,0.1))", border: "1px solid rgba(139,92,246,0.2)" }}>
-                <Sparkles className="w-8 h-8 text-purple-300" />
-              </div>
+              <img src="/logo.png" alt="Transilience AI" width={64} height={64} className="object-contain mb-5 glow-brand" draggable={false} />
               <h2 className="text-xl font-bold text-white mb-1 text-gradient-brand">Transilience AI</h2>
               <p className="text-[13px] text-slate-500 mb-8 text-center max-w-sm leading-relaxed">
                 Ask anything about your threat intel, advisories, alerts, or the broader threat landscape.
@@ -1190,7 +1188,7 @@ export default function TransilienceAIPage() {
                     title="Send message"
                   >
                     {sending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <InfinityLoader size={16} />
                     ) : (
                       <Send className="w-4 h-4" />
                     )}
@@ -1262,10 +1260,7 @@ function MessageBubble({ msg, onRetry }: { msg: AiMessage; onRetry: (m: AiMessag
 
   return (
     <div className="flex items-start gap-3 animate-fade-up">
-      <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1"
-        style={{ background: "linear-gradient(135deg,rgba(139,92,246,0.2),rgba(236,72,153,0.1))", border: "1px solid rgba(139,92,246,0.2)" }}>
-        <Bot className="w-4 h-4 text-purple-300" />
-      </div>
+      <img src="/logo.png" alt="Transilience AI" width={32} height={32} className="object-contain shrink-0 mt-1" draggable={false} />
       <div className="flex-1 min-w-0">
         {isError ? (
           <div className="rounded-2xl rounded-tl-sm px-4 py-3 flex items-start gap-3"

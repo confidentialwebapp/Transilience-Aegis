@@ -1,14 +1,19 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { getOrgId } from "@/lib/api";
 import { toast } from "sonner";
 import {
-  Building2, Plus, Search, Loader2, Shield, ChevronLeft, ChevronRight,
-  Scan, Trash2, X, Download, AlertTriangle, TrendingDown, TrendingUp,
-  ExternalLink, Filter, RefreshCw, Eye, Globe, KeyRound, Tag,
-  GitBranch, Cpu, CheckCircle2, Clock, ChevronDown,
+  Building2, Plus, Search, Shield,
+  ChevronLeft, ChevronRight, Scan, Trash2,
+  X, Download, AlertTriangle, TrendingDown,
+  TrendingUp, ExternalLink, Filter, RefreshCw,
+  Eye, Globe, KeyRound, Tag,
+  GitBranch, Cpu, CheckCircle2, Clock,
+  ChevronDown
 } from "lucide-react";
 import {
   LineChart, Line, ResponsiveContainer, Tooltip,
@@ -387,7 +392,7 @@ function VendorDrawer({
           <div className="flex gap-2 pt-2" style={{ borderTop: "1px solid rgba(139,92,246,0.06)" }}>
             <button onClick={() => { onReassess(vendor.id); onClose(); }}
               className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white btn-brand flex items-center justify-center gap-2">
-              {scanning === vendor.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scan className="w-4 h-4" />}
+              {scanning === vendor.id ? <InfinityLoader size={16} /> : <Scan className="w-4 h-4" />}
               Reassess
             </button>
             <button onClick={() => { if (confirm(`Remove ${vendor.name}?`)) { onRemove(vendor.id); onClose(); } }}
@@ -580,7 +585,7 @@ export default function VendorsPage() {
       {/* ── Vendor Grid ─────────────────────────────────────────────── */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Loader2 className="w-7 h-7 animate-spin text-purple-400" />
+          <InfinityLoader size={28} />
           <p className="text-xs text-slate-500">Loading vendor registry…</p>
         </div>
       ) : paged.length === 0 ? (
@@ -696,7 +701,7 @@ export default function VendorsPage() {
                   <button onClick={e => { e.stopPropagation(); triggerScan(vendor.id); }}
                     disabled={scanning === vendor.id}
                     className="h-7 px-2.5 rounded-lg text-[10px] font-semibold text-purple-300 bg-purple-500/[0.1] border border-purple-500/25 hover:bg-purple-500/20 transition-all flex items-center gap-1">
-                    {scanning === vendor.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Scan className="w-3 h-3" />} Reassess
+                    {scanning === vendor.id ? <InfinityLoader size={12} /> : <Scan className="w-3 h-3" />} Reassess
                   </button>
                 </div>
               </div>

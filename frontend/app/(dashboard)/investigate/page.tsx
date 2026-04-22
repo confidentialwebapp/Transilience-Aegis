@@ -1,15 +1,19 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect } from "react";
 import { api, getOrgId, type Investigation } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import {
-  Search, Loader2, Globe, Mail, Server, User, Phone, Link2,
-  Shield, CheckCircle2, XCircle, AlertTriangle, ExternalLink,
-  Download, Clock, ChevronDown, X, Activity, Hash,
-  Wifi, Database, Eye,
+  Search, Globe, Mail, Server,
+  User, Phone, Link2, Shield,
+  CheckCircle2, XCircle, AlertTriangle, ExternalLink,
+  Download, Clock, ChevronDown, X,
+  Activity, Hash, Wifi, Database,
+  Eye
 } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://tai-aegis-api.onrender.com";
@@ -142,7 +146,7 @@ function RiskBadge({ score }: { score: number }) {
 }
 
 function SourceStatusIcon({ status }: { status: SourceStatus }) {
-  if (status === "running") return <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />;
+  if (status === "running") return <InfinityLoader size={14} />;
   if (status === "done") return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />;
   if (status === "failed") return <XCircle className="w-3.5 h-3.5 text-red-400" />;
   if (status === "skipped") return <div className="w-3.5 h-3.5 rounded-full border border-slate-600" />;
@@ -650,7 +654,7 @@ export default function InvestigatePage() {
               </div>
               <button type="submit" disabled={scanning || !targetValue.trim()}
                 className="h-12 px-6 rounded-xl flex items-center gap-2 text-sm font-semibold text-white btn-brand disabled:opacity-40 transition-all min-w-[140px] justify-center">
-                {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                {scanning ? <InfinityLoader size={16} /> : <Search className="w-4 h-4" />}
                 {scanning ? `${doneCount}/${totalCount} sources` : "Investigate"}
               </button>
             </form>
@@ -812,7 +816,7 @@ export default function InvestigatePage() {
               <span className="text-[11px] text-slate-600">{history.length}</span>
             </div>
             {loadingHistory ? (
-              <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-purple-400" /></div>
+              <div className="flex justify-center py-8"><InfinityLoader size={20} /></div>
             ) : history.length === 0 ? (
               <div className="p-8 text-center">
                 <p className="text-xs text-slate-600">No investigations yet.</p>

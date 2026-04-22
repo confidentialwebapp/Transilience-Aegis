@@ -16,6 +16,7 @@ import {
   Bell,
   Tag,
 } from "lucide-react";
+import { InfinityLoader } from "@/components/InfinityLoader";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -269,7 +270,7 @@ function SubscribeForm() {
               className="btn-brand px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {state === "loading" ? (
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <InfinityLoader size={16} />
               ) : (
                 <>
                   Subscribe

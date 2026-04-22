@@ -1,10 +1,13 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useMemo, useState, useEffect } from "react";
 import {
-  KeyRound, Search as SearchIcon, SlidersHorizontal, Info, Share2, Download,
-  Check, Ban, ChevronLeft, ChevronRight, ChevronDown, Loader2, FileCheck2,
-  HelpCircle, Trash2, Sparkles, Users,
+  KeyRound, Search as SearchIcon, SlidersHorizontal, Info,
+  Share2, Download, Check, Ban,
+  ChevronLeft, ChevronRight, ChevronDown, FileCheck2,
+  HelpCircle, Trash2, Sparkles, Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -378,7 +381,7 @@ export default function CredentialsPage() {
       <div className="card-enterprise overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Loader2 className="w-7 h-7 animate-spin text-purple-400" />
+            <InfinityLoader size={28} />
             <p className="text-xs text-slate-500">Loading credentials feed…</p>
           </div>
         ) : filtered.length === 0 ? (

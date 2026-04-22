@@ -1,7 +1,9 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useEffect, useState } from "react";
-import { Loader2, Target, Globe, Server, Mail, Link2, Network, AlertCircle, RefreshCw, ChevronDown } from "lucide-react";
+import { Target, Globe, Server, Mail, Link2, Network, AlertCircle, RefreshCw, ChevronDown } from "lucide-react";
 import { api, getOrgId, type HarvesterResult, type HarvesterRun } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -111,7 +113,7 @@ export default function ReconPage() {
             disabled={running || !domain.trim()}
             className="h-10 px-5 rounded-lg flex items-center gap-2 text-sm font-semibold text-white btn-brand disabled:opacity-40"
           >
-            {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />}
+            {running ? <InfinityLoader size={16} /> : <Target className="w-4 h-4" />}
             {running ? "Harvesting…" : "Run theHarvester"}
           </button>
         </div>
@@ -127,7 +129,7 @@ export default function ReconPage() {
 
       {running && (
         <div className="card-enterprise p-8 flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+          <InfinityLoader size={32} />
           <p className="text-sm text-slate-300">Running theHarvester (up to 2 minutes)…</p>
           <p className="text-[11px] text-slate-600">{sources.split(",").length} sources queried in parallel</p>
         </div>

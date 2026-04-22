@@ -1,0 +1,19 @@
+<svg width="100%" viewBox="0 0 680 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="infGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7B2FBE"/>
+      <stop offset="50%" stop-color="#C2326B"/>
+      <stop offset="100%" stop-color="#7B2FBE"/>
+    </linearGradient>
+    <style>
+      @keyframes infDash1 { 0% { stroke-dashoffset: 900; } 100% { stroke-dashoffset: 0; } }
+      @keyframes infDash2 { 0% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 900; } }
+      .inf-track { fill:none; stroke:#2a1a3a; stroke-width:22; stroke-linecap:round; }
+      .inf-a1 { fill:none; stroke:url(#infGrad); stroke-width:22; stroke-dasharray:450,450; stroke-linecap:round; animation:infDash1 2s linear infinite; }
+      .inf-a2 { fill:none; stroke:url(#infGrad); stroke-width:22; stroke-dasharray:450,450; stroke-linecap:round; animation:infDash2 2s linear infinite; }
+    </style>
+  </defs>
+  <path class="inf-track" d="M340,140 C340,80 270,40 210,80 C150,120 150,160 210,200 C270,240 340,200 340,140 C340,80 410,40 470,80 C530,120 530,160 470,200 C410,240 340,200 340,140"/>
+  <path class="inf-a1" d="M340,140 C340,80 270,40 210,80 C150,120 150,160 210,200 C270,240 340,200 340,140 C340,80 410,40 470,80 C530,120 530,160 470,200 C410,240 340,200 340,140"/>
+  <path class="inf-a2" d="M340,140 C340,200 410,240 470,200 C530,160 530,120 470,80 C410,40 340,80 340,140 C340,200 270,240 210,200 C150,160 150,120 210,80 C270,40 340,80 340,140"/>
+</svg>

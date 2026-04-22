@@ -1,12 +1,14 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { setOrgId } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Lock, User, Loader2, ArrowRight, CheckCircle } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, CheckCircle } from "lucide-react";
 
 const DEMO_ORG_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -145,7 +147,7 @@ export default function RegisterPage() {
             </div>
             <button type="submit" disabled={loading}
               className="w-full py-2.5 btn-brand rounded-lg font-medium flex items-center justify-center gap-2">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+              {loading ? <InfinityLoader size={16} /> : <ArrowRight className="w-4 h-4" />}
               {loading ? "Creating account..." : "Create Account"}
             </button>
           </form>

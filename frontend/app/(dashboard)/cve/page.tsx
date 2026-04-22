@@ -1,13 +1,17 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getOrgId } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
-  Bug, RefreshCw, Loader2, Search, SlidersHorizontal, Download,
-  X, ExternalLink, ChevronLeft, ChevronRight, Zap, AlertTriangle,
-  Shield, TrendingUp, Database, Clock, Plus, Minus, Eye,
+  Bug, RefreshCw, Search, SlidersHorizontal,
+  Download, X, ExternalLink, ChevronLeft,
+  ChevronRight, Zap, AlertTriangle, Shield,
+  TrendingUp, Database, Clock, Plus,
+  Minus, Eye
 } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://tai-aegis-api.onrender.com";
@@ -438,7 +442,7 @@ export default function CVEPage() {
           </button>
           <button onClick={triggerSync} disabled={syncing}
             className="h-9 px-4 rounded-lg flex items-center gap-2 text-sm font-semibold text-white btn-brand disabled:opacity-50 transition-all">
-            {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            {syncing ? <InfinityLoader size={16} /> : <RefreshCw className="w-4 h-4" />}
             Sync Now
           </button>
         </div>
@@ -530,7 +534,7 @@ export default function CVEPage() {
           <div className="card-enterprise overflow-hidden">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <Loader2 className="w-7 h-7 animate-spin text-purple-400" />
+                <InfinityLoader size={28} />
                 <p className="text-xs text-slate-500">Loading CVE feed…</p>
               </div>
             ) : cves.length === 0 ? (

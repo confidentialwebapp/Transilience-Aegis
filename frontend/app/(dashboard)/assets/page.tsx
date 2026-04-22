@@ -1,23 +1,16 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect } from "react";
 import { getOrgId } from "@/lib/api";
 import { useAssets } from "@/hooks/useAssets";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import {
-  Plus,
-  Trash2,
-  Globe,
-  Server,
-  Mail,
-  Hash,
-  Github,
-  Users,
-  ShieldCheck,
-  Loader2,
-  AlertTriangle,
-  RefreshCw,
+  Plus, Trash2, Globe, Server,
+  Mail, Hash, Github, Users,
+  ShieldCheck, AlertTriangle, RefreshCw
 } from "lucide-react";
 
 const ASSET_TYPES = [
@@ -136,7 +129,7 @@ export default function AssetsPage() {
               disabled={adding}
               className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white rounded-lg text-sm font-medium transition-colors"
             >
-              {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              {adding ? <InfinityLoader size={16} /> : <Plus className="w-4 h-4" />}
               Add
             </button>
           </div>
@@ -185,7 +178,7 @@ export default function AssetsPage() {
       {/* Assets table */}
       {loading ? (
         <div className="flex justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+          <InfinityLoader size={24} />
         </div>
       ) : !error && (
         <div className="card-enterprise overflow-hidden">
@@ -234,7 +227,7 @@ export default function AssetsPage() {
                         className="p-1.5 text-slate-500 hover:text-red-400 disabled:opacity-50 transition-colors"
                       >
                         {deleting === asset.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <InfinityLoader size={16} />
                         ) : (
                           <Trash2 className="w-4 h-4" />
                         )}

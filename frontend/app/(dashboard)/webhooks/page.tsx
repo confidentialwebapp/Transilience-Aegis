@@ -1,9 +1,12 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useEffect, useState } from "react";
 import {
-  Webhook as WebhookIcon, Plus, Trash2, Loader2, CheckCircle2, XCircle,
-  Send, Activity, AlertCircle, X, Save,
+  Webhook as WebhookIcon, Plus, Trash2, CheckCircle2,
+  XCircle, Send, Activity, AlertCircle,
+  X, Save
 } from "lucide-react";
 import { api, getOrgId, type Webhook, type WebhookDelivery } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -199,7 +202,7 @@ export default function WebhooksPage() {
       <div className="card-enterprise p-4">
         <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-[0.1em] mb-3">Configured webhooks</h3>
         {loading && webhooks.length === 0 ? (
-          <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-emerald-400" /></div>
+          <div className="flex justify-center py-6"><InfinityLoader size={20} /></div>
         ) : webhooks.length === 0 ? (
           <div className="text-[12px] text-slate-500 p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
             No webhooks yet. Add one to push every new alert to Slack/Teams/Discord.
@@ -228,7 +231,7 @@ export default function WebhooksPage() {
                   <div className="flex gap-1 shrink-0">
                     <button onClick={() => handleTest(w.id)} disabled={testingId === w.id}
                       className="px-2 py-1 rounded text-[11px] text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50 flex items-center gap-1">
-                      {testingId === w.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                      {testingId === w.id ? <InfinityLoader size={12} /> : <Send className="w-3 h-3" />}
                       Test
                     </button>
                     <button onClick={() => handleEdit(w)} className="px-2 py-1 rounded text-[11px] text-slate-400 hover:text-white hover:bg-white/[0.05]">Edit</button>

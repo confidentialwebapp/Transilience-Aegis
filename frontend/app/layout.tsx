@@ -10,6 +10,20 @@ export const metadata: Metadata = {
   description: "Enterprise Security powered by AI Agents — CSPM, CNAPP, CWPP, CTEM workflows. Managed cloud security and compliance without enterprise cost.",
   icons: {
     icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
+  openGraph: {
+    title: "Transilience AI | Threat Exposure Management Platform",
+    description: "Enterprise Security powered by AI Agents — CSPM, CNAPP, CWPP, CTEM workflows.",
+    images: [{ url: "/logo.png" }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Transilience AI",
+    description: "Enterprise Security powered by AI Agents.",
+    images: ["/logo.png"],
   },
 };
 

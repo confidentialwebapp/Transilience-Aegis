@@ -1,12 +1,14 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { setOrgId } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Lock, Loader2, ArrowRight } from "lucide-react";
+import { Mail, Lock, ArrowRight } from "lucide-react";
 
 const DEMO_ORG_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -133,7 +135,7 @@ export default function LoginPage() {
             </div>
             <button type="submit" disabled={loading}
               className="w-full py-2.5 btn-brand rounded-lg font-medium flex items-center justify-center gap-2">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+              {loading ? <InfinityLoader size={16} /> : <ArrowRight className="w-4 h-4" />}
               {loading ? "Signing in..." : "Sign in"}
             </button>
           </form>
@@ -150,7 +152,7 @@ export default function LoginPage() {
           <button onClick={handleDemoAccess} disabled={demoLoading}
             className="w-full py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white"
             style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.08)" }}>
-            {demoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {demoLoading ? <InfinityLoader size={16} /> : null}
             {demoLoading ? "Starting demo..." : "Explore Demo Environment"}
           </button>
 

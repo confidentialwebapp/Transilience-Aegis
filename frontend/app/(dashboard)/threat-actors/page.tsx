@@ -1,12 +1,16 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { getOrgId } from "@/lib/api";
 import { toast } from "sonner";
 import {
-  Skull, Search, Loader2, RefreshCw, X, ChevronDown,
-  SlidersHorizontal, Shield, Target, Code2, Cpu, Layers,
-  AlertOctagon, Clock, Globe, Zap, Users, ChevronRight,
+  Skull, Search, RefreshCw, X,
+  ChevronDown, SlidersHorizontal, Shield, Target,
+  Code2, Cpu, Layers, AlertOctagon,
+  Clock, Globe, Zap, Users,
+  ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -578,7 +582,7 @@ export default function ThreatActorsPage() {
           disabled={syncing}
           className="h-9 px-4 rounded-lg text-sm font-semibold text-white btn-brand flex items-center gap-2 disabled:opacity-60"
         >
-          {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          {syncing ? <InfinityLoader size={16} /> : <RefreshCw className="w-4 h-4" />}
           Sync MITRE ATT&CK
         </button>
       </div>
@@ -695,7 +699,7 @@ export default function ThreatActorsPage() {
         <div className="xl:col-span-2">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader2 className="w-7 h-7 animate-spin text-red-400" />
+              <InfinityLoader size={28} />
               <p className="text-xs text-slate-500">Loading threat intelligence…</p>
             </div>
           ) : activeTab === "ransomware" ? (

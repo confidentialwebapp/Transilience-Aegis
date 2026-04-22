@@ -18,11 +18,13 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
-  Sparkles, Send, X, Loader2, Brain, ChevronDown, Check, Maximize2,
-  AlertCircle, Plus,
+  Sparkles, Send, X, Brain,
+  ChevronDown, Check, Maximize2, AlertCircle,
+  Plus
 } from "lucide-react";
 import Link from "next/link";
 import { api, getOrgId, type AiMessage } from "@/lib/api";
+import { InfinityLoader } from "@/components/InfinityLoader";
 import { MODELS, DEFAULT_MODEL, modelLabel as sharedModelLabel } from "@/lib/ai-models";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -168,16 +170,12 @@ function ModelPicker({ value, onChange }: { value: string; onChange: (v: string)
   );
 }
 
-// ── TypingDots ───────────────────────────────────────────────────────────────
+// ── Typing indicator (brand infinity loader) ─────────────────────────────────
 
 function TypingDots() {
   return (
-    <div className="flex items-center gap-1 py-1">
-      {[0, 1, 2].map((i) => (
-        <span key={i} className="w-1.5 h-1.5 rounded-full bg-purple-400"
-              style={{ animation: `tai-dock-bounce 1.2s ${i * 0.2}s ease-in-out infinite` }} />
-      ))}
-      <style>{`@keyframes tai-dock-bounce { 0%,80%,100%{transform:translateY(0);opacity:.4} 40%{transform:translateY(-4px);opacity:1} }`}</style>
+    <div className="py-0.5">
+      <InfinityLoader size={18} />
     </div>
   );
 }
@@ -416,10 +414,7 @@ export function TransilienceDock() {
         {/* Header */}
         <header className="flex items-center gap-2 h-14 px-4 border-b shrink-0"
                 style={{ borderColor: "rgba(139,92,246,0.15)" }}>
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-               style={{ background: "linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)" }}>
-            <Sparkles className="w-4 h-4 text-white" />
-          </div>
+          <img src="/logo.png" alt="Transilience AI" width={32} height={32} className="object-contain shrink-0" draggable={false} />
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-bold text-white leading-tight">Transilience AI</h2>
             <p className="text-[10px] text-slate-500 font-mono">Quick ask · context-aware</p>
@@ -451,7 +446,7 @@ export function TransilienceDock() {
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           {loadingMessages && (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+              <InfinityLoader size={20} />
             </div>
           )}
 
@@ -487,10 +482,7 @@ export function TransilienceDock() {
           {messages.map((m) => (
             <div key={m.id} className={cn("flex gap-2.5", m.role === "user" ? "justify-end" : "justify-start")}>
               {m.role === "assistant" && (
-                <div className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center"
-                     style={{ background: "linear-gradient(135deg, #7c3aed, #ec4899)" }}>
-                  <Sparkles className="w-3.5 h-3.5 text-white" />
-                </div>
+                <img src="/logo.png" alt="Transilience AI" width={28} height={28} className="object-contain shrink-0" draggable={false} />
               )}
               <div className={cn(
                 "max-w-[78%] rounded-2xl px-3.5 py-2.5",
@@ -529,10 +521,7 @@ export function TransilienceDock() {
 
           {sending && (
             <div className="flex gap-2.5 justify-start">
-              <div className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center"
-                   style={{ background: "linear-gradient(135deg, #7c3aed, #ec4899)" }}>
-                <Sparkles className="w-3.5 h-3.5 text-white" />
-              </div>
+              <img src="/logo.png" alt="Transilience AI" width={28} height={28} className="object-contain shrink-0" draggable={false} />
               <div className="rounded-2xl rounded-tl-sm px-3.5 py-2.5"
                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <TypingDots />
@@ -572,7 +561,7 @@ export function TransilienceDock() {
                 }}
               >
                 {sending
-                  ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+                  ? <InfinityLoader size={14} />
                   : <Send className="w-3.5 h-3.5 text-white" />}
               </button>
             </div>

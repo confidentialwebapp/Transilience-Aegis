@@ -1,12 +1,15 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect } from "react";
 import { getOrgId } from "@/lib/api";
 import Link from "next/link";
 import {
-  Radar, Globe, Lock, Wifi, Server, AlertTriangle, Eye,
-  Loader2, ChevronRight, Shield, Radio, Clock, ExternalLink,
-  Bug, Skull, Database,
+  Radar, Globe, Lock, Wifi,
+  Server, AlertTriangle, Eye, ChevronRight,
+  Shield, Radio, Clock, ExternalLink,
+  Bug, Skull, Database
 } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://tai-aegis-api.onrender.com";
@@ -51,7 +54,7 @@ export default function AttackSurfacePage() {
     });
   }, []);
 
-  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div>;
+  if (loading) return <div className="flex items-center justify-center py-20"><InfinityLoader size={32} /></div>;
 
   const subCount = overview?.subdomains?.total ?? 0;
   const sslCount = overview?.ssl?.total ?? 0;

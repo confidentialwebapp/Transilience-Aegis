@@ -1,5 +1,7 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect, useCallback } from "react";
 import { api, getOrgId, type ScanJob, type Alert } from "@/lib/api";
 import { SeverityBadge } from "@/components/shared/SeverityBadge";
@@ -8,15 +10,8 @@ import { RiskScoreMeter } from "@/components/shared/RiskScoreMeter";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
 import {
-  Loader2,
-  RefreshCw,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Play,
-  ChevronRight,
-  ExternalLink,
-  Filter,
+  RefreshCw, CheckCircle2, XCircle, Clock,
+  Play, ChevronRight, ExternalLink, Filter
 } from "lucide-react";
 
 export default function ScanReviewPage() {
@@ -81,7 +76,7 @@ export default function ScanReviewPage() {
       case "failed":
         return <XCircle className="w-4 h-4 text-red-400" />;
       case "running":
-        return <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />;
+        return <InfinityLoader size={16} />;
       default:
         return <Clock className="w-4 h-4 text-yellow-400" />;
     }
@@ -154,7 +149,7 @@ export default function ScanReviewPage() {
 
           {loading ? (
             <div className="flex justify-center py-8">
-              <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
+              <InfinityLoader size={20} />
             </div>
           ) : filteredScans.length === 0 ? (
             <div className="text-sm text-slate-500 text-center py-8">
@@ -237,7 +232,7 @@ export default function ScanReviewPage() {
               {/* Findings */}
               {loadingAlerts ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
+                  <InfinityLoader size={20} />
                 </div>
               ) : scanAlerts.length === 0 ? (
                 <div className="text-sm text-slate-500 text-center py-8">

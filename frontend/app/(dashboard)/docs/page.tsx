@@ -1,5 +1,7 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   BookOpen,
@@ -8,7 +10,7 @@ import {
   Copy,
   Check,
   Play,
-  Loader2,
+  RefreshCw,
   AlertTriangle,
   ArrowRight,
   Key,
@@ -394,7 +396,7 @@ function TryItPanel({
         >
           {loading ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <InfinityLoader size={16} />
               Sending...
             </>
           ) : (
@@ -553,7 +555,7 @@ export default function DocsPage() {
           className="w-16 h-16 rounded-2xl flex items-center justify-center"
           style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)" }}
         >
-          <Loader2 className="w-7 h-7 text-purple-400 animate-spin" />
+          <InfinityLoader size={28} />
         </div>
         <div className="text-center">
           <p className="text-sm font-semibold text-white mb-1">Loading API reference</p>
@@ -593,7 +595,7 @@ export default function DocsPage() {
             onClick={() => { setError(null); setLoading(true); }}
             className="btn-brand px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 mx-auto"
           >
-            <Loader2 className="w-3.5 h-3.5" />
+            <RefreshCw className="w-3.5 h-3.5" />
             Retry
           </button>
         </div>

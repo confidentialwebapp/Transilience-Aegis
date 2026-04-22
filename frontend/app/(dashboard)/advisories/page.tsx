@@ -1,10 +1,14 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
-  FileText, Loader2, Plus, Sparkles, X, Eye, Download, Search,
-  Filter, ChevronDown, Trash2, Pencil, ExternalLink, Tag, AlertTriangle,
-  Shield, Cpu, RefreshCw, Save, Check,
+  FileText, Plus, Sparkles, X,
+  Eye, Download, Search, Filter,
+  ChevronDown, Trash2, Pencil, ExternalLink,
+  Tag, AlertTriangle, Shield, Cpu,
+  RefreshCw, Save, Check
 } from "lucide-react";
 import { api, getOrgId } from "@/lib/api";
 import type {
@@ -638,12 +642,12 @@ function ManualModal({ advisory, onClose, onSaved }: ManualModalProps) {
           <div className="flex gap-2">
             <button onClick={() => handleSave("draft")} disabled={saving}
               className="h-9 px-4 rounded-lg flex items-center gap-2 text-xs font-semibold text-slate-300 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.07] disabled:opacity-50 transition-all">
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              {saving ? <InfinityLoader size={14} /> : <Save className="w-3.5 h-3.5" />}
               Save Draft
             </button>
             <button onClick={() => handleSave("published")} disabled={saving}
               className="h-9 px-4 rounded-lg flex items-center gap-2 text-xs font-semibold text-white btn-brand disabled:opacity-50">
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              {saving ? <InfinityLoader size={14} /> : <Check className="w-3.5 h-3.5" />}
               Publish Now
             </button>
           </div>
@@ -801,7 +805,7 @@ function AIDraftModal({ onClose, onDrafted }: AIDraftModalProps) {
             className="h-9 px-5 rounded-lg flex items-center gap-2 text-xs font-semibold text-white btn-brand disabled:opacity-50">
             {generating ? (
               <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <InfinityLoader size={14} />
                 Generating…
               </>
             ) : (
@@ -977,7 +981,7 @@ export default function AdvisoriesPage() {
             className="h-9 w-9 rounded-lg flex items-center justify-center text-slate-500 hover:text-white disabled:opacity-40 transition-all"
             style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
             title="Refresh">
-            <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+            {loading ? <InfinityLoader size={16} /> : <RefreshCw className="w-4 h-4" />}
           </button>
           <button onClick={() => setShowAIDraft(true)}
             className="h-9 px-4 rounded-lg flex items-center gap-2 text-xs font-semibold text-white"
@@ -1085,7 +1089,7 @@ export default function AdvisoriesPage() {
       {/* List */}
       {loading && displayed.length === 0 ? (
         <div className="card-enterprise p-10 flex items-center justify-center">
-          <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+          <InfinityLoader size={24} />
         </div>
       ) : displayed.length === 0 ? (
         <EmptyState

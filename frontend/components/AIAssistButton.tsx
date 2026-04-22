@@ -1,7 +1,9 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect, useRef } from "react";
-import { Loader2, X, Sparkles, Clock, DollarSign, Cpu, Check, AlertTriangle, Shield, Eye } from "lucide-react";
+import { X, Sparkles, Clock, DollarSign, Cpu, Check, AlertTriangle, Shield, Eye } from "lucide-react";
 import { api, getOrgId, type SkillInvokeResult } from "@/lib/api";
 import { modelLabel } from "@/lib/ai-models";
 import { cn } from "@/lib/utils";
@@ -264,7 +266,7 @@ export function AIAssistButton({ skill, params, label = "Ask AI", model, classNa
         aria-label={label}
       >
         {loading ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <InfinityLoader size={14} />
         ) : (
           <Sparkles className="w-3.5 h-3.5" />
         )}
@@ -361,7 +363,7 @@ export function AIAssistButton({ skill, params, label = "Ask AI", model, classNa
             )
           ) : (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+              <InfinityLoader size={24} />
             </div>
           )}
         </div>

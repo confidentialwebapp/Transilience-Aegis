@@ -1,16 +1,22 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getOrgId } from "@/lib/api";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  User, Shield, Bell, Sliders, Building2, Users, Puzzle, Key, Clock,
-  Save, Loader2, ChevronRight, Copy, Check, RefreshCw, Trash2, Plus,
-  Mail, Send, AlertTriangle, Globe, Eye, EyeOff, MoreHorizontal,
-  Smartphone, X, LogOut, Monitor, Zap, CheckSquare, Square,
-  Camera, Lock, QrCode, Activity
+  User, Shield, Bell, Sliders,
+  Building2, Users, Puzzle, Key,
+  Clock, Save, ChevronRight, Copy,
+  Check, RefreshCw, Trash2, Plus,
+  Mail, Send, AlertTriangle, Globe,
+  Eye, EyeOff, MoreHorizontal, Smartphone,
+  X, LogOut, Monitor, Zap,
+  CheckSquare, Square, Camera, Lock,
+  QrCode, Activity
 } from "lucide-react";
 
 /* ─────────────────────────── API ─────────────────────────── */
@@ -279,7 +285,7 @@ function SaveBar({ dirty, saving, onSave, onDiscard }: { dirty: boolean; saving:
           </button>
           <button onClick={onSave} disabled={saving}
             className="flex items-center gap-1.5 px-4 py-1.5 btn-brand rounded-lg text-xs font-medium">
-            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+            {saving ? <InfinityLoader size={12} /> : <Save className="w-3 h-3" />}
             Save Changes
           </button>
         </div>
@@ -381,7 +387,7 @@ function ProfileTab() {
   };
   const discard = () => setForm(orig);
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-purple-400" /></div>;
+  if (loading) return <div className="flex justify-center py-20"><InfinityLoader size={24} /></div>;
 
   return (
     <>
@@ -656,7 +662,7 @@ function SecurityTab() {
               onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))} placeholder="Repeat new password" />
           </div>
           <button onClick={savePassword} disabled={savingPw} className="btn-brand px-5 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 mt-2 disabled:opacity-60">
-            {savingPw ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />} Update Password
+            {savingPw ? <InfinityLoader size={16} /> : <Lock className="w-4 h-4" />} Update Password
           </button>
         </div>
       </div>
@@ -713,7 +719,7 @@ function SecurityTab() {
                     disabled={mfaBusy || mfaCode.length !== 6}
                     className="btn-brand px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 disabled:opacity-50"
                   >
-                    {mfaBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Verify & Enable
+                    {mfaBusy ? <InfinityLoader size={12} /> : <Check className="w-3 h-3" />} Verify & Enable
                   </button>
                 </div>
               </div>
@@ -736,7 +742,7 @@ function SecurityTab() {
             disabled={revokingOthers}
             className="text-[10px] text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1 disabled:opacity-60"
           >
-            {revokingOthers ? <Loader2 className="w-3 h-3 animate-spin" /> : <LogOut className="w-3 h-3" />}
+            {revokingOthers ? <InfinityLoader size={12} /> : <LogOut className="w-3 h-3" />}
             Revoke all other sessions
           </button>
         </div>
@@ -1581,7 +1587,7 @@ function ScanSchedulesTab({
                   <button onClick={() => handleTrigger(mod.key)} disabled={triggering[mod.key]}
                     className="p-2 rounded-lg border border-slate-800 text-slate-500 hover:text-purple-400 hover:border-purple-500/20 transition-all"
                     title="Run now">
-                    <RefreshCw className={cn("w-4 h-4", triggering[mod.key] && "animate-spin text-purple-400")} />
+                    {triggering[mod.key] ? <InfinityLoader size={16} /> : <RefreshCw className="w-4 h-4" />}
                   </button>
                 </div>
               </div>

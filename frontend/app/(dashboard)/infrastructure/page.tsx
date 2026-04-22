@@ -1,11 +1,15 @@
 "use client";
 
+import { InfinityLoader } from "@/components/InfinityLoader";
+
 import { useState, useEffect, useCallback } from "react";
 import { getOrgId } from "@/lib/api";
 import { toast } from "sonner";
 import {
-  Globe, Shield, Lock, Network, Search, Loader2, ChevronLeft, ChevronRight,
-  RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, Wifi, Mail
+  Globe, Shield, Lock, Network,
+  Search, ChevronLeft, ChevronRight, RefreshCw,
+  AlertTriangle, CheckCircle, XCircle, Clock,
+  Wifi, Mail
 } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://tai-aegis-api.onrender.com";
@@ -159,7 +163,7 @@ export default function InfrastructurePage() {
           </div>
           <button onClick={triggerSubdomainEnum} disabled={scanning}
             className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white rounded-lg text-sm font-medium flex items-center gap-2">
-            {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}Subdomains
+            {scanning ? <InfinityLoader size={16} /> : <Search className="w-4 h-4" />}Subdomains
           </button>
           <button onClick={triggerSSLCheck} disabled={scanning}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white rounded-lg text-sm font-medium flex items-center gap-2">
@@ -240,7 +244,7 @@ export default function InfrastructurePage() {
       {/* Subdomains Tab */}
       {tab === "subdomains" && (
         <div className="card-enterprise overflow-hidden">
-          {loading ? <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div> :
+          {loading ? <div className="flex items-center justify-center p-12"><InfinityLoader size={32} /></div> :
           subdomains.length === 0 ? <div className="p-12 text-center text-slate-500"><Globe className="w-10 h-10 mx-auto mb-3 opacity-50" /><p>No subdomains found. Enter a domain above and click Subdomains.</p></div> : (
             <table className="w-full text-sm">
               <thead style={{ background: "rgba(139,92,246,0.04)" }}>
@@ -272,7 +276,7 @@ export default function InfrastructurePage() {
       {/* SSL Tab */}
       {tab === "ssl" && (
         <div className="card-enterprise overflow-hidden">
-          {loading ? <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div> :
+          {loading ? <div className="flex items-center justify-center p-12"><InfinityLoader size={32} /></div> :
           sslCerts.length === 0 ? <div className="p-12 text-center text-slate-500"><Lock className="w-10 h-10 mx-auto mb-3 opacity-50" /><p>No SSL certificates monitored. Enter a domain above and click SSL.</p></div> : (
             <div className="divide-y" style={{ borderColor: "rgba(139,92,246,0.06)" }}>
               {sslCerts.map((cert) => {
@@ -314,7 +318,7 @@ export default function InfrastructurePage() {
       {/* DNS Tab */}
       {tab === "dns" && (
         <div className="card-enterprise overflow-hidden">
-          {loading ? <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div> :
+          {loading ? <div className="flex items-center justify-center p-12"><InfinityLoader size={32} /></div> :
           dnsRecords.length === 0 ? <div className="p-12 text-center text-slate-500"><Wifi className="w-10 h-10 mx-auto mb-3 opacity-50" /><p>No DNS records tracked. Enter a domain above and click DNS.</p></div> : (
             <table className="w-full text-sm">
               <thead style={{ background: "rgba(139,92,246,0.04)" }}>

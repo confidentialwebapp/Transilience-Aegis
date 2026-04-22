@@ -97,7 +97,7 @@ async def sync_feodo_tracker() -> Dict[str, int]:
     fetched = upserted = 0
     error: Optional[str] = None
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             resp = await client.get(
                 "https://feodotracker.abuse.ch/downloads/ipblocklist.json"
             )
@@ -143,7 +143,7 @@ async def sync_openphish() -> Dict[str, int]:
     fetched = upserted = 0
     error: Optional[str] = None
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             resp = await client.get("https://openphish.com/feed.txt")
             if resp.status_code != 200:
                 raise RuntimeError(f"HTTP {resp.status_code}")
@@ -180,7 +180,7 @@ async def sync_phishstats() -> Dict[str, int]:
     fetched = upserted = 0
     error: Optional[str] = None
     try:
-        async with httpx.AsyncClient(timeout=60) as client:
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
             resp = await client.get("https://phishstats.info/phish_score.csv")
             if resp.status_code != 200:
                 raise RuntimeError(f"HTTP {resp.status_code}")
@@ -250,7 +250,7 @@ async def _sync_et_feed(source: str) -> Dict[str, int]:
     fetched = upserted = 0
     error: Optional[str] = None
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             resp = await client.get(url)
             if resp.status_code != 200:
                 raise RuntimeError(f"HTTP {resp.status_code}")
@@ -300,7 +300,7 @@ async def sync_tor_exit_nodes() -> Dict[str, int]:
     fetched = upserted = 0
     error: Optional[str] = None
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             resp = await client.get("https://check.torproject.org/torbulkexitlist")
             if resp.status_code != 200:
                 raise RuntimeError(f"HTTP {resp.status_code}")

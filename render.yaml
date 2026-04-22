@@ -36,5 +36,31 @@ services:
         sync: false
       - key: TELEGRAM_CHAT_ID
         sync: false
+      - key: TELEGRAM_POLL_INTERVAL_SECONDS
+        sync: false
       - key: FRONTEND_URL
+        sync: false
+      # New providers (set in dashboard or via API)
+      - key: ABUSEIPDB_API_KEY
+        sync: false
+      - key: IPQS_API_KEY
+        sync: false
+      - key: NETLAS_API_KEY
+        sync: false
+      - key: DNSDUMPSTER_API_KEY
+        sync: false
+      # Upstash Redis (REST)
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: ENRICHMENT_CACHE_TTL
+        sync: false
+      # theHarvester
+      - key: HARVESTER_BIN
+        sync: false
+      - key: HARVESTER_TIMEOUT_SECONDS
+        sync: false
+      # Maltego TRX shared secret (optional)
+      - key: MALTEGO_TRX_AUTH_TOKEN
         sync: false

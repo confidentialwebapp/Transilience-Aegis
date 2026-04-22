@@ -253,20 +253,26 @@ def run_theharvester(domain: str, sources: str = "crtsh,duckduckgo,bing,otx,hack
 # nmap — port + service detection
 # ---------------------------------------------------------------------------
 @app.function(image=kali_image, timeout=300, memory=512)
-def run_nmap(target: str, args: str = "-sT -sV -F -T4") -> dict:
-    """Default args: TCP-connect (-sT) service-version scan on top 100 ports.
+def run_nmap(target: str, args: str = "-sT -Pn -sV -F -T4") -> dict:
+    """Default args: TCP-connect service-version scan on top 100 ports,
+    no host-discovery ping.
 
-    -sT (TCP connect) is used instead of the default -sS (SYN scan) because
-    Modal containers don't grant CAP_NET_RAW to the runtime user — raw
-    sockets fail with "Operation not permitted". -sT works at user level.
+    Modal containers run unprivileged (no CAP_NET_RAW). nmap needs three
+    things changed to work in that environment:
+      -sT             TCP connect scan (vs SYN scan -sS) — no raw socket
+      -Pn             Skip ICMP host discovery — pings need raw socket too
+      --unprivileged  Force userland-only mode for any internal nmap ops
 
-    Caller can pass any nmap args; we just split on spaces (no shell escaping).
-    -iL is dropped to prevent file-input attacks; ../ is blocked.
+    Caller can override args; we always inject -Pn and --unprivileged
+    if missing because forgetting them silently fails.
     """
     safe_args = [a for a in args.split() if a and not a.startswith("-iL") and "../" not in a]
-    # If caller didn't specify any scan-type flag, default to -sT
     if not any(a in ("-sT", "-sS", "-sU", "-sA") for a in safe_args):
         safe_args = ["-sT"] + safe_args
+    if "-Pn" not in safe_args and "-PS" not in safe_args and "-PA" not in safe_args:
+        safe_args.append("-Pn")
+    if "--unprivileged" not in safe_args and "--privileged" not in safe_args:
+        safe_args.append("--unprivileged")
     res = _run(["nmap", *safe_args, "-oN", "-", target], timeout=290)
     return {
         "tool": "nmap",

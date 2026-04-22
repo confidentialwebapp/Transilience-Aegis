@@ -2,6 +2,7 @@
 Individual Investigation Scanner — scan any URL, email, IP, domain, username, phone on-demand.
 Returns results inline with risk assessment from multiple OSINT sources.
 """
+import asyncio
 import logging
 import re
 from typing import Optional, List, Dict, Any
@@ -892,6 +893,156 @@ async def _check_phone(phone: str) -> Dict[str, Any]:
     return info
 
 
+# ---------------------------------------------------------------------------
+# Modal / Kali OSINT tools — subfinder, dnstwist, theHarvester, nmap, nuclei, ...
+# These run on Modal serverless; latencies are 30-120s per tool and are
+# executed in parallel with gather(). Each returns a source-like dict so the
+# frontend/AI treat them identically to an API provider.
+# ---------------------------------------------------------------------------
+async def _modal_domain_tools(domain: str) -> Dict[str, Dict[str, Any]]:
+    """subfinder + dnstwist + theHarvester. nuclei runs only when asked for URL."""
+    try:
+        from modules import modal_recon
+    except Exception as e:
+        return {"modal_error": {"source": "modal", "status": "error", "detail": str(e)[:150]}}
+
+    sf, tw, th = await asyncio.gather(
+        modal_recon.subfinder(domain),
+        modal_recon.dnstwist(domain, registered_only=True),
+        modal_recon.theharvester(domain),
+        return_exceptions=True,
+    )
+
+    def _wrap(r: Any, tool: str) -> Dict[str, Any]:
+        if isinstance(r, Exception):
+            return {"source": tool, "status": "error", "detail": str(r)[:200]}
+        if not r or not isinstance(r, dict):
+            return {"source": tool, "status": "error", "detail": "no response"}
+        if r.get("error"):
+            return {"source": tool, "status": "error", "detail": str(r["error"])[:200]}
+        return r
+
+    sf_wrap = _wrap(sf, "subfinder")
+    if sf_wrap.get("status") != "error":
+        sf_wrap = {
+            "source": "subfinder",
+            "status": "found" if (sf_wrap.get("count") or 0) > 0 else "clean",
+            "subdomain_count": sf_wrap.get("count", 0),
+            "subdomains": (sf_wrap.get("subdomains") or [])[:40],
+        }
+
+    tw_wrap = _wrap(tw, "dnstwist")
+    if tw_wrap.get("status") != "error":
+        twr = tw_wrap.get("results") or []
+        tw_wrap = {
+            "source": "dnstwist",
+            "status": "found" if twr else "clean",
+            "typosquat_count": len(twr),
+            "typosquats": [
+                {"domain": t.get("domain"), "fuzzer": t.get("fuzzer"),
+                 "dns_a": (t.get("dns_a") or [None])[0]}
+                for t in twr[:15]
+            ],
+        }
+
+    th_wrap = _wrap(th, "theharvester")
+    if th_wrap.get("status") != "error":
+        rr = th_wrap.get("results") or {}
+        th_wrap = {
+            "source": "theharvester",
+            "status": "found" if (rr.get("emails") or rr.get("hosts")) else "clean",
+            "email_count": len(rr.get("emails") or []),
+            "host_count": len(rr.get("hosts") or []),
+            "emails": (rr.get("emails") or [])[:20],
+            "hosts": (rr.get("hosts") or [])[:20],
+            "ips": rr.get("ips") or [],
+            "asns": (rr.get("asns") or [])[:10],
+        }
+
+    return {"subfinder": sf_wrap, "dnstwist": tw_wrap, "theharvester": th_wrap}
+
+
+async def _modal_ip_tools(ip: str) -> Dict[str, Dict[str, Any]]:
+    try:
+        from modules import modal_recon
+    except Exception as e:
+        return {"modal_error": {"source": "modal", "status": "error", "detail": str(e)[:150]}}
+    r = await modal_recon.nmap(ip, args="-sT -Pn -sV -F -T4")
+    if r.get("error") or not r.get("ok", True):
+        return {"nmap": {"source": "nmap", "status": "error",
+                         "detail": (r.get("error") or r.get("stderr") or "failed")[:200]}}
+    out = r.get("output") or ""
+    open_ports: List[Dict[str, str]] = []
+    for line in out.splitlines():
+        line = line.strip()
+        m = re.match(r"^(\d+)/tcp\s+(\S+)\s+(\S+)(?:\s+(.+))?$", line)
+        if m and m.group(2) == "open":
+            open_ports.append({"port": m.group(1), "service": m.group(3), "version": (m.group(4) or "").strip()})
+    return {"nmap": {
+        "source": "nmap", "status": "found" if open_ports else "clean",
+        "open_ports_count": len(open_ports),
+        "open_ports": open_ports[:30],
+        "args": r.get("args", ""),
+    }}
+
+
+async def _modal_url_tools(url: str) -> Dict[str, Dict[str, Any]]:
+    try:
+        from modules import modal_recon
+    except Exception as e:
+        return {"modal_error": {"source": "modal", "status": "error", "detail": str(e)[:150]}}
+    r = await modal_recon.nuclei(url, severity="critical,high,medium")
+    if r.get("error"):
+        return {"nuclei": {"source": "nuclei", "status": "error", "detail": str(r["error"])[:200]}}
+    findings = r.get("findings") or []
+    by_sev: Dict[str, int] = {}
+    for f in findings:
+        sev = ((f.get("info") or {}).get("severity") or "unknown").lower()
+        by_sev[sev] = by_sev.get(sev, 0) + 1
+    return {"nuclei": {
+        "source": "nuclei",
+        "status": "found" if findings else "clean",
+        "total_findings": len(findings),
+        "by_severity": by_sev,
+        "top_findings": [
+            {"template": f.get("template-id"), "severity": (f.get("info") or {}).get("severity"),
+             "name": (f.get("info") or {}).get("name"), "matched": f.get("matched-at")}
+            for f in findings[:10]
+        ],
+    }}
+
+
+async def _ai_summarize(inv_id: str, org_id: str) -> Optional[Dict[str, Any]]:
+    """Invoke the summarize-investigation skill. Best-effort — never raises."""
+    try:
+        from skills.registry import get as get_skill
+        skill = get_skill("summarize-investigation")
+        if not skill:
+            return None
+        sr = await skill.invoke(
+            {"investigation_id": inv_id},
+            org_id=org_id,
+            model="claude-haiku-4-5",
+        )
+        if sr.error or not sr.result:
+            return {"error": sr.error, "cached": sr.cached,
+                    "input_tokens": sr.input_tokens, "output_tokens": sr.output_tokens}
+        return {
+            **(sr.result if isinstance(sr.result, dict) else {"text": str(sr.result)}),
+            "_meta": {
+                "model": sr.model,
+                "input_tokens": sr.input_tokens,
+                "output_tokens": sr.output_tokens,
+                "cost_usd": sr.cost_usd,
+                "duration_ms": sr.duration_ms,
+                "cached": sr.cached,
+            },
+        }
+    except Exception as e:
+        logger.warning("ai summarize failed: %s", e)
+        return {"error": f"{type(e).__name__}: {e}"}
+
+
 @router.post("/")
 async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
     if body.target_type not in VALID_TYPES:
@@ -976,6 +1127,15 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("otx")
             results["netlas"] = await _check_netlas("domain", target)
             sources_checked.append("netlas")
+            # Modal-backed Kali OSINT tools (subfinder, dnstwist, theHarvester)
+            modal_res = await _modal_domain_tools(target)
+            for k, v in modal_res.items():
+                results[k] = v
+                sources_checked.append(k)
+            if (results.get("subfinder") or {}).get("subdomain_count", 0) > 50:
+                scoring_factors["large_attack_surface"] = True
+            if (results.get("dnstwist") or {}).get("typosquat_count", 0) > 0:
+                scoring_factors["typosquat_present"] = True
             if (results.get("virustotal") or {}).get("malicious", 0) > 0:
                 scoring_factors["virustotal_flagged"] = True
             if (results.get("urlscan") or {}).get("malicious_count", 0) > 0:
@@ -1015,6 +1175,13 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("otx")
             results["netlas"] = await _check_netlas("ip", target)
             sources_checked.append("netlas")
+            # Modal-backed Kali OSINT: nmap
+            modal_res = await _modal_ip_tools(target)
+            for k, v in modal_res.items():
+                results[k] = v
+                sources_checked.append(k)
+            if (results.get("nmap") or {}).get("open_ports_count", 0) > 10:
+                scoring_factors["exposed_credentials"] = True
             idb = results.get("shodan_internetdb") or {}
             if idb.get("open_ports_count", 0) > 10:
                 scoring_factors["exposed_credentials"] = True
@@ -1058,6 +1225,15 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("otx")
             results["ipqs"] = await _check_ipqs("url", target)
             sources_checked.append("ipqs")
+            # Modal-backed Kali OSINT: nuclei vulnerability scan
+            modal_res = await _modal_url_tools(target)
+            for k, v in modal_res.items():
+                results[k] = v
+                sources_checked.append(k)
+            nuclei = results.get("nuclei") or {}
+            if nuclei.get("by_severity", {}).get("critical", 0) > 0 or nuclei.get("by_severity", {}).get("high", 0) > 0:
+                scoring_factors["urlscan_phishing"] = True
+                scoring_factors["virustotal_flagged"] = True
             if (results.get("virustotal") or {}).get("malicious", 0) > 0:
                 scoring_factors["virustotal_flagged"] = True
             if (results.get("urlscan") or {}).get("malicious_count", 0) > 0:
@@ -1149,7 +1325,7 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
 
         risk_score = calculate_risk_score(scoring_factors)
 
-        # Update investigation record
+        # Update investigation record (pre-AI so the skill can read the row)
         if inv_id:
             db.table("investigations").update({
                 "status": "completed",
@@ -1158,6 +1334,18 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
                 "risk_score": risk_score,
                 "completed_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", inv_id).execute()
+
+        # AI synthesis — never blocks a successful investigation
+        ai_summary = None
+        if inv_id:
+            ai_summary = await _ai_summarize(inv_id, x_org_id)
+            if ai_summary and not ai_summary.get("error"):
+                try:
+                    db.table("investigations").update({
+                        "results": {**results, "_ai_summary": ai_summary},
+                    }).eq("id", inv_id).execute()
+                except Exception as e:
+                    logger.warning("persist ai_summary failed: %s", e)
 
         return {
             "id": inv_id,
@@ -1168,6 +1356,7 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             "severity": severity_from_score(risk_score),
             "sources_checked": sources_checked,
             "results": results,
+            "ai_summary": ai_summary,
         }
 
     except Exception as e:

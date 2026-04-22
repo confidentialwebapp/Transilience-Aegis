@@ -533,6 +533,28 @@ export interface ThreatIntel {
   created_at: string;
 }
 
+export interface AiFinding {
+  source: string;
+  finding: string;
+  severity: "critical" | "high" | "medium" | "low" | "info";
+}
+export interface AiAction {
+  action: string;
+  urgency: "now" | "today" | "this week";
+  owner: string;
+}
+export interface AiSummary {
+  executive_summary?: string;
+  risk_verdict?: "critical" | "high" | "medium" | "low" | "info";
+  confidence?: "high" | "medium" | "low";
+  key_findings?: AiFinding[];
+  indicators?: string[];
+  recommended_actions?: AiAction[];
+  contradictions?: string | null;
+  error?: string;
+  _meta?: { model: string; input_tokens: number; output_tokens: number; cost_usd: number; duration_ms: number; cached: boolean };
+}
+
 export interface Investigation {
   id: string;
   org_id: string;
@@ -546,6 +568,7 @@ export interface Investigation {
   started_at: string;
   completed_at: string | null;
   created_at: string;
+  ai_summary?: AiSummary | null;
 }
 
 export interface PaginatedResponse<T> {

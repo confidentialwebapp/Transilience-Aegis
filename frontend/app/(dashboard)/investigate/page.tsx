@@ -13,7 +13,7 @@ import {
   CheckCircle2, XCircle, AlertTriangle, ExternalLink,
   Download, Clock, ChevronDown, X,
   Activity, Hash, Wifi, Database,
-  Eye
+  Eye, Sparkles, ShieldAlert, ListChecks, Target
 } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://tai-aegis-api.onrender.com";
@@ -53,6 +53,15 @@ const ALL_SOURCES = [
   { key: "crtsh",              label: "crt.sh",            icon: Eye,           desc: "Certificate transparency logs",    color: "#0ea5e9" },
   { key: "geolocation",        label: "Geolocation",       icon: Globe,         desc: "IP country/ISP/ASN",               color: "#14b8a6" },
   { key: "intelx",             label: "IntelX",            icon: Database,      desc: "Deep/dark web archives",           color: "#a855f7" },
+  { key: "otx",                label: "AlienVault OTX",    icon: Shield,        desc: "Threat intel pulses + malware",    color: "#22c55e" },
+  { key: "abuseipdb",          label: "AbuseIPDB",         icon: Shield,        desc: "IP abuse reports + confidence",    color: "#f59e0b" },
+  { key: "netlas",             label: "Netlas",            icon: Server,        desc: "Internet-wide passive recon",      color: "#06b6d4" },
+  { key: "ipqs",               label: "IPQualityScore",    icon: AlertTriangle, desc: "URL/email/phone fraud scoring",    color: "#d946ef" },
+  { key: "subfinder",          label: "Subfinder",         icon: Server,        desc: "Passive subdomain enumeration",    color: "#84cc16" },
+  { key: "dnstwist",           label: "dnstwist",          icon: AlertTriangle, desc: "Typosquat + lookalike domains",    color: "#f97316" },
+  { key: "theharvester",       label: "theHarvester",      icon: Mail,          desc: "Emails/hosts/ASNs via OSINT",      color: "#ec4899" },
+  { key: "nmap",               label: "nmap",              icon: Wifi,          desc: "Port + service detection",         color: "#ef4444" },
+  { key: "nuclei",             label: "nuclei",            icon: Shield,        desc: "Templated vulnerability scan",     color: "#dc2626" },
 ];
 
 type SourceStatus = "idle" | "pending" | "running" | "done" | "failed" | "skipped";
@@ -121,6 +130,139 @@ const DEMO_INVESTIGATION: Record<string, unknown> = {
     ],
   },
 };
+
+function AIAnalysisCard({ summary }: { summary: NonNullable<Investigation["ai_summary"]> }) {
+  if (summary.error) {
+    return (
+      <div className="rounded-xl p-4 border border-amber-500/15 bg-amber-500/[0.03]">
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+          <span className="text-[11px] font-bold tracking-wider text-amber-300 uppercase">AI Analysis unavailable</span>
+        </div>
+        <p className="text-[11px] text-slate-500">{summary.error}</p>
+      </div>
+    );
+  }
+
+  const verdict = summary.risk_verdict ?? "info";
+  const verdictColor = {
+    critical: "#ef4444", high: "#f97316", medium: "#eab308", low: "#10b981", info: "#64748b",
+  }[verdict];
+  const sevColor = (s?: string) => ({
+    critical: "#ef4444", high: "#f97316", medium: "#eab308", low: "#10b981", info: "#64748b",
+  }[s ?? "info"] ?? "#64748b");
+
+  return (
+    <div className="rounded-xl p-5 border relative overflow-hidden"
+      style={{
+        borderColor: "rgba(139,92,246,0.18)",
+        background: "linear-gradient(180deg, rgba(139,92,246,0.06) 0%, rgba(236,72,153,0.02) 100%)",
+      }}>
+      <div className="absolute top-0 left-0 right-0 h-[1px]" style={{ background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.6), transparent)" }} />
+
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.12)" }}>
+            <Sparkles className="w-3.5 h-3.5 text-violet-300" />
+          </div>
+          <div>
+            <div className="text-[11px] font-bold tracking-wider text-violet-300 uppercase">Transilience AI Analysis</div>
+            <div className="text-[10px] text-slate-500">
+              {summary._meta?.cached ? "cached" : summary._meta?.model ?? "claude"} · {summary._meta?.duration_ms ? `${Math.round(summary._meta.duration_ms / 100) / 10}s` : ""}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-1 rounded text-[10px] font-bold uppercase border"
+            style={{ color: verdictColor, borderColor: `${verdictColor}40`, background: `${verdictColor}10` }}>
+            {verdict}
+          </span>
+          {summary.confidence && (
+            <span className="px-2 py-1 rounded text-[10px] font-medium text-slate-400 bg-white/[0.03] border border-white/[0.06]">
+              {summary.confidence} confidence
+            </span>
+          )}
+        </div>
+      </div>
+
+      {summary.executive_summary && (
+        <p className="text-[13px] leading-relaxed text-slate-200 mb-4">{summary.executive_summary}</p>
+      )}
+
+      {summary.contradictions && (
+        <div className="mb-4 rounded-lg p-2.5 border border-amber-500/20 bg-amber-500/[0.04]">
+          <div className="flex items-center gap-1.5 mb-1">
+            <AlertTriangle className="w-3 h-3 text-amber-300" />
+            <span className="text-[10px] font-bold uppercase text-amber-300 tracking-wider">Contradictions</span>
+          </div>
+          <p className="text-[11px] text-slate-300">{summary.contradictions}</p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {summary.key_findings && summary.key_findings.length > 0 && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-2">
+              <ShieldAlert className="w-3 h-3 text-slate-400" />
+              <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Key findings</span>
+            </div>
+            <ul className="space-y-1.5">
+              {summary.key_findings.slice(0, 8).map((f, i) => (
+                <li key={i} className="flex items-start gap-2 text-[12px]">
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5" style={{ background: sevColor(f.severity) }} />
+                  <div>
+                    <span className="text-slate-300">{f.finding}</span>
+                    <span className="text-slate-600 text-[10px] font-mono ml-1.5">· {f.source}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {summary.recommended_actions && summary.recommended_actions.length > 0 && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-2">
+              <ListChecks className="w-3 h-3 text-slate-400" />
+              <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Recommended actions</span>
+            </div>
+            <ul className="space-y-1.5">
+              {summary.recommended_actions.slice(0, 5).map((a, i) => {
+                const uc = a.urgency === "now" ? "#ef4444" : a.urgency === "today" ? "#f97316" : "#eab308";
+                return (
+                  <li key={i} className="flex items-start gap-2 text-[12px]">
+                    <span className="shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase border"
+                      style={{ color: uc, borderColor: `${uc}40`, background: `${uc}10` }}>{a.urgency}</span>
+                    <span className="text-slate-300">
+                      {a.action}
+                      {a.owner && <span className="text-slate-600 text-[10px] ml-1.5">· {a.owner}</span>}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {summary.indicators && summary.indicators.length > 0 && (
+        <div className="mt-4 pt-3 border-t border-white/[0.05]">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Target className="w-3 h-3 text-slate-400" />
+            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Indicators to pivot on</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {summary.indicators.slice(0, 12).map((ind, i) => (
+              <span key={i} className="font-mono text-[11px] px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.06] text-slate-300 break-all">
+                {ind}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function RiskBadge({ score }: { score: number }) {
   const label = score >= 70 ? "CRITICAL" : score >= 50 ? "HIGH" : score >= 30 ? "MEDIUM" : "LOW";
@@ -539,21 +681,30 @@ export default function InvestigatePage() {
 
       const data = await api.investigate(orgId, targetType, targetValue.trim());
 
-      // Animate completion
-      for (let i = 0; i < sourceArr.length; i++) {
-        await delay(120);
-        const src = sourceArr[i];
-        const srcData = (data.results as Record<string, unknown>)?.[src];
-        setSourceStatuses((prev) => ({
-          ...prev,
-          [src]: { status: srcData ? "done" : "skipped", data: srcData ?? null },
-          ...(i + 1 < sourceArr.length ? { [sourceArr[i + 1]]: { ...prev[sourceArr[i + 1]], status: "running" } } : {}),
-        }));
+      // Backend returns every source it actually ran (API + Modal/Kali).
+      // Surface all of them — not just the user's pre-selection — so the
+      // Intelligence Sources panel reflects reality.
+      const returned = Object.keys((data.results as Record<string, unknown>) ?? {})
+        .filter((k) => !k.startsWith("_"));
+      const checked = (data.sources_checked as string[] | undefined) ?? [];
+      // map `haveibeenpwned` tab key used by the UI to the `hibp` results key
+      const srcKey = (k: string) => (k === "haveibeenpwned" ? "hibp" : k);
+      const allKeys = Array.from(new Set<string>([...sourceArr, ...checked, ...returned]));
+
+      // Animate completion across the union
+      const merged: Record<string, SourceState> = {};
+      for (const s of allKeys) {
+        const d = (data.results as Record<string, unknown>)?.[srcKey(s)] ?? (data.results as Record<string, unknown>)?.[s];
+        merged[s] = { status: d ? "done" : "skipped", data: d ?? null };
+      }
+      for (let i = 0; i < allKeys.length; i++) {
+        await delay(60);
+        setSourceStatuses((prev) => ({ ...prev, [allKeys[i]]: merged[allKeys[i]] }));
       }
 
       setResult(data);
-      const firstDone = sourceArr.find((s) => (data.results as Record<string, unknown>)?.[s]);
-      setActiveTab(firstDone ?? sourceArr[0]);
+      const firstDone = allKeys.find((s) => merged[s].status === "done");
+      setActiveTab(firstDone ?? allKeys[0] ?? "");
       toast.success("Investigation complete");
       loadHistory(orgId);
     } catch {
@@ -752,6 +903,12 @@ export default function InvestigatePage() {
                   </button>
                 </div>
               </div>
+
+              {/* AI Analysis card — prefer fresh `ai_summary`, else read from persisted `results._ai_summary` */}
+              {(() => {
+                const ai = result.ai_summary ?? (result.results as Record<string, unknown>)?._ai_summary;
+                return ai ? <AIAnalysisCard summary={ai as NonNullable<Investigation["ai_summary"]>} /> : null;
+              })()}
 
               {/* Tabs */}
               <div className="flex gap-0 overflow-x-auto" style={{ borderBottom: "1px solid rgba(139,92,246,0.08)" }}>

@@ -43,4 +43,5 @@ def _ensure_loaded() -> None:
         draft_advisory,
         suggest_remediation,
         compare_iocs,
+        summarize_investigation,
     )

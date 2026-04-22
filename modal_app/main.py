@@ -29,8 +29,21 @@ import modal
 # Image — one Kali Rolling base for all tools. Heavy first build (~6-10 min),
 # then layer-cached for subsequent deploys (~30s).
 # ---------------------------------------------------------------------------
+# Note on the GPG key dance below: Kali rotates its archive signing key every
+# year or so, and the kalilinux/kali-rolling Docker image on Docker Hub
+# sometimes lags behind the live key. Without refreshing it ourselves, the
+# very first `apt-get update` fails with "Missing key …". The two run_commands
+# steps refresh the keyring directly before any apt operations.
 kali_image = (
     modal.Image.from_registry("kalilinux/kali-rolling", add_python="3.11")
+    .run_commands(
+        # Refresh Kali archive signing keys. -o flags allow the first update
+        # to proceed even though the existing key is missing/expired.
+        "apt-get update -o Acquire::AllowInsecureRepositories=true "
+        "        -o Acquire::AllowDowngradeToInsecureRepositories=true || true",
+        "apt-get install -y --allow-unauthenticated kali-archive-keyring",
+        "apt-get update",
+    )
     # OS tools available via apt — Kali ships these in main repos
     .apt_install(
         "theharvester",

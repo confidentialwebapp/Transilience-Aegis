@@ -17,11 +17,13 @@ type ProfileForm = {
   brand_keywords: string;
   notify_email: string;
   notify_telegram_chat_id: string;
+  digest_frequency: "off" | "daily" | "weekly";
 };
 
 const EMPTY_FORM: ProfileForm = {
   display_name: "", sectors: "", countries: "", domains: "",
   brand_keywords: "", notify_email: "", notify_telegram_chat_id: "",
+  digest_frequency: "off",
 };
 
 export default function ProfilePage() {
@@ -67,6 +69,7 @@ export default function ProfilePage() {
       brand_keywords: splitList(form.brand_keywords),
       notify_email: form.notify_email.trim() || null,
       notify_telegram_chat_id: form.notify_telegram_chat_id ? parseInt(form.notify_telegram_chat_id) : null,
+      digest_frequency: form.digest_frequency,
     };
     try {
       if (editingId) {
@@ -95,8 +98,25 @@ export default function ProfilePage() {
       brand_keywords: (p.brand_keywords || []).join(", "),
       notify_email: p.notify_email || "",
       notify_telegram_chat_id: p.notify_telegram_chat_id?.toString() || "",
+      digest_frequency: p.digest_frequency || "off",
     });
     setShowForm(true);
+  };
+
+  const handleSendDigest = async (profileId: string) => {
+    try {
+      const r = await api.sendDigestNow(getOrgId(), profileId);
+      if (r.status === "sent") {
+        toast.success(`Digest sent (${r.alerts ?? 0} alerts, ${r.posts ?? 0} mentions)`);
+      } else if (r.status === "skipped") {
+        toast.info(`Skipped: ${r.reason || "no content"}`);
+      } else {
+        toast.error(`Failed: ${r.error || "unknown error"}`);
+      }
+      load();
+    } catch (e: any) {
+      toast.error(e?.message ?? "send failed");
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -192,6 +212,19 @@ export default function ProfilePage() {
               value={form.notify_email} onChange={(v) => setForm({ ...form, notify_email: v })} />
             <Field label="Telegram chat ID (optional)" placeholder="-100123456789"
               value={form.notify_telegram_chat_id} onChange={(v) => setForm({ ...form, notify_telegram_chat_id: v })} />
+            <div>
+              <label className="text-[11px] text-slate-500 mb-1 block">Email digest frequency</label>
+              <select
+                value={form.digest_frequency}
+                onChange={(e) => setForm({ ...form, digest_frequency: e.target.value as any })}
+                className="w-full h-9 px-3 rounded-lg bg-white/[0.02] border border-white/[0.06] text-sm text-slate-200 focus:outline-none focus:border-rose-500/30"
+              >
+                <option value="off">Off — don't send digests</option>
+                <option value="daily">Daily — every morning</option>
+                <option value="weekly">Weekly — every Monday</option>
+              </select>
+              <p className="text-[10px] text-slate-600 mt-1">Requires "Notify email" set above. Sent via Resend.</p>
+            </div>
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <button onClick={() => { setShowForm(false); setEditingId(null); setForm(EMPTY_FORM); }}
@@ -233,10 +266,25 @@ export default function ProfilePage() {
                       <div className="flex gap-3 mt-2 text-[11px] text-slate-500">
                         {p.notify_email && <span>📧 {p.notify_email}</span>}
                         {p.notify_telegram_chat_id && <span>💬 {p.notify_telegram_chat_id}</span>}
+                        {p.digest_frequency && p.digest_frequency !== "off" && (
+                          <span className="text-rose-400">📬 {p.digest_frequency} digest</span>
+                        )}
+                        {p.digest_last_sent_at && (
+                          <span className="text-slate-600">last: {new Date(p.digest_last_sent_at).toLocaleDateString()}</span>
+                        )}
                       </div>
                     )}
                   </div>
                   <div className="flex gap-1 shrink-0">
+                    {p.digest_frequency && p.digest_frequency !== "off" && p.notify_email && (
+                      <button
+                        onClick={() => handleSendDigest(p.id)}
+                        className="px-2 py-1 rounded text-[11px] text-emerald-300 hover:bg-emerald-500/10"
+                        title={`Send ${p.digest_frequency} digest now`}
+                      >
+                        📧 Send
+                      </button>
+                    )}
                     <button onClick={() => handleEdit(p)} className="px-2 py-1 rounded text-[11px] text-slate-400 hover:text-white hover:bg-white/[0.05]">Edit</button>
                     <button onClick={() => handleDelete(p.id)} className="px-2 py-1 rounded text-[11px] text-red-400 hover:bg-red-500/10"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>

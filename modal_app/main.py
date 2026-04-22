@@ -237,6 +237,8 @@ def run_theharvester(domain: str, sources: str = "crtsh,duckduckgo,bing,otx,hack
         "ok": res["ok"],
         "domain": domain,
         "sources": sources.split(","),
+        "exit_code": res["exit_code"],
+        "json_written": __import__("os").path.exists(json_path),
         "results": {
             "emails": _list("emails"),
             "hosts": _list("hosts"),
@@ -245,7 +247,9 @@ def run_theharvester(domain: str, sources: str = "crtsh,duckduckgo,bing,otx,hack
             "urls": _list("urls", "interesting_urls"),
             "linkedin": _list("linkedin", "linkedin_links"),
         },
-        "stderr": res["stderr"],
+        "stdout_tail": (res["stdout"] or "")[-2000:],
+        "stderr": res["stderr"] or "(empty)",
+        "error": (res["stderr"] or res["stdout"] or "")[-500:] if not res["ok"] else None,
     }
 
 
@@ -311,6 +315,34 @@ def run_nuclei(target: str, severity: str = "critical,high,medium") -> dict:
         "count": len(findings),
         "stderr": res["stderr"],
     }
+
+
+# ---------------------------------------------------------------------------
+# Daily email-digest cron — fires hourly, backend decides which profiles are
+# actually due for a digest based on their digest_frequency. Modal cron runs
+# even when Render is sleeping, which guarantees alerts get delivered.
+# ---------------------------------------------------------------------------
+@app.function(image=kali_image, schedule=modal.Cron("0 * * * *"), timeout=600, memory=512)
+def daily_digest_tick() -> dict:
+    """Hourly tick that asks the Render backend to fan out all due digests.
+
+    Why call Render rather than do it inside Modal: the digest logic talks to
+    Supabase + Resend with creds held by Render. We don't replicate the same
+    secrets in Modal — Render is the one place that owns them.
+    """
+    import os, urllib.request, urllib.error, json
+    backend = os.environ.get("AEGIS_BACKEND_URL", "https://tai-aegis-api.onrender.com")
+    secret = os.environ.get("MODAL_TOKEN_ID", "")
+    url = f"{backend}/api/v1/digest/send-all?secret={secret}"
+    try:
+        req = urllib.request.Request(url, method="POST", data=b"")
+        with urllib.request.urlopen(req, timeout=300) as r:
+            body = r.read().decode("utf-8", errors="ignore")
+            return {"http": r.status, "body": body[:500]}
+    except urllib.error.HTTPError as e:
+        return {"http": e.code, "error": e.read().decode("utf-8", errors="ignore")[:500]}
+    except Exception as e:
+        return {"http": 0, "error": f"{type(e).__name__}: {e}"}
 
 
 # ---------------------------------------------------------------------------

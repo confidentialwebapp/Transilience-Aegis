@@ -279,6 +279,12 @@ export const api = {
     apiFetch<NucleiResult>(`/api/v1/recon/nuclei?target=${encodeURIComponent(target)}&severity=${encodeURIComponent(severity)}`, { method: "POST", orgId }),
   scanUsername: (orgId: string, username: string, topSites = 100) =>
     apiFetch<UsernameSearchResult>(`/api/v1/osint/username?username=${encodeURIComponent(username)}&top_sites=${topSites}`, { orgId }),
+
+  // Email digest
+  sendDigestNow: (orgId: string, profileId: string) =>
+    apiFetch<DigestSendResult>(`/api/v1/digest/send-now/${profileId}`, { method: "POST", orgId }),
+  digestLog: (orgId: string, limit = 30) =>
+    apiFetch<{ data: Array<{ id: string; profile_id: string; email: string; frequency: string; status: string; error: string | null; alerts_count: number; posts_count: number; sent_at: string }> }>(`/api/v1/digest/log?limit=${limit}`, { orgId }),
 };
 
 // Types
@@ -471,6 +477,17 @@ export interface CustomerProfile {
   enabled: boolean;
   created_at: string;
   updated_at: string;
+  digest_frequency?: "off" | "daily" | "weekly";
+  digest_last_sent_at?: string | null;
+}
+
+export interface DigestSendResult {
+  status: "sent" | "skipped" | "failed";
+  alerts?: number;
+  posts?: number;
+  error?: string;
+  message_id?: string;
+  reason?: string;
 }
 
 export interface ProfileMatchAlert {

@@ -22,6 +22,7 @@ class ProfileIn(BaseModel):
     notify_email: Optional[str] = None
     notify_telegram_chat_id: Optional[int] = None
     enabled: bool = True
+    digest_frequency: str = "off"  # off | daily | weekly
 
 
 @router.get("/")
@@ -64,7 +65,8 @@ async def update_profile(profile_id: str, body: dict = Body(...), x_org_id: str 
     from db import get_client
 
     allowed = {"display_name", "sectors", "countries", "domains", "brand_keywords",
-               "notify_in_app", "notify_email", "notify_telegram_chat_id", "enabled"}
+               "notify_in_app", "notify_email", "notify_telegram_chat_id", "enabled",
+               "digest_frequency"}
     payload = {k: v for k, v in body.items() if k in allowed}
     if not payload:
         raise HTTPException(400, "no editable fields in body")

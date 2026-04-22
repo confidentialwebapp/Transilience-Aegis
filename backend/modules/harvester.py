@@ -117,13 +117,15 @@ async def run(
             status = "success"
             used = "modal"
         else:
-            err_msg = modal_result.get("error") or "modal call failed"
+            err_msg = (modal_result.get("error")
+                       or modal_result.get("stderr")
+                       or f"modal returned ok=False (no error/stderr): {str(modal_result)[:200]}")
             # Fall back to local subprocess if Modal isn't configured
             if "MODAL_TOKEN" in err_msg or "not configured" in err_msg:
                 raw, error, status = await _run_local(domain, sources, limit, timeout, binary)
                 used = "local"
             else:
-                error = f"modal: {err_msg}"
+                error = f"modal: {err_msg[:300]}"
                 used = "modal"
     except Exception as e:
         logger.warning("Modal harvester call failed, falling back to local: %s", e)

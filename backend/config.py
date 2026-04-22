@@ -57,6 +57,12 @@ class Settings(BaseSettings):
     MODAL_TOKEN_ID: str = ""
     MODAL_TOKEN_SECRET: str = ""
 
+    # Anthropic — for the AI skills framework (alert triage, advisory drafting, etc.)
+    # Get from https://console.anthropic.com/settings/keys
+    ANTHROPIC_API_KEY: str = ""
+    ANTHROPIC_DEFAULT_MODEL: str = "claude-haiku-4-5"  # cheap fast default
+    ANTHROPIC_PREMIUM_MODEL: str = "claude-sonnet-4-6"  # for high-stakes operations
+
     # App
     APP_ENV: str = "development"
     LOG_LEVEL: str = "info"

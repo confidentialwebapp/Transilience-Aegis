@@ -115,7 +115,7 @@ def _lines(s: str) -> list[str]:
 # ---------------------------------------------------------------------------
 # Subdomain enumeration — subfinder
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, timeout=180, memory=512, container_idle_timeout=10)
+@app.function(image=kali_image, timeout=180, memory=512, scaledown_window=10)
 def run_subfinder(domain: str) -> dict:
     """List subdomains via projectdiscovery's subfinder.
 
@@ -135,7 +135,7 @@ def run_subfinder(domain: str) -> dict:
 # ---------------------------------------------------------------------------
 # HTTP probe — projectdiscovery httpx (renamed httpx-pd to avoid clash with python httpx)
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, timeout=180, memory=512, container_idle_timeout=10)
+@app.function(image=kali_image, timeout=180, memory=512, scaledown_window=10)
 def run_httpx(targets: list[str]) -> dict:
     """Probe each host: returns alive ones with status, title, tech.
 
@@ -171,7 +171,7 @@ def run_httpx(targets: list[str]) -> dict:
 # ---------------------------------------------------------------------------
 # DNS bulk resolver — projectdiscovery dnsx
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, timeout=120, memory=512, container_idle_timeout=10)
+@app.function(image=kali_image, timeout=120, memory=512, scaledown_window=10)
 def run_dnsx(targets: list[str]) -> dict:
     if not targets:
         return {"tool": "dnsx", "ok": True, "results": [], "count": 0}
@@ -192,7 +192,7 @@ def run_dnsx(targets: list[str]) -> dict:
 # ---------------------------------------------------------------------------
 # Typosquat detection — dnstwist
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, timeout=180, memory=1024, container_idle_timeout=10)
+@app.function(image=kali_image, timeout=180, memory=1024, scaledown_window=10)
 def run_dnstwist(domain: str, registered_only: bool = True) -> dict:
     """Find lookalike/typo domains. With --registered, only returns ones that resolve."""
     cmd = ["dnstwist", "--format", "json"]
@@ -223,7 +223,7 @@ def run_dnstwist(domain: str, registered_only: bool = True) -> dict:
 # ---------------------------------------------------------------------------
 # theHarvester — email/host/IP discovery
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, timeout=300, memory=1024, container_idle_timeout=10)
+@app.function(image=kali_image, timeout=300, memory=1024, scaledown_window=10)
 def run_theharvester(domain: str, sources: str = "crtsh,duckduckgo,bing,otx,hackertarget,rapiddns,anubis,urlscan", limit: int = 200) -> dict:
     out_base = tempfile.mktemp(prefix="th-")
     res = _run(
@@ -270,7 +270,7 @@ def run_theharvester(domain: str, sources: str = "crtsh,duckduckgo,bing,otx,hack
 # ---------------------------------------------------------------------------
 # nmap — port + service detection
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, timeout=300, memory=512, container_idle_timeout=10)
+@app.function(image=kali_image, timeout=300, memory=512, scaledown_window=10)
 def run_nmap(target: str, args: str = "-sT -Pn -sV -F -T4") -> dict:
     """Default args: TCP-connect service-version scan on top 100 ports,
     no host-discovery ping.
@@ -305,7 +305,7 @@ def run_nmap(target: str, args: str = "-sT -Pn -sV -F -T4") -> dict:
 # ---------------------------------------------------------------------------
 # nuclei — templated vulnerability scanner
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, timeout=420, memory=1024, container_idle_timeout=10)
+@app.function(image=kali_image, timeout=420, memory=1024, scaledown_window=10)
 def run_nuclei(target: str, severity: str = "critical,high,medium") -> dict:
     """Run nuclei with a severity filter to keep runtime + noise reasonable.
     Templates auto-update on first run (~30s extra)."""
@@ -336,7 +336,7 @@ def run_nuclei(target: str, severity: str = "critical,high,medium") -> dict:
 # actually due for a digest based on their digest_frequency. Modal cron runs
 # even when Render is sleeping, which guarantees alerts get delivered.
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, schedule=modal.Cron("17 3 * * *", container_idle_timeout=10), timeout=600, memory=512)
+@app.function(image=kali_image, schedule=modal.Cron("17 3 * * *", scaledown_window=10), timeout=600, memory=512)
 def nightly_attack_surface_diff() -> dict:
     """Once per night: ask the Render backend to scan every customer profile's
     domains, diff against last snapshot, and create alerts for new subdomains
@@ -357,7 +357,7 @@ def nightly_attack_surface_diff() -> dict:
         return {"http": 0, "error": f"{type(e).__name__}: {e}"}
 
 
-@app.function(image=kali_image, schedule=modal.Cron("0 * * * *", container_idle_timeout=10), timeout=600, memory=512)
+@app.function(image=kali_image, schedule=modal.Cron("0 * * * *", scaledown_window=10), timeout=600, memory=512)
 def daily_digest_tick() -> dict:
     """Hourly tick that asks the Render backend to fan out all due digests.
 
@@ -383,7 +383,7 @@ def daily_digest_tick() -> dict:
 # ---------------------------------------------------------------------------
 # sherlock — username presence across 400+ social/SaaS sites
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, timeout=300, memory=1024, container_idle_timeout=10)
+@app.function(image=kali_image, timeout=300, memory=1024, scaledown_window=10)
 def run_sherlock(username: str, timeout: int = 20) -> dict:
     """Check which platforms a username exists on. Returns a list of sites
     where the account was found.
@@ -449,7 +449,7 @@ def run_sherlock(username: str, timeout: int = 20) -> dict:
 # ---------------------------------------------------------------------------
 # holehe — which sites is this email registered on?
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, timeout=300, memory=1024, container_idle_timeout=10)
+@app.function(image=kali_image, timeout=300, memory=1024, scaledown_window=10)
 def run_holehe(email: str) -> dict:
     res = _run(["holehe", "--only-used", "--no-color", email], timeout=290)
     used: list[str] = []
@@ -470,7 +470,7 @@ def run_holehe(email: str) -> dict:
 # ---------------------------------------------------------------------------
 # amass — passive DNS / subdomain enumeration (broader than subfinder)
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, timeout=360, memory=1024, container_idle_timeout=10)
+@app.function(image=kali_image, timeout=360, memory=1024, scaledown_window=10)
 def run_amass(domain: str) -> dict:
     res = _run(
         ["amass", "enum", "-passive", "-d", domain, "-silent", "-timeout", "5"],
@@ -489,7 +489,7 @@ def run_amass(domain: str) -> dict:
 # ---------------------------------------------------------------------------
 # whatweb — web technology fingerprinting
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, timeout=180, memory=512, container_idle_timeout=10)
+@app.function(image=kali_image, timeout=180, memory=512, scaledown_window=10)
 def run_whatweb(url: str) -> dict:
     res = _run(
         ["whatweb", "-a", "3", "--no-errors", "--log-json=-", "--quiet", url],
@@ -519,7 +519,7 @@ def run_whatweb(url: str) -> dict:
 # ---------------------------------------------------------------------------
 # waybackurls / gau — historical URL corpus for a domain
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, timeout=240, memory=1024, container_idle_timeout=10)
+@app.function(image=kali_image, timeout=240, memory=1024, scaledown_window=10)
 def run_waybackurls(domain: str, limit: int = 500) -> dict:
     res = _run(["waybackurls", domain], timeout=230)
     urls = sorted(set(_lines(res["stdout"])))[:limit]
@@ -536,7 +536,7 @@ def run_waybackurls(domain: str, limit: int = 500) -> dict:
 # ---------------------------------------------------------------------------
 # naabu — fast port scanner (top ports, syn-less alt to nmap)
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, timeout=240, memory=512, container_idle_timeout=10)
+@app.function(image=kali_image, timeout=240, memory=512, scaledown_window=10)
 def run_naabu(target: str, top_ports: int = 1000) -> dict:
     res = _run(
         ["naabu", "-host", target, "-silent", "-json", "-top-ports", str(top_ports),
@@ -562,7 +562,7 @@ def run_naabu(target: str, top_ports: int = 1000) -> dict:
 # Composite pipeline: domain → subfinder → dnsx → httpx → alive hosts w/ tech
 # Convenient single call for the customer-facing /recon/subdomains endpoint.
 # ---------------------------------------------------------------------------
-@app.function(image=kali_image, timeout=420, memory=1024, container_idle_timeout=10)
+@app.function(image=kali_image, timeout=420, memory=1024, scaledown_window=10)
 def attack_surface(domain: str) -> dict:
     """End-to-end attack-surface map for a domain. ~60-120s typically."""
     sub_result = run_subfinder.local(domain)  # call helper directly inside same container

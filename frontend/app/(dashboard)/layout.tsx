@@ -40,6 +40,8 @@ const NAV_SECTIONS = [
     items: [
       { href: "/attack-surface", label: "Surface Map", icon: Radar, badge: null },
       { href: "/infrastructure", label: "Infra Monitor", icon: Network, badge: null },
+      { href: "/recon", label: "OSINT Recon", icon: Target, badge: "NEW" },
+      { href: "/telegram", label: "Telegram Bot", icon: MessageSquare, badge: "NEW" },
       { href: "/assets", label: "Asset Inventory", icon: Box, badge: null },
       { href: "/scan-review", label: "Scan Review", icon: FileText, badge: null },
     ],
@@ -72,6 +74,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/intel": "IOC Lookup",
   "/attack-surface": "Surface Map",
   "/infrastructure": "Infra Monitor",
+  "/recon": "OSINT Recon",
+  "/telegram": "Telegram Bot",
   "/assets": "Asset Inventory",
   "/scan-review": "Scan Review",
   "/alerts": "Alert Center",

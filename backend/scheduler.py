@@ -74,6 +74,44 @@ async def _blocklist_sync_job():
         logger.error("Blocklist sync job failed: %s", e)
 
 
+_telegram_task = None
+
+
+async def _start_telegram_loop():
+    """Spawn the long-poll loop once at startup. APScheduler fires this on a
+    short interval; the loop is idempotent (run_forever is a no-op if already running).
+    """
+    global _telegram_task
+    try:
+        from config import get_settings
+
+        settings = get_settings()
+        if not settings.TELEGRAM_BOT_TOKEN:
+            return
+        if _telegram_task and not _telegram_task.done():
+            return  # already running
+        from modules.telegram_monitor import run_forever
+
+        _telegram_task = asyncio.create_task(
+            run_forever(settings.TELEGRAM_BOT_TOKEN, settings.TELEGRAM_POLL_INTERVAL_SECONDS)
+        )
+        logger.info("Telegram poll loop spawned")
+    except Exception as e:
+        logger.error("Telegram poll loop start failed: %s", e)
+
+
+async def _enrichment_cache_cleanup():
+    """Drop expired rows from enrichment_cache. Redis handles TTL itself; this
+    is just for the Postgres audit trail."""
+    try:
+        from db import get_client
+
+        client = get_client()
+        client.table("enrichment_cache").delete().lt("expires_at", "now()").execute()
+    except Exception as e:
+        logger.warning("enrichment_cache cleanup failed: %s", e)
+
+
 def start_scheduler():
     global _scheduler
     _scheduler = AsyncIOScheduler()
@@ -88,9 +126,16 @@ def start_scheduler():
     _scheduler.add_job(_ransomware_sync_job, IntervalTrigger(minutes=15), id="ransomware_live", replace_existing=True, misfire_grace_time=120)
     # Open blocklists — hourly refresh is plenty for these feeds
     _scheduler.add_job(_blocklist_sync_job, IntervalTrigger(hours=1), id="blocklist_sync", replace_existing=True, misfire_grace_time=300)
+    # Telegram bot — spawn the long-poll loop once at startup. The scheduler also
+    # ticks every 5min as a guard so the loop is restarted if it ever exits.
+    _scheduler.add_job(_start_telegram_loop, IntervalTrigger(minutes=5), id="telegram_loop", replace_existing=True, next_run_time=None, misfire_grace_time=60)
+    # Enrichment cache cleanup — Postgres audit trail prune
+    _scheduler.add_job(_enrichment_cache_cleanup, IntervalTrigger(hours=6), id="enrichment_cleanup", replace_existing=True, misfire_grace_time=300)
 
     _scheduler.start()
-    logger.info("APScheduler started with 8 scan jobs (ransomware @15min, blocklists @60min)")
+    # Kick the Telegram loop immediately rather than waiting for the first scheduled tick.
+    asyncio.create_task(_start_telegram_loop())
+    logger.info("APScheduler started with 10 jobs (telegram poll loop + enrichment cleanup added)")
 
 
 def stop_scheduler():

@@ -23,16 +23,35 @@ class Settings(BaseSettings):
     NVD_API_KEY: str = ""
     RANSOMWARE_LIVE_API_KEY: str = ""
 
+    # New keyed providers
+    ABUSEIPDB_API_KEY: str = ""
+    IPQS_API_KEY: str = ""
+    NETLAS_API_KEY: str = ""
+    DNSDUMPSTER_API_KEY: str = ""
+
+    # Upstash Redis (REST)
+    UPSTASH_REDIS_REST_URL: str = ""
+    UPSTASH_REDIS_REST_TOKEN: str = ""
+    ENRICHMENT_CACHE_TTL: int = 86400
+
     # MaxMind GeoLite2 — free account required for license key
     MAXMIND_ACCOUNT_ID: str = ""
     MAXMIND_LICENSE_KEY: str = ""
     GEOLITE2_CITY_DB: str = "/tmp/GeoLite2-City.mmdb"
     GEOLITE2_ASN_DB: str = "/tmp/GeoLite2-ASN.mmdb"
 
-    # Notifications
+    # Notifications + Telegram bot
     RESEND_API_KEY: str = ""
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_CHAT_ID: str = ""
+    TELEGRAM_POLL_INTERVAL_SECONDS: int = 20
+
+    # theHarvester
+    HARVESTER_BIN: str = "theHarvester"
+    HARVESTER_TIMEOUT_SECONDS: int = 120
+
+    # Maltego TRX
+    MALTEGO_TRX_AUTH_TOKEN: str = ""
 
     # App
     APP_ENV: str = "development"

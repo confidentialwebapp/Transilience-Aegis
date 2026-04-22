@@ -51,12 +51,18 @@ const IOC_TYPES = [
 ];
 
 const SOURCES = [
-  { key: "virustotal", label: "VirusTotal",  color: "#3b82f6" },
-  { key: "abuseipdb",  label: "AbuseIPDB",   color: "#ef4444" },
-  { key: "otx",        label: "OTX",         color: "#10b981" },
-  { key: "urlscan",    label: "URLScan",     color: "#f97316" },
-  { key: "shodan",     label: "Shodan",      color: "#eab308" },
-  { key: "greynoise",  label: "GreyNoise",   color: "#a855f7" },
+  { key: "virustotal",        label: "VirusTotal",  color: "#3b82f6" },
+  { key: "abuseipdb",         label: "AbuseIPDB",   color: "#ef4444" },
+  { key: "otx",               label: "OTX",         color: "#10b981" },
+  { key: "urlscan",           label: "URLScan",     color: "#f97316" },
+  { key: "shodan",            label: "Shodan",      color: "#eab308" },
+  { key: "shodan_internetdb", label: "InternetDB",  color: "#facc15" },
+  { key: "greynoise",         label: "GreyNoise",   color: "#a855f7" },
+  { key: "ipqs",              label: "IPQS",        color: "#f43f5e" },
+  { key: "netlas",            label: "Netlas",      color: "#06b6d4" },
+  { key: "dnsdumpster",       label: "DNSDumpster", color: "#22c55e" },
+  { key: "threatminer",       label: "ThreatMiner", color: "#94a3b8" },
+  { key: "blocklist",         label: "Blocklists",  color: "#fb923c" },
 ];
 
 // Demo lookups stored in memory for the session
@@ -234,24 +240,44 @@ export default function IntelPage() {
       const data = await apiFetch(`/api/v1/ioc-watchlist/lookup-enhanced?type=${iocType}&value=${encodeURIComponent(ioc)}`);
       const raw = data.results || {};
       setRawResults(raw);
+      // Backend now returns a merged `_enrichment` block with verdict/tags/sources/confidence
+      // alongside per-provider raw results. Use it when present for accurate scoring.
+      const enrichmentMeta: any = (raw as any)._enrichment || {};
+      const enrichmentVerdict: string | undefined = enrichmentMeta.verdict;
+      const enrichmentConfidence: number | undefined = enrichmentMeta.confidence;
+      const enrichmentTags: string[] = Array.isArray(enrichmentMeta.tags) ? enrichmentMeta.tags : [];
+
       // Build normalized result
-      const sources: SourceResult[] = Object.entries(raw).map(([key, d]: [string, any]) => {
-        let verdict: SourceResult["verdict"] = "unknown";
-        if (key === "virustotal") {
-          const mal = d?.data?.attributes?.last_analysis_stats?.malicious ?? 0;
-          verdict = mal > 5 ? "malicious" : mal > 0 ? "suspicious" : "clean";
-        } else if (key === "greynoise") {
-          verdict = d?.classification === "malicious" ? "malicious" : d?.riot ? "clean" : "unknown";
-        } else if (key === "otx") {
-          verdict = (d?.pulse_count ?? 0) > 5 ? "malicious" : (d?.pulse_count ?? 0) > 0 ? "suspicious" : "clean";
-        }
-        const srcInfo = SOURCES.find((s) => s.key === key);
-        return { name: key, label: srcInfo?.label ?? key, verdict };
-      });
+      const sources: SourceResult[] = Object.entries(raw)
+        .filter(([key]) => key !== "_enrichment")
+        .map(([key, d]: [string, any]) => {
+          let verdict: SourceResult["verdict"] = "unknown";
+          if (key === "virustotal") {
+            const mal = d?.data?.attributes?.last_analysis_stats?.malicious ?? 0;
+            verdict = mal > 5 ? "malicious" : mal > 0 ? "suspicious" : "clean";
+          } else if (key === "greynoise") {
+            verdict = d?.classification === "malicious" ? "malicious" : d?.riot ? "clean" : "unknown";
+          } else if (key === "otx") {
+            verdict = (d?.pulse_count ?? 0) > 5 ? "malicious" : (d?.pulse_count ?? 0) > 0 ? "suspicious" : "clean";
+          } else if (typeof d?.verdict === "string") {
+            // Providers via enrichment.py already emit a normalized verdict.
+            const v = d.verdict;
+            if (v === "malicious" || v === "suspicious" || v === "clean") verdict = v;
+            else verdict = "unknown";
+          }
+          const srcInfo = SOURCES.find((s) => s.key === key);
+          return { name: key, label: srcInfo?.label ?? key, verdict };
+        });
+
       const malCount = sources.filter((s) => s.verdict === "malicious").length;
       const suspCount = sources.filter((s) => s.verdict === "suspicious").length;
-      const score = Math.min(100, malCount * 20 + suspCount * 10);
-      const result: LookupResult = { ioc, type: iocType, verdict: score, sources, tags: [], relatedIocs: [] };
+      const fallbackScore = Math.min(100, malCount * 20 + suspCount * 10);
+      const score = typeof enrichmentConfidence === "number" && enrichmentVerdict !== "info"
+        ? (enrichmentVerdict === "malicious" ? Math.max(70, enrichmentConfidence)
+            : enrichmentVerdict === "suspicious" ? Math.max(30, enrichmentConfidence)
+            : enrichmentConfidence)
+        : fallbackScore;
+      const result: LookupResult = { ioc, type: iocType, verdict: score, sources, tags: enrichmentTags, relatedIocs: [] };
       setResults(result);
       saveToRecents(ioc, iocType, score);
     } catch {

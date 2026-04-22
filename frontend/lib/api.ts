@@ -203,6 +203,53 @@ export const api = {
 
   getInvestigation: (orgId: string, id: string) =>
     apiFetch<Investigation>(`/api/v1/investigate/${id}`, { orgId }),
+
+  // Multi-source enrichment fan-out
+  enrich: (orgId: string, type: string, value: string, refresh = false) =>
+    apiFetch<EnrichmentResult>(
+      `/api/v1/intel/enrich?type=${type}&value=${encodeURIComponent(value)}${refresh ? "&refresh=true" : ""}`,
+      { orgId }
+    ),
+
+  // Recon (theHarvester + DNSDumpster + Netlas + ThreatMiner)
+  runHarvester: (orgId: string, domain: string, sources?: string, limit?: number) => {
+    const sp = new URLSearchParams({ domain });
+    if (sources) sp.set("sources", sources);
+    if (limit) sp.set("limit", String(limit));
+    return apiFetch<HarvesterResult>(`/api/v1/recon/harvest?${sp.toString()}`, { method: "POST", orgId });
+  },
+  listReconRuns: (orgId: string, domain?: string) => {
+    const sp = new URLSearchParams();
+    if (domain) sp.set("domain", domain);
+    sp.set("limit", "20");
+    return apiFetch<{ data: HarvesterRun[] }>(`/api/v1/recon/runs?${sp.toString()}`, { orgId });
+  },
+  dnsdumpster: (orgId: string, domain: string) =>
+    apiFetch<Record<string, unknown>>(`/api/v1/recon/dnsdumpster?domain=${encodeURIComponent(domain)}`, { orgId }),
+  netlas: (orgId: string, type: "ip" | "domain", value: string) =>
+    apiFetch<Record<string, unknown>>(`/api/v1/recon/netlas?type=${type}&value=${encodeURIComponent(value)}`, { orgId }),
+
+  // Telegram bot
+  listTelegramChannels: (orgId: string) =>
+    apiFetch<{ data: TelegramChannel[] }>("/api/v1/telegram/channels", { orgId }),
+  listTelegramMessages: (orgId: string, params?: { chat_id?: number; q?: string; has_iocs?: boolean; page?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.chat_id !== undefined) sp.set("chat_id", String(params.chat_id));
+    if (params?.q) sp.set("q", params.q);
+    if (params?.has_iocs) sp.set("has_iocs", "true");
+    sp.set("page", String(params?.page ?? 1));
+    sp.set("per_page", "50");
+    return apiFetch<{ data: TelegramMessage[]; total: number; page: number; per_page: number }>(
+      `/api/v1/telegram/messages?${sp.toString()}`,
+      { orgId }
+    );
+  },
+  pollTelegram: (orgId: string) =>
+    apiFetch<{ updates_processed: number }>("/api/v1/telegram/poll", { method: "POST", orgId }),
+
+  // Maltego transform listing (read-only — actual transforms hit per-name endpoints from Maltego desktop)
+  listMaltegoTransforms: (orgId: string) =>
+    apiFetch<{ transforms: MaltegoTransform[] }>("/api/v1/maltego/transforms", { orgId }),
 };
 
 // Types
@@ -323,4 +370,84 @@ export interface PaginatedResponse<T> {
   total: number;
   page: number;
   per_page: number;
+}
+
+export interface EnrichmentResult {
+  ioc_type: string;
+  ioc_value: string;
+  verdict: "malicious" | "suspicious" | "clean" | "info" | "unknown";
+  confidence: number;
+  tags: string[];
+  sources: string[];
+  providers: Record<string, Record<string, unknown>>;
+  cached: boolean;
+  fetched_at: string;
+}
+
+export interface HarvesterResult {
+  domain: string;
+  tool: string;
+  status: "success" | "partial" | "failed" | "running";
+  sources: string[];
+  started_at: string;
+  completed_at: string;
+  duration_seconds: number;
+  error: string | null;
+  results: {
+    emails: string[];
+    hosts: string[];
+    ips: string[];
+    asns: string[];
+    urls: string[];
+    linkedin: string[];
+    twitter: string[];
+    vulnerabilities: string[];
+    trello: string[];
+  };
+  counts: Record<string, number>;
+}
+
+export interface HarvesterRun {
+  id: string;
+  domain: string;
+  tool: string;
+  status: string;
+  started_at: string;
+  completed_at: string | null;
+  error: string | null;
+  emails: string[];
+  hosts: string[];
+  ips: string[];
+  asns: string[];
+  urls: string[];
+}
+
+export interface TelegramChannel {
+  id: string;
+  chat_id: number;
+  chat_type: string;
+  title: string | null;
+  username: string | null;
+  added_at: string;
+  enabled: boolean;
+}
+
+export interface TelegramMessage {
+  id: string;
+  chat_id: number;
+  message_id: number;
+  sender_id: number | null;
+  sender_name: string | null;
+  message_date: string;
+  text: string | null;
+  has_media: boolean;
+  media_type: string | null;
+  extracted_iocs: Record<string, string[]>;
+  ingested_at: string;
+}
+
+export interface MaltegoTransform {
+  name: string;
+  input_entities: string[];
+  endpoint: string;
 }

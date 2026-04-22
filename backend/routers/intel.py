@@ -225,6 +225,25 @@ async def lookup_ioc(
         except Exception as e:
             logger.warning("Shodan InternetDB lookup failed: %s", e)
 
+    # Multi-source enrichment fan-out (AbuseIPDB, IPQS, Netlas, DNSDumpster, ThreatMiner).
+    # Cached in Redis; safe to call on every lookup.
+    try:
+        from enrichment import enrich as _enrich_ioc
+
+        merged = await _enrich_ioc(type, value)
+        for provider_name, provider_data in (merged.get("providers") or {}).items():
+            results.setdefault(provider_name, provider_data)
+        results["_enrichment"] = {
+            "verdict": merged.get("verdict"),
+            "confidence": merged.get("confidence"),
+            "tags": merged.get("tags", []),
+            "sources": merged.get("sources", []),
+            "cached": merged.get("cached", False),
+            "fetched_at": merged.get("fetched_at"),
+        }
+    except Exception as e:
+        logger.warning("Enrichment fan-out failed for %s/%s: %s", type, value, e)
+
     # Cache the result - best effort
     try:
         db = get_client()
@@ -278,6 +297,21 @@ async def blocklist_sync_trigger(x_org_id: str = Header(...)):
     """Manually kick off a blocklist refresh. Scheduler also runs this hourly."""
     from modules.blocklist_sync import run_all_blocklists
     return await run_all_blocklists()
+
+
+@router.get("/enrich")
+async def enrich_ioc(
+    type: str = Query(..., description="ip, domain, url, hash, email"),
+    value: str = Query(...),
+    refresh: bool = Query(False, description="Bypass Redis cache"),
+    x_org_id: str = Header(...),
+):
+    """Multi-source enrichment fan-out. Returns merged verdict + per-provider details."""
+    if type not in {"ip", "domain", "url", "hash", "email", "asn", "cve"}:
+        raise HTTPException(400, "Invalid IOC type")
+    from enrichment import enrich as _enrich_ioc
+
+    return await _enrich_ioc(type, value, use_cache=not refresh)
 
 
 @router.get("/feed")

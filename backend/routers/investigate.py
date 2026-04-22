@@ -137,13 +137,21 @@ async def _check_ip_geolocation(ip: str) -> Dict[str, Any]:
 
 
 async def _check_threatfox(ioc: str) -> Dict[str, Any]:
-    """ThreatFox IOC lookup by Abuse.ch — free, no key required."""
+    """ThreatFox IOC lookup by Abuse.ch — now requires an Auth-Key header."""
+    settings = get_settings()
+    headers = {}
+    if getattr(settings, "ABUSECH_AUTH_KEY", ""):
+        headers["Auth-Key"] = settings.ABUSECH_AUTH_KEY
     try:
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(
                 "https://threatfox-api.abuse.ch/api/v1/",
                 json={"query": "search_ioc", "search_term": ioc},
+                headers=headers,
             )
+            if resp.status_code == 401:
+                return {"source": "threatfox", "status": "skipped",
+                        "reason": "Abuse.ch now requires ABUSECH_AUTH_KEY (free at auth.abuse.ch)"}
             if resp.status_code != 200:
                 return {"source": "threatfox", "status": "error", "detail": f"HTTP {resp.status_code}"}
             data = resp.json()
@@ -189,11 +197,17 @@ async def _check_blocklist(ioc_type: str, value: str) -> Dict[str, Any]:
 
 
 async def _check_urlhaus(ioc: str) -> Dict[str, Any]:
-    """URLhaus lookup by Abuse.ch — free, no key required."""
+    """URLhaus lookup by Abuse.ch — may require Auth-Key."""
+    settings = get_settings()
+    headers = {}
+    if getattr(settings, "ABUSECH_AUTH_KEY", ""):
+        headers["Auth-Key"] = settings.ABUSECH_AUTH_KEY
     try:
         async with httpx.AsyncClient(timeout=15) as client:
-            # Try as URL first
-            resp = await client.post("https://urlhaus-api.abuse.ch/v1/url/", data={"url": ioc})
+            resp = await client.post("https://urlhaus-api.abuse.ch/v1/url/", data={"url": ioc}, headers=headers)
+            if resp.status_code == 401:
+                return {"source": "urlhaus", "status": "skipped",
+                        "reason": "Abuse.ch now requires ABUSECH_AUTH_KEY (free at auth.abuse.ch)"}
             if resp.status_code == 200:
                 data = resp.json()
                 if data.get("query_status") == "ok":
@@ -205,8 +219,10 @@ async def _check_urlhaus(ioc: str) -> Dict[str, Any]:
                         "date_added": data.get("date_added", ""),
                         "tags": data.get("tags", []),
                     }
-            # Try as host
-            resp = await client.post("https://urlhaus-api.abuse.ch/v1/host/", data={"host": ioc})
+            resp = await client.post("https://urlhaus-api.abuse.ch/v1/host/", data={"host": ioc}, headers=headers)
+            if resp.status_code == 401:
+                return {"source": "urlhaus", "status": "skipped",
+                        "reason": "Abuse.ch now requires ABUSECH_AUTH_KEY"}
             if resp.status_code == 200:
                 data = resp.json()
                 if data.get("query_status") == "ok" and data.get("urls"):
@@ -340,13 +356,21 @@ async def _check_shodan(ip: str) -> Dict[str, Any]:
 
 
 async def _check_malwarebazaar(hash_value: str) -> Dict[str, Any]:
-    """Abuse.ch MalwareBazaar — free hash lookup (md5/sha1/sha256)."""
+    """Abuse.ch MalwareBazaar — hash lookup (md5/sha1/sha256). Auth-Key now required."""
+    settings = get_settings()
+    headers = {}
+    if getattr(settings, "ABUSECH_AUTH_KEY", ""):
+        headers["Auth-Key"] = settings.ABUSECH_AUTH_KEY
     try:
         async with httpx.AsyncClient(timeout=20) as client:
             resp = await client.post(
                 "https://mb-api.abuse.ch/api/v1/",
                 data={"query": "get_info", "hash": hash_value},
+                headers=headers,
             )
+            if resp.status_code == 401:
+                return {"source": "malwarebazaar", "status": "skipped",
+                        "reason": "Abuse.ch now requires ABUSECH_AUTH_KEY (free at auth.abuse.ch)"}
             if resp.status_code != 200:
                 return {"source": "malwarebazaar", "status": "error", "detail": f"HTTP {resp.status_code}"}
             data = resp.json()
@@ -408,26 +432,34 @@ async def _check_shodan_internetdb(ip: str) -> Dict[str, Any]:
 
 
 async def _check_greynoise(ip: str) -> Dict[str, Any]:
-    """GreyNoise Community API — works WITHOUT API key."""
+    """GreyNoise. Prefer v2/noise/context (keyed) which has higher limits than v3/community."""
     settings = get_settings()
     try:
-        headers = {}
+        headers = {"Accept": "application/json"}
         if settings.GREYNOISE_API_KEY:
             headers["key"] = settings.GREYNOISE_API_KEY
+            url = f"https://api.greynoise.io/v2/noise/context/{ip}"
+        else:
+            url = f"https://api.greynoise.io/v3/community/{ip}"
         async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.get(
-                f"https://api.greynoise.io/v3/community/{ip}",
-                headers=headers,
-            )
+            resp = await client.get(url, headers=headers)
+            if resp.status_code == 429:
+                return {"source": "greynoise", "status": "skipped", "reason": "Rate limit (shared egress IP)"}
             if resp.status_code == 200:
-                data = resp.json()
+                data = resp.json() or {}
+                meta = data.get("metadata") or {}
                 return {
                     "source": "greynoise",
                     "status": "found",
                     "noise": data.get("noise", False),
                     "riot": data.get("riot", False),
+                    "seen": data.get("seen", False),
                     "classification": data.get("classification", "unknown"),
-                    "name": data.get("name", ""),
+                    "name": data.get("name") or data.get("actor", ""),
+                    "organization": meta.get("organization"),
+                    "category": meta.get("category"),
+                    "country": meta.get("country"),
+                    "tags": data.get("tags", []),
                     "link": data.get("link", ""),
                 }
             elif resp.status_code == 404:
@@ -517,8 +549,8 @@ async def _check_intelx(query: str) -> Dict[str, Any]:
                 if result_resp.status_code != 200:
                     last_err = f"{host} result HTTP {result_resp.status_code}"
                     continue
-                data = result_resp.json()
-                records = data.get("records", [])
+                data = result_resp.json() or {}
+                records = data.get("records") or []
                 return {
                     "source": "intelx",
                     "status": "found" if records else "clean",

@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     INTELX_API_KEY: str = ""
     NVD_API_KEY: str = ""
     RANSOMWARE_LIVE_API_KEY: str = ""
+    ABUSECH_AUTH_KEY: str = ""  # threatfox / urlhaus / malwarebazaar
 
     # New keyed providers
     ABUSEIPDB_API_KEY: str = ""

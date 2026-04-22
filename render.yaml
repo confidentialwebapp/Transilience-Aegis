@@ -31,6 +31,9 @@ services:
         sync: false
       - key: INTELX_API_KEY
         sync: false
+      # Abuse.ch shared auth key (threatfox + urlhaus + malwarebazaar)
+      - key: ABUSECH_AUTH_KEY
+        sync: false
       - key: RESEND_API_KEY
         sync: false
       - key: TELEGRAM_BOT_TOKEN

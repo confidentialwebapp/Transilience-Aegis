@@ -13,14 +13,9 @@ import { toast } from "sonner";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-// User-facing model branding (backend still uses the real Anthropic model IDs).
-// TAIv1 = fast, cheap; TAIv2 = deeper reasoning, costlier per call.
-const MODELS = [
-  { id: "claude-haiku-4-5",  label: "TAIv1", description: "Fast · everyday questions" },
-  { id: "claude-sonnet-4-6", label: "TAIv2", description: "Smart · complex analysis" },
-] as const;
-
-const DEFAULT_MODEL = "claude-haiku-4-5";
+// Model branding centralized in lib/ai-models.ts (so every page in the app
+// shows the same TAIv1 / TAIv2 labels instead of leaking provider names).
+import { MODELS, DEFAULT_MODEL, modelLabel as sharedModelLabel } from "@/lib/ai-models";
 
 const MAX_ATTACHMENTS = 5;
 const MAX_FILE_BYTES = 4 * 1024 * 1024; // 4 MB
@@ -71,13 +66,8 @@ function getConvTitle(conv: AiConversation): string {
   return conv.title || "New conversation";
 }
 
-function modelLabel(model: string | null | undefined): string {
-  if (!model) return "TAI";
-  if (model.includes("haiku")) return "TAIv1";
-  if (model.includes("sonnet")) return "TAIv2";
-  if (model.includes("opus")) return "TAIv3";
-  return "TAI";
-}
+// Use the shared helper so every page in the app stays consistent.
+const modelLabel = sharedModelLabel;
 
 // ── Inline Markdown Renderer (~100 lines) ────────────────────────────────────
 
@@ -425,7 +415,9 @@ export default function TransilienceAIPage() {
   // Input
   const [inputValue, setInputValue] = useState("");
   const [attachments, setAttachments] = useState<LocalAttachment[]>([]);
-  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
+  // Plain string — backend may send model ids that aren't in our local MODELS list
+  // (e.g. an older haiku-4-5 vs our new id) and we should still render gracefully.
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
   const [sending, setSending] = useState(false);
 
   // UI states

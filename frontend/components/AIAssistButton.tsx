@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Loader2, X, Sparkles, Clock, DollarSign, Cpu, Check, AlertTriangle, Shield, Eye } from "lucide-react";
 import { api, getOrgId, type SkillInvokeResult } from "@/lib/api";
+import { modelLabel } from "@/lib/ai-models";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -306,7 +307,7 @@ export function AIAssistButton({ skill, params, label = "Ask AI", model, classNa
             <div className="min-w-0">
               <p className="text-sm font-bold text-white truncate">{skillLabel}</p>
               {invokeResult && (
-                <p className="text-[10px] text-slate-500 truncate font-mono">{invokeResult.model}</p>
+                <p className="text-[10px] text-slate-500 truncate font-mono">{modelLabel(invokeResult.model)}</p>
               )}
             </div>
           </div>

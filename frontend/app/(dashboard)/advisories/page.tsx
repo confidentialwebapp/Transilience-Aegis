@@ -60,9 +60,11 @@ const STATUS_STYLE: Record<AdvisoryStatus, { bg: string; text: string; border: s
   archived:  { bg: "rgba(71,85,105,0.1)",    text: "#64748b",  border: "rgba(71,85,105,0.15)" },
 };
 
+// Note: real backend model id for "TAIv2" is claude-sonnet-4-6 (not 4-5).
+// Using the wrong id would 400 from Anthropic with "invalid model".
 const MODEL_OPTIONS = [
-  { value: "claude-haiku-4-5",   label: "Haiku",   cost: "~$0.001 / draft", description: "Fast & cheap" },
-  { value: "claude-sonnet-4-5",  label: "Sonnet",  cost: "~$0.008 / draft", description: "Default · Balanced" },
+  { value: "claude-haiku-4-5",   label: "TAIv1", cost: "~$0.001 / draft", description: "Fast & cheap" },
+  { value: "claude-sonnet-4-6",  label: "TAIv2", cost: "~$0.008 / draft", description: "Default · Balanced" },
 ] as const;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -1231,7 +1233,7 @@ function EmptyState({ onNewAdvisory, onAIDraft, hasFilters, onClear }: {
                 { icon: Eye, color: "#34d399", text: "Styled HTML preview and download" },
                 { icon: AlertTriangle, color: "#fbbf24", text: "TLP classifications — WHITE to RED" },
                 { icon: Tag, color: "#f472b6", text: "IOC lists: IPs, domains, hashes, CVEs" },
-                { icon: Cpu, color: "#f97316", text: "AI Haiku or Sonnet model selection" },
+                { icon: Cpu, color: "#f97316", text: "TAIv1 or TAIv2 model selection" },
               ].map(({ icon: Icon, color, text }) => (
                 <div key={text} className="flex items-start gap-2">
                   <Icon className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color }} />

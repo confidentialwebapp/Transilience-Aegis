@@ -13,9 +13,11 @@ import { toast } from "sonner";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
+// User-facing model branding (backend still uses the real Anthropic model IDs).
+// TAIv1 = fast, cheap; TAIv2 = deeper reasoning, costlier per call.
 const MODELS = [
-  { id: "claude-haiku-4-5", label: "Haiku", description: "Fast · $0.80 / 1M in" },
-  { id: "claude-sonnet-4-5", label: "Sonnet", description: "Smart · $3 / 1M in" },
+  { id: "claude-haiku-4-5",  label: "TAIv1", description: "Fast · everyday questions" },
+  { id: "claude-sonnet-4-6", label: "TAIv2", description: "Smart · complex analysis" },
 ] as const;
 
 const DEFAULT_MODEL = "claude-haiku-4-5";
@@ -70,11 +72,11 @@ function getConvTitle(conv: AiConversation): string {
 }
 
 function modelLabel(model: string | null | undefined): string {
-  if (!model) return "AI";
-  if (model.includes("haiku")) return "Haiku";
-  if (model.includes("sonnet")) return "Sonnet";
-  if (model.includes("opus")) return "Opus";
-  return model.split("-").slice(-1)[0] ?? "AI";
+  if (!model) return "TAI";
+  if (model.includes("haiku")) return "TAIv1";
+  if (model.includes("sonnet")) return "TAIv2";
+  if (model.includes("opus")) return "TAIv3";
+  return "TAI";
 }
 
 // ── Inline Markdown Renderer (~100 lines) ────────────────────────────────────

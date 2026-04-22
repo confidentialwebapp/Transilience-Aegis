@@ -253,11 +253,20 @@ def run_theharvester(domain: str, sources: str = "crtsh,duckduckgo,bing,otx,hack
 # nmap — port + service detection
 # ---------------------------------------------------------------------------
 @app.function(image=kali_image, timeout=300, memory=512)
-def run_nmap(target: str, args: str = "-sV -F -T4") -> dict:
-    """Default args: TCP service detection on top 100 ports, fast timing.
+def run_nmap(target: str, args: str = "-sT -sV -F -T4") -> dict:
+    """Default args: TCP-connect (-sT) service-version scan on top 100 ports.
+
+    -sT (TCP connect) is used instead of the default -sS (SYN scan) because
+    Modal containers don't grant CAP_NET_RAW to the runtime user — raw
+    sockets fail with "Operation not permitted". -sT works at user level.
+
     Caller can pass any nmap args; we just split on spaces (no shell escaping).
+    -iL is dropped to prevent file-input attacks; ../ is blocked.
     """
     safe_args = [a for a in args.split() if a and not a.startswith("-iL") and "../" not in a]
+    # If caller didn't specify any scan-type flag, default to -sT
+    if not any(a in ("-sT", "-sS", "-sU", "-sA") for a in safe_args):
+        safe_args = ["-sT"] + safe_args
     res = _run(["nmap", *safe_args, "-oN", "-", target], timeout=290)
     return {
         "tool": "nmap",

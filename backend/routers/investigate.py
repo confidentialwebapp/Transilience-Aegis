@@ -144,25 +144,26 @@ async def _check_threatfox(ioc: str) -> Dict[str, Any]:
                 "https://threatfox-api.abuse.ch/api/v1/",
                 json={"query": "search_ioc", "search_term": ioc},
             )
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get("query_status") == "ok" and data.get("data"):
-                    entries = data["data"]
-                    return {
-                        "source": "threatfox",
-                        "status": "found",
-                        "threat_type": entries[0].get("threat_type", ""),
-                        "malware": entries[0].get("malware_printable", ""),
-                        "confidence": entries[0].get("confidence_level", 0),
-                        "first_seen": entries[0].get("first_seen", ""),
-                        "results": [
-                            {"malware": e.get("malware_printable", ""), "threat_type": e.get("threat_type", ""),
-                             "confidence": e.get("confidence_level", 0), "tags": e.get("tags", [])}
-                            for e in entries[:5]
-                        ],
-                        "total_count": len(entries),
-                    }
-                return {"source": "threatfox", "status": "clean", "detail": "Not found in ThreatFox"}
+            if resp.status_code != 200:
+                return {"source": "threatfox", "status": "error", "detail": f"HTTP {resp.status_code}"}
+            data = resp.json()
+            if data.get("query_status") == "ok" and data.get("data"):
+                entries = data["data"]
+                return {
+                    "source": "threatfox",
+                    "status": "found",
+                    "threat_type": entries[0].get("threat_type", ""),
+                    "malware": entries[0].get("malware_printable", ""),
+                    "confidence": entries[0].get("confidence_level", 0),
+                    "first_seen": entries[0].get("first_seen", ""),
+                    "results": [
+                        {"malware": e.get("malware_printable", ""), "threat_type": e.get("threat_type", ""),
+                         "confidence": e.get("confidence_level", 0), "tags": e.get("tags", [])}
+                        for e in entries[:5]
+                    ],
+                    "total_count": len(entries),
+                }
+            return {"source": "threatfox", "status": "clean", "detail": "Not found in ThreatFox"}
     except Exception as e:
         return {"source": "threatfox", "status": "error", "detail": str(e)[:200]}
 
@@ -444,10 +445,16 @@ async def _check_urlscan(target: str) -> Dict[str, Any]:
         headers = {}
         if settings.URLSCAN_API_KEY:
             headers["API-Key"] = settings.URLSCAN_API_KEY
+        # urlscan's query parser chokes on raw URLs (forward slashes).
+        # Wrap full URLs in `page.url.keyword:"..."` to force exact-match.
+        if target.startswith(("http://", "https://")):
+            query = f'page.url.keyword:"{target}"'
+        else:
+            query = target
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.get(
                 "https://urlscan.io/api/v1/search/",
-                params={"q": target, "size": 5},
+                params={"q": query, "size": 5},
                 headers=headers,
             )
             if resp.status_code == 200:
@@ -477,48 +484,242 @@ async def _check_urlscan(target: str) -> Dict[str, Any]:
 
 
 async def _check_intelx(query: str) -> Dict[str, Any]:
-    """IntelX dark web search — requires API key."""
+    """IntelX dark web search. free.intelx.io is the public tier; 2.intelx.io is paid."""
     settings = get_settings()
     if not settings.INTELX_API_KEY:
         return {"source": "intelx", "status": "skipped", "reason": "No API key"}
+    hosts = ["https://free.intelx.io", "https://2.intelx.io"]
+    last_err = None
     try:
-        async with httpx.AsyncClient(timeout=20) as client:
-            # Start search
-            resp = await client.post(
-                "https://2.intelx.io/intelligent/search",
-                headers={"x-key": settings.INTELX_API_KEY},
-                json={"term": query, "maxresults": 10, "media": 0, "timeout": 10},
-            )
-            if resp.status_code == 200:
-                search_id = resp.json().get("id")
-                if search_id:
-                    # Fetch results
-                    import asyncio
-                    await asyncio.sleep(2)
-                    result_resp = await client.get(
-                        f"https://2.intelx.io/intelligent/search/result?id={search_id}",
-                        headers={"x-key": settings.INTELX_API_KEY},
-                    )
-                    if result_resp.status_code == 200:
-                        data = result_resp.json()
-                        records = data.get("records", [])
-                        return {
-                            "source": "intelx",
-                            "status": "found" if records else "clean",
-                            "total_results": len(records),
-                            "results": [
-                                {
-                                    "name": r.get("name", ""),
-                                    "date": r.get("date", ""),
-                                    "bucket": r.get("bucket", ""),
-                                    "media": r.get("mediah", ""),
-                                }
-                                for r in records[:10]
-                            ],
+        async with httpx.AsyncClient(timeout=25) as client:
+            for host in hosts:
+                resp = await client.post(
+                    f"{host}/intelligent/search",
+                    headers={"x-key": settings.INTELX_API_KEY, "Content-Type": "application/json"},
+                    json={"term": query, "maxresults": 10, "media": 0, "timeout": 10},
+                )
+                if resp.status_code == 401:
+                    last_err = f"{host} 401"
+                    continue
+                if resp.status_code != 200:
+                    last_err = f"{host} HTTP {resp.status_code}"
+                    continue
+                search_id = (resp.json() or {}).get("id")
+                if not search_id:
+                    return {"source": "intelx", "status": "clean", "detail": "No search id"}
+                import asyncio
+                await asyncio.sleep(2)
+                result_resp = await client.get(
+                    f"{host}/intelligent/search/result",
+                    params={"id": search_id},
+                    headers={"x-key": settings.INTELX_API_KEY},
+                )
+                if result_resp.status_code != 200:
+                    last_err = f"{host} result HTTP {result_resp.status_code}"
+                    continue
+                data = result_resp.json()
+                records = data.get("records", [])
+                return {
+                    "source": "intelx",
+                    "status": "found" if records else "clean",
+                    "total_results": len(records),
+                    "results": [
+                        {
+                            "name": r.get("name", ""),
+                            "date": r.get("date", ""),
+                            "bucket": r.get("bucket", ""),
+                            "media": r.get("mediah", ""),
                         }
-            return {"source": "intelx", "status": "clean", "detail": "No results"}
+                        for r in records[:10]
+                    ],
+                }
+            return {"source": "intelx", "status": "error", "detail": last_err or "all hosts failed"}
     except Exception as e:
         return {"source": "intelx", "status": "error", "detail": str(e)[:200]}
+
+
+async def _check_otx(kind: str, value: str) -> Dict[str, Any]:
+    """AlienVault OTX — works with or without key; better limits with one."""
+    settings = get_settings()
+    # Map our target kind to OTX section types
+    kmap = {
+        "ip": "IPv4", "ipv4": "IPv4", "ipv6": "IPv6",
+        "domain": "domain", "hostname": "hostname", "url": "url",
+        "md5": "file", "sha1": "file", "sha256": "file",
+    }
+    otx_type = kmap.get(kind)
+    if not otx_type:
+        return {"source": "otx", "status": "skipped", "reason": f"Unsupported kind {kind}"}
+    headers = {"User-Agent": "TAI-AEGIS"}
+    if settings.OTX_API_KEY:
+        headers["X-OTX-API-KEY"] = settings.OTX_API_KEY
+    try:
+        async with httpx.AsyncClient(timeout=25) as client:
+            # Pulses = threat-intel matches; general = reputation + summary
+            g = await client.get(
+                f"https://otx.alienvault.com/api/v1/indicators/{otx_type}/{value}/general",
+                headers=headers,
+            )
+            if g.status_code == 404:
+                return {"source": "otx", "status": "clean", "detail": "No OTX record"}
+            if g.status_code != 200:
+                return {"source": "otx", "status": "error", "detail": f"HTTP {g.status_code}"}
+            gd = g.json()
+            pulses = ((gd.get("pulse_info") or {}).get("pulses") or [])
+            related_malware = []
+            for p in pulses[:10]:
+                for m in (p.get("malware_families") or [])[:5]:
+                    n = m.get("display_name") if isinstance(m, dict) else str(m)
+                    if n and n not in related_malware:
+                        related_malware.append(n)
+            return {
+                "source": "otx",
+                "status": "found" if pulses else "clean",
+                "reputation": gd.get("reputation", 0),
+                "pulse_count": (gd.get("pulse_info") or {}).get("count", 0),
+                "asn": gd.get("asn"),
+                "country": gd.get("country_name"),
+                "malware_families": related_malware[:10],
+                "pulses": [
+                    {"name": p.get("name"), "author": (p.get("author") or {}).get("username"),
+                     "created": p.get("created"), "tags": (p.get("tags") or [])[:6]}
+                    for p in pulses[:5]
+                ],
+            }
+    except Exception as e:
+        return {"source": "otx", "status": "error", "detail": str(e)[:200]}
+
+
+async def _check_abuseipdb(ip: str) -> Dict[str, Any]:
+    """AbuseIPDB IP reputation."""
+    settings = get_settings()
+    if not settings.ABUSEIPDB_API_KEY:
+        return {"source": "abuseipdb", "status": "skipped", "reason": "No API key"}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.get(
+                "https://api.abuseipdb.com/api/v2/check",
+                params={"ipAddress": ip, "maxAgeInDays": 90, "verbose": ""},
+                headers={"Key": settings.ABUSEIPDB_API_KEY, "Accept": "application/json"},
+            )
+            if resp.status_code != 200:
+                return {"source": "abuseipdb", "status": "error", "detail": f"HTTP {resp.status_code}"}
+            d = (resp.json() or {}).get("data") or {}
+            reports = d.get("totalReports", 0)
+            score = d.get("abuseConfidenceScore", 0)
+            return {
+                "source": "abuseipdb",
+                "status": "found" if reports else "clean",
+                "abuse_score": score,
+                "total_reports": reports,
+                "last_reported": d.get("lastReportedAt"),
+                "country": d.get("countryCode"),
+                "usage_type": d.get("usageType"),
+                "isp": d.get("isp"),
+                "domain": d.get("domain"),
+                "is_tor": d.get("isTor"),
+                "is_whitelisted": d.get("isWhitelisted"),
+                "categories": [r.get("categories") for r in (d.get("reports") or [])[:5]],
+            }
+    except Exception as e:
+        return {"source": "abuseipdb", "status": "error", "detail": str(e)[:200]}
+
+
+async def _check_netlas(kind: str, value: str) -> Dict[str, Any]:
+    """Netlas.io — passive DNS / host intelligence."""
+    settings = get_settings()
+    if not settings.NETLAS_API_KEY:
+        return {"source": "netlas", "status": "skipped", "reason": "No API key"}
+    if kind == "domain":
+        q = f'domain:{value}'
+        path = "/api/domains/"
+    elif kind == "ip":
+        q = f'ip:{value}'
+        path = "/api/responses/"
+    else:
+        return {"source": "netlas", "status": "skipped", "reason": f"Unsupported {kind}"}
+    try:
+        async with httpx.AsyncClient(timeout=25, follow_redirects=True) as client:
+            resp = await client.get(
+                f"https://app.netlas.io{path}",
+                params={"q": q, "size": 5},
+                headers={
+                    "X-API-Key": settings.NETLAS_API_KEY,
+                    "User-Agent": "TAI-AEGIS/1.0 (+https://tai-aegis.vercel.app)",
+                    "Accept": "application/json",
+                },
+            )
+            if resp.status_code != 200:
+                return {"source": "netlas", "status": "error", "detail": f"HTTP {resp.status_code}"}
+            j = resp.json() or {}
+            items = j.get("items", j.get("data", [])) or []
+            return {
+                "source": "netlas",
+                "status": "found" if items else "clean",
+                "total_results": j.get("count", len(items)),
+                "results": [
+                    {k: (it.get("data") or it).get(k) for k in ("domain", "ip", "asn", "port", "products", "last_seen")}
+                    for it in items[:5]
+                ],
+            }
+    except Exception as e:
+        return {"source": "netlas", "status": "error", "detail": str(e)[:200]}
+
+
+async def _check_ipqs(kind: str, value: str) -> Dict[str, Any]:
+    """IPQualityScore — URL/email/phone fraud scoring.
+    Handles `success:false` (e.g. quota exhausted) as 'skipped' so investigations
+    don't look broken when the provider is out of credits.
+    """
+    settings = get_settings()
+    if not settings.IPQS_API_KEY:
+        return {"source": "ipqs", "status": "skipped", "reason": "No API key"}
+    from urllib.parse import quote
+    if kind == "url":
+        endpoint = f"https://ipqualityscore.com/api/json/url/{settings.IPQS_API_KEY}/{quote(value, safe='')}"
+    elif kind == "email":
+        endpoint = f"https://ipqualityscore.com/api/json/email/{settings.IPQS_API_KEY}/{quote(value, safe='')}"
+    elif kind == "phone":
+        endpoint = f"https://ipqualityscore.com/api/json/phone/{settings.IPQS_API_KEY}/{quote(value, safe='')}"
+    else:
+        return {"source": "ipqs", "status": "skipped", "reason": f"Unsupported {kind}"}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.get(endpoint)
+            if resp.status_code != 200:
+                return {"source": "ipqs", "status": "error", "detail": f"HTTP {resp.status_code}"}
+            d = resp.json() or {}
+            if not d.get("success", True):
+                return {"source": "ipqs", "status": "skipped", "reason": d.get("message", "unknown")[:120]}
+            out = {"source": "ipqs", "status": "found", "kind": kind}
+            if kind == "url":
+                out.update({
+                    "unsafe": d.get("unsafe"), "spam": d.get("spamming"),
+                    "malware": d.get("malware"), "phishing": d.get("phishing"),
+                    "suspicious": d.get("suspicious"), "risk_score": d.get("risk_score"),
+                    "domain_rank": d.get("domain_rank"), "category": d.get("category"),
+                    "status_code": d.get("status_code"),
+                })
+            elif kind == "email":
+                out.update({
+                    "valid": d.get("valid"), "disposable": d.get("disposable"),
+                    "deliverability": d.get("deliverability"), "fraud_score": d.get("fraud_score"),
+                    "first_seen": (d.get("first_seen") or {}).get("human"),
+                    "leaked": d.get("leaked"), "smtp_score": d.get("smtp_score"),
+                    "honeypot": d.get("honeypot"), "recent_abuse": d.get("recent_abuse"),
+                })
+            elif kind == "phone":
+                out.update({
+                    "valid": d.get("valid"), "fraud_score": d.get("fraud_score"),
+                    "active": d.get("active"), "carrier": d.get("carrier"),
+                    "line_type": d.get("line_type"), "country": d.get("country"),
+                    "region": d.get("region"), "city": d.get("city"),
+                    "recent_abuse": d.get("recent_abuse"),
+                    "leaked": d.get("leaked"), "risky": d.get("risky"),
+                })
+            return out
+    except Exception as e:
+        return {"source": "ipqs", "status": "error", "detail": str(e)[:200]}
 
 
 async def _check_crtsh(domain: str) -> Dict[str, Any]:
@@ -691,6 +892,8 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("haveibeenpwned")
             results["github"] = await _check_github_leaks(target)
             sources_checked.append("github")
+            results["ipqs"] = await _check_ipqs("email", target)
+            sources_checked.append("ipqs")
             domain = target.split("@")[-1] if "@" in target else None
             if domain:
                 results["dns"] = await _check_dns(domain)
@@ -701,11 +904,18 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
                 sources_checked.append("virustotal")
                 results["threatfox"] = await _check_threatfox(domain)
                 sources_checked.append("threatfox")
+                results["otx"] = await _check_otx("domain", domain)
+                sources_checked.append("otx")
             results["intelx"] = await _check_intelx(target)
             sources_checked.append("intelx")
             if results["hibp"].get("status") == "breached":
                 scoring_factors["in_breach_db"] = True
                 scoring_factors["exposed_credentials"] = True
+            ipqs = results.get("ipqs") or {}
+            if ipqs.get("fraud_score", 0) >= 85 or ipqs.get("honeypot") or ipqs.get("disposable"):
+                scoring_factors["exposed_credentials"] = True
+            if (results.get("otx") or {}).get("pulse_count", 0) > 0:
+                scoring_factors["virustotal_flagged"] = True
 
         elif body.target_type == "domain":
             # Free sources (no key required)
@@ -730,6 +940,10 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("virustotal")
             results["urlscan"] = await _check_urlscan(target)
             sources_checked.append("urlscan")
+            results["otx"] = await _check_otx("domain", target)
+            sources_checked.append("otx")
+            results["netlas"] = await _check_netlas("domain", target)
+            sources_checked.append("netlas")
             if (results.get("virustotal") or {}).get("malicious", 0) > 0:
                 scoring_factors["virustotal_flagged"] = True
             if (results.get("urlscan") or {}).get("malicious_count", 0) > 0:
@@ -740,6 +954,8 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
                 scoring_factors["urlscan_phishing"] = True
             if (results.get("blocklist") or {}).get("status") == "found":
                 scoring_factors["on_blocklist"] = True
+            if (results.get("otx") or {}).get("pulse_count", 0) > 0:
+                scoring_factors["virustotal_flagged"] = True
 
         elif body.target_type == "ip":
             # Free sources
@@ -761,6 +977,12 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("shodan")
             results["greynoise"] = await _check_greynoise(target)
             sources_checked.append("greynoise")
+            results["abuseipdb"] = await _check_abuseipdb(target)
+            sources_checked.append("abuseipdb")
+            results["otx"] = await _check_otx("ip", target)
+            sources_checked.append("otx")
+            results["netlas"] = await _check_netlas("ip", target)
+            sources_checked.append("netlas")
             idb = results.get("shodan_internetdb") or {}
             if idb.get("open_ports_count", 0) > 10:
                 scoring_factors["exposed_credentials"] = True
@@ -771,6 +993,12 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             if (results.get("shodan") or {}).get("open_ports_count", 0) > 10:
                 scoring_factors["exposed_credentials"] = True
             if (results.get("threatfox") or {}).get("status") == "found":
+                scoring_factors["virustotal_flagged"] = True
+            if (results.get("abuseipdb") or {}).get("abuse_score", 0) >= 50:
+                scoring_factors["virustotal_flagged"] = True
+            if (results.get("abuseipdb") or {}).get("is_tor"):
+                scoring_factors["tor_exit_node"] = True
+            if (results.get("otx") or {}).get("pulse_count", 0) > 0:
                 scoring_factors["virustotal_flagged"] = True
             bl = results.get("blocklist") or {}
             if bl.get("status") == "found":
@@ -794,6 +1022,10 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             sources_checked.append("virustotal")
             results["urlscan"] = await _check_urlscan(target)
             sources_checked.append("urlscan")
+            results["otx"] = await _check_otx("url", target)
+            sources_checked.append("otx")
+            results["ipqs"] = await _check_ipqs("url", target)
+            sources_checked.append("ipqs")
             if (results.get("virustotal") or {}).get("malicious", 0) > 0:
                 scoring_factors["virustotal_flagged"] = True
             if (results.get("urlscan") or {}).get("malicious_count", 0) > 0:
@@ -802,16 +1034,29 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
                 scoring_factors["virustotal_flagged"] = True
             if (results.get("blocklist") or {}).get("status") == "found":
                 scoring_factors["on_blocklist"] = True
+            if (results.get("otx") or {}).get("pulse_count", 0) > 0:
+                scoring_factors["virustotal_flagged"] = True
+            if (results.get("ipqs") or {}).get("risk_score", 0) >= 75 or (results.get("ipqs") or {}).get("phishing"):
+                scoring_factors["urlscan_phishing"] = True
 
         elif body.target_type == "username":
             results["username"] = await _check_username(target)
             sources_checked.append("username_platforms")
             results["github"] = await _check_github_leaks(target)
             sources_checked.append("github")
+            results["intelx"] = await _check_intelx(target)
+            sources_checked.append("intelx")
+            if (results.get("github") or {}).get("total_count", 0) > 0:
+                scoring_factors["exposed_credentials"] = True
 
         elif body.target_type == "phone":
             results["phone"] = await _check_phone(target)
             sources_checked.append("phone_check")
+            results["ipqs"] = await _check_ipqs("phone", target)
+            sources_checked.append("ipqs")
+            ipqs = results.get("ipqs") or {}
+            if ipqs.get("fraud_score", 0) >= 85 or ipqs.get("recent_abuse") or ipqs.get("risky"):
+                scoring_factors["exposed_credentials"] = True
 
         elif body.target_type == "hash":
             kind = _classify_hash(target)
@@ -852,6 +1097,9 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
                             sources_checked.append("virustotal")
                 except Exception as e:
                     logger.warning("VT file lookup failed: %s", e)
+            # OTX file hash lookup
+            results["otx"] = await _check_otx(kind, target)
+            sources_checked.append("otx")
             if (results.get("malwarebazaar") or {}).get("status") == "found":
                 scoring_factors["malware_hash_match"] = True
                 scoring_factors["virustotal_flagged"] = True
@@ -861,6 +1109,8 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
                 scoring_factors["virustotal_flagged"] = True
             if (results.get("blocklist") or {}).get("status") == "found":
                 scoring_factors["on_blocklist"] = True
+            if (results.get("otx") or {}).get("pulse_count", 0) > 0:
+                scoring_factors["malware_hash_match"] = True
 
         # Filter out None results
         results = {k: v for k, v in results.items() if v is not None}

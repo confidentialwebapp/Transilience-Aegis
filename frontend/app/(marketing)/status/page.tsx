@@ -23,12 +23,6 @@ import {
   Twitter,
 } from "lucide-react";
 
-export const metadata = {
-  title: "System Status — TAI-AEGIS by Transilience AI",
-  description:
-    "Real-time operational status of all TAI-AEGIS services: API, frontend, database, workers, email delivery, and Telegram bot.",
-};
-
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 type ServiceStatus = "checking" | "up" | "degraded" | "down";

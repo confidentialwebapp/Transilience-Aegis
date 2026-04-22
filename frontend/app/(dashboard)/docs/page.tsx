@@ -24,12 +24,6 @@ import {
 } from "lucide-react";
 import { getOrgId } from "@/lib/api";
 
-export const metadata = {
-  title: "API Reference — TAI-AEGIS by Transilience AI",
-  description:
-    "Complete interactive API documentation for TAI-AEGIS. All endpoints, parameters, and live try-it-out. RESTful JSON over HTTPS.",
-};
-
 // ─── OpenAPI types (minimal subset we need) ───────────────────────────────
 
 interface OAParameter {

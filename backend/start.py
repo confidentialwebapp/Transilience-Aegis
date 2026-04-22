@@ -49,7 +49,9 @@ def create_app():
     logger.info("Loading routers...")
     try:
         from routers import assets, alerts, scans, intel, dashboard, investigate
-        from routers import cve, vendors, infrastructure, ioc_watchlist, threat_actors, settings
+        from routers import cve, vendors, infrastructure, ioc_watchlist, threat_actors
+        from routers import settings as settings_router  # alias to avoid shadowing
+        from routers import recon, telegram, maltego_router
         app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
         app.include_router(assets.router, prefix="/api/v1/assets", tags=["Assets"])
         app.include_router(alerts.router, prefix="/api/v1/alerts", tags=["Alerts"])
@@ -61,7 +63,10 @@ def create_app():
         app.include_router(infrastructure.router, prefix="/api/v1/infrastructure", tags=["Infrastructure"])
         app.include_router(ioc_watchlist.router, prefix="/api/v1/ioc-watchlist", tags=["IOC Watchlist"])
         app.include_router(threat_actors.router, prefix="/api/v1/threat-actors", tags=["Threat Actors"])
-        app.include_router(settings.router, prefix="/api/v1/settings", tags=["Settings"])
+        app.include_router(settings_router.router, prefix="/api/v1/settings", tags=["Settings"])
+        app.include_router(recon.router, prefix="/api/v1/recon", tags=["Recon (theHarvester)"])
+        app.include_router(telegram.router, prefix="/api/v1/telegram", tags=["Telegram Bot"])
+        app.include_router(maltego_router.router, prefix="/api/v1/maltego", tags=["Maltego Transforms"])
         logger.info("All routers loaded successfully.")
     except Exception as e:
         import traceback

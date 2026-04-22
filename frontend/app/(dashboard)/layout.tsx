@@ -34,6 +34,7 @@ const NAV_SECTIONS = [
       { href: "/threat-actors", label: "Threat Actors", icon: Skull, badge: null },
       { href: "/dark-web", label: "Dark Web Monitor", icon: Eye, badge: "LIVE" },
       { href: "/intel", label: "IOC Lookup", icon: Fingerprint, badge: null },
+      { href: "/graph", label: "Link Graph", icon: Network, badge: "NEW" },
     ],
   },
   {
@@ -85,6 +86,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/threat-actors": "Threat Actors",
   "/dark-web": "Dark Web Monitor",
   "/intel": "IOC Lookup",
+  "/graph": "Link Graph",
   "/attack-surface": "Surface Map",
   "/infrastructure": "Infra Monitor",
   "/recon": "OSINT Recon",

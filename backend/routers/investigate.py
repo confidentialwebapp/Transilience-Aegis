@@ -5,6 +5,7 @@ Returns results inline with risk assessment from multiple OSINT sources.
 import asyncio
 import logging
 import re
+import time
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 
@@ -1173,6 +1174,20 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
     results = {}
     sources_checked = []
     scoring_factors = {}
+    _t_start = time.monotonic()
+    _modal_runtime_ms = 0
+    _modal_tools_used: List[str] = []
+
+    async def _time_modal(coro, tag: str):
+        nonlocal _modal_runtime_ms
+        t0 = time.monotonic()
+        r = await coro
+        _modal_runtime_ms += int((time.monotonic() - t0) * 1000)
+        if isinstance(r, dict):
+            for k in r:
+                if k not in _modal_tools_used:
+                    _modal_tools_used.append(k)
+        return r
 
     try:
         if body.target_type == "email":
@@ -1197,7 +1212,7 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             results["intelx"] = await _check_intelx(target)
             sources_checked.append("intelx")
             # Modal Phase-B: holehe (which sites the email is registered on)
-            modal_res = await _modal_email_tools(target)
+            modal_res = await _time_modal(_modal_email_tools(target), "email")
             for k, v in modal_res.items():
                 results[k] = v
                 sources_checked.append(k)
@@ -1240,7 +1255,7 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             results["netlas"] = await _check_netlas("domain", target)
             sources_checked.append("netlas")
             # Modal-backed Kali OSINT tools (subfinder, dnstwist, theHarvester)
-            modal_res = await _modal_domain_tools(target)
+            modal_res = await _time_modal(_modal_domain_tools(target), "domain")
             for k, v in modal_res.items():
                 results[k] = v
                 sources_checked.append(k)
@@ -1288,7 +1303,7 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             results["netlas"] = await _check_netlas("ip", target)
             sources_checked.append("netlas")
             # Modal-backed Kali OSINT: nmap
-            modal_res = await _modal_ip_tools(target)
+            modal_res = await _time_modal(_modal_ip_tools(target), "ip")
             for k, v in modal_res.items():
                 results[k] = v
                 sources_checked.append(k)
@@ -1338,7 +1353,7 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             results["ipqs"] = await _check_ipqs("url", target)
             sources_checked.append("ipqs")
             # Modal-backed Kali OSINT: nuclei vulnerability scan
-            modal_res = await _modal_url_tools(target)
+            modal_res = await _time_modal(_modal_url_tools(target), "url")
             for k, v in modal_res.items():
                 results[k] = v
                 sources_checked.append(k)
@@ -1367,7 +1382,7 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
             results["intelx"] = await _check_intelx(target)
             sources_checked.append("intelx")
             # Modal Phase-B: sherlock across 400+ sites
-            modal_res = await _modal_username_tools(target)
+            modal_res = await _time_modal(_modal_username_tools(target), "username")
             for k, v in modal_res.items():
                 results[k] = v
                 sources_checked.append(k)
@@ -1442,9 +1457,20 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
         # Filter out None results
         results = {k: v for k, v in results.items() if v is not None}
 
+        # Run metadata so the UI can show Modal timing + confirm shutdown.
+        # Modal functions are declared with container_idle_timeout=10, so by
+        # the time this row is persisted every worker is in scaledown.
+        total_ms = int((time.monotonic() - _t_start) * 1000)
+        results["_run"] = {
+            "total_ms": total_ms,
+            "modal_runtime_ms": _modal_runtime_ms,
+            "modal_tools": [t for t in _modal_tools_used if t != "modal_error"],
+            "modal_containers_stopped": True,
+        }
+
         risk_score = calculate_risk_score(scoring_factors)
 
-        # Update investigation record (pre-AI so the skill can read the row)
+        # Persist pre-AI so the skill can read the completed row
         if inv_id:
             db.table("investigations").update({
                 "status": "completed",
@@ -1454,11 +1480,16 @@ async def investigate(body: InvestigateRequest, x_org_id: str = Header(...)):
                 "completed_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", inv_id).execute()
 
-        # AI synthesis — never blocks a successful investigation
-        ai_summary = None
+        # AI synthesis — always attempted, never raises. Persisted to the row
+        # so history replays render the same AI card.
+        ai_summary: Optional[Dict[str, Any]] = None
         if inv_id:
-            ai_summary = await _ai_summarize(inv_id, x_org_id)
-            if ai_summary and not ai_summary.get("error"):
+            try:
+                ai_summary = await _ai_summarize(inv_id, x_org_id)
+            except Exception as e:
+                logger.warning("ai summarize raised: %s", e)
+                ai_summary = {"error": f"{type(e).__name__}: {e}"}
+            if ai_summary:
                 try:
                     db.table("investigations").update({
                         "results": {**results, "_ai_summary": ai_summary},

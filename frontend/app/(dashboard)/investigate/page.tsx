@@ -137,7 +137,13 @@ const DEMO_INVESTIGATION: Record<string, unknown> = {
   },
 };
 
-function AIAnalysisCard({ summary }: { summary: NonNullable<Investigation["ai_summary"]> }) {
+function AIAnalysisCard({
+  summary,
+  run,
+}: {
+  summary: NonNullable<Investigation["ai_summary"]>;
+  run?: { total_ms?: number; modal_runtime_ms?: number; modal_tools?: string[]; modal_containers_stopped?: boolean };
+}) {
   if (summary.error) {
     return (
       <div className="rounded-xl p-4 border border-amber-500/15 bg-amber-500/[0.03]">
@@ -264,6 +270,32 @@ function AIAnalysisCard({ summary }: { summary: NonNullable<Investigation["ai_su
               </span>
             ))}
           </div>
+        </div>
+      )}
+
+      {run && (
+        <div className="mt-4 pt-3 border-t border-white/[0.05] flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] text-slate-500">
+          {run.modal_containers_stopped && (
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+              Modal containers shut down
+            </span>
+          )}
+          {typeof run.modal_runtime_ms === "number" && run.modal_runtime_ms > 0 && (
+            <span>
+              Modal runtime: <span className="font-mono text-slate-400">{(run.modal_runtime_ms / 1000).toFixed(1)}s</span>
+            </span>
+          )}
+          {typeof run.total_ms === "number" && (
+            <span>
+              Total scan: <span className="font-mono text-slate-400">{(run.total_ms / 1000).toFixed(1)}s</span>
+            </span>
+          )}
+          {run.modal_tools && run.modal_tools.length > 0 && (
+            <span>
+              Kali tools run: <span className="font-mono text-slate-400">{run.modal_tools.join(", ")}</span>
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -913,7 +945,10 @@ export default function InvestigatePage() {
               {/* AI Analysis card — prefer fresh `ai_summary`, else read from persisted `results._ai_summary` */}
               {(() => {
                 const ai = result.ai_summary ?? (result.results as Record<string, unknown>)?._ai_summary;
-                return ai ? <AIAnalysisCard summary={ai as NonNullable<Investigation["ai_summary"]>} /> : null;
+                const run = (result.results as Record<string, unknown>)?._run as
+                  | { total_ms?: number; modal_runtime_ms?: number; modal_tools?: string[]; modal_containers_stopped?: boolean }
+                  | undefined;
+                return ai ? <AIAnalysisCard summary={ai as NonNullable<Investigation["ai_summary"]>} run={run} /> : null;
               })()}
 
               {/* Tabs */}

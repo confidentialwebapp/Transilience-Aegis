@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { type Metadata } from "next";
 import Link from "next/link";
 import {
   Sparkles,
@@ -17,12 +16,6 @@ import {
   Bell,
   Tag,
 } from "lucide-react";
-
-export const metadata: Metadata = {
-  title: "Changelog | TAI-AEGIS by Transilience AI",
-  description:
-    "Every feature shipped in TAI-AEGIS — in reverse chronological order. No fluff, just what changed.",
-};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

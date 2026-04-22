@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { type Metadata } from "next";
 import Link from "next/link";
 import {
   FileText,
@@ -17,12 +16,6 @@ import {
   Zap,
   Scale,
 } from "lucide-react";
-
-export const metadata: Metadata = {
-  title: "Terms of Service | TAI-AEGIS by Transilience AI",
-  description:
-    "Plain-English terms for using TAI-AEGIS. No wall of legalese. Know what you're agreeing to.",
-};
 
 // ─── TOC sections ─────────────────────────────────────────────────────────────
 

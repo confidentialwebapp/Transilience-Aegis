@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { type Metadata } from "next";
 import Link from "next/link";
 import {
   Shield,
@@ -17,12 +16,6 @@ import {
   Globe,
   Users,
 } from "lucide-react";
-
-export const metadata: Metadata = {
-  title: "Privacy Policy | TAI-AEGIS by Transilience AI",
-  description:
-    "How we collect, use, and protect your data. Written in plain English — not legal boilerplate.",
-};
 
 // ─── TOC sections ─────────────────────────────────────────────────────────────
 

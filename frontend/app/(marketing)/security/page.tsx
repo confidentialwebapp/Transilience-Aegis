@@ -1,6 +1,5 @@
 "use client";
 
-import { type Metadata } from "next";
 import Link from "next/link";
 import {
   Shield,
@@ -20,12 +19,6 @@ import {
   Cpu,
   Mail,
 } from "lucide-react";
-
-export const metadata: Metadata = {
-  title: "Security | TAI-AEGIS by Transilience AI",
-  description:
-    "Our security posture, architecture, sub-processors, and vulnerability disclosure process. We are a security company — our infrastructure reflects that.",
-};
 
 // ─── Primitives (shared with landing page pattern) ────────────────────────────
 

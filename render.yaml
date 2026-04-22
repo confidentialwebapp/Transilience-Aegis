@@ -1,11 +1,11 @@
 services:
   - type: web
     name: tai-aegis-api
-    env: python
+    env: docker
     region: oregon
     plan: free
-    buildCommand: cd backend && pip install -r requirements.txt
-    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    dockerfilePath: ./Dockerfile.backend
+    dockerContext: .
     healthCheckPath: /health
     envVars:
       - key: SUPABASE_URL

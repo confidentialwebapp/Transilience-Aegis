@@ -81,7 +81,16 @@ async def dnstwist(domain: str, registered_only: bool = True) -> dict:
 
 
 async def maigret(username: str, top_sites: int = 100) -> dict:
-    return await _call("run_maigret", username=username, top_sites=top_sites)
+    """Username OSINT — currently disabled. maigret's pycairo dep can't compile
+    against Modal's bundled Python install. Will be re-added with sherlock."""
+    return {
+        "tool": "maigret",
+        "ok": False,
+        "error": "username search temporarily unavailable — maigret/pycairo build issue on Modal",
+        "username": username,
+        "found": [],
+        "count": 0,
+    }
 
 
 async def theharvester(

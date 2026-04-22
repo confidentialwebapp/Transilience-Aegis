@@ -46,22 +46,17 @@ kali_image = (
         # 2. Standard Docker trick: stop any package post-install scripts from
         #    trying to start services (systemd refuses to run in containers).
         "printf '#!/bin/sh\\nexit 101\\n' > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d",
-        # 3. Install the recon toolchain + compile-time deps for the pip layer.
-        #    `pycairo` (transitively required by maigret) needs a C compiler
-        #    and cairo headers — hence build-essential + libcairo2-dev.
-        #    --no-install-recommends keeps the image lean.
+        # 3. Install the recon toolchain. --no-install-recommends keeps the
+        #    image small; no compile-time deps needed since we removed
+        #    the only Python tool that required them (maigret/pycairo).
         "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "
         "    theharvester nmap subfinder dnstwist dnsutils whois "
-        "    ca-certificates curl wget git unzip "
-        "    build-essential python3-dev libcairo2-dev pkg-config",
+        "    ca-certificates curl wget git unzip",
         # 4. Restore normal policy.
         "rm -f /usr/sbin/policy-rc.d",
     )
-    # Tools that don't have stable apt packages yet
-    .pip_install(
-        "maigret",        # username OSINT across 500+ sites
-        "httpx",          # python HTTP client (separate from projectdiscovery's httpx tool)
-    )
+    # python httpx for any HTTP we do directly inside Modal functions.
+    .pip_install("httpx")
     # projectdiscovery binaries that aren't in Kali apt repos — install via Go releases
     .run_commands(
         "wget -qO- https://github.com/projectdiscovery/httpx/releases/download/v1.6.10/httpx_1.6.10_linux_amd64.zip > /tmp/httpx.zip "
@@ -204,48 +199,11 @@ def run_dnstwist(domain: str, registered_only: bool = True) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
-# Username OSINT — maigret (sherlock successor, 500+ sites)
-# ---------------------------------------------------------------------------
-@app.function(image=kali_image, timeout=300, memory=1024)
-def run_maigret(username: str, top_sites: int = 100) -> dict:
-    """Search for `username` across top_sites most-popular platforms.
-    top_sites=100 keeps runtime ~60s; 500 (full) takes 3-4 min.
-    """
-    workdir = tempfile.mkdtemp(prefix="maigret-")
-    res = _run(
-        ["maigret", username, "--folderoutput", workdir, "--json", "ndjson",
-         "--top-sites", str(top_sites), "--no-recursion", "--no-color"],
-        timeout=290,
-    )
-    # maigret writes a .json file per username in folderoutput
-    found = []
-    try:
-        import os
-        for fname in os.listdir(workdir):
-            if fname.endswith(".ndjson") or fname.endswith("_simple.json"):
-                with open(f"{workdir}/{fname}") as f:
-                    for line in f:
-                        try:
-                            row = json.loads(line)
-                            if row.get("status", {}).get("status") == "Claimed":
-                                found.append({
-                                    "site": row.get("sitename") or row.get("site"),
-                                    "url": row.get("status", {}).get("url"),
-                                    "tags": row.get("tags", []),
-                                })
-                        except Exception:
-                            continue
-    finally:
-        shutil.rmtree(workdir, ignore_errors=True)
-    return {
-        "tool": "maigret",
-        "ok": res["ok"],
-        "username": username,
-        "found": found,
-        "count": len(found),
-        "stderr": res["stderr"],
-    }
+# Note: run_maigret was removed — maigret pulls pycairo which fails to
+# compile against Modal's bundled Python (no dev headers ship with
+# add_python). The /api/v1/osint/username endpoint stays in the backend
+# but returns a clear "not configured" response. Re-introduce later via
+# sherlock-project or by switching to a base image with full dev headers.
 
 
 # ---------------------------------------------------------------------------

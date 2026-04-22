@@ -43,7 +43,10 @@ export default function DashboardPage() {
   const [ransomware, setRansomware] = useState<any[]>([]);
   const [feedTab, setFeedTab] = useState<"cve" | "ransomware" | "credentials">("cve");
   const [tickerIdx, setTickerIdx] = useState(0);
-  const [now, setNow] = useState<Date>(new Date());
+  // Initialised null on purpose — `new Date()` would run during SSR on
+  // Vercel's UTC server, briefly rendering the wrong greeting for any
+  // user east of UTC. Populated in the useEffect below so hours are local.
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
     setOrgIdLocal(getOrgId());
@@ -61,6 +64,7 @@ export default function DashboardPage() {
   }, [orgId]);
 
   useEffect(() => {
+    setNow(new Date());                                  // first paint — local browser time
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
@@ -185,16 +189,26 @@ export default function DashboardPage() {
             <span className="text-[10px] text-emerald-300 font-semibold tracking-wider">LIVE</span>
           </div>
           <span className="ml-auto text-[11px] font-mono text-slate-500 tabular-nums">
-            {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })} · {now.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
+            {now
+              ? `${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })} · ${now.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}`
+              : "--:--:-- · --"}
           </span>
         </div>
 
         <div className="relative flex items-end gap-6 flex-wrap">
           <div className="flex-1 min-w-[280px]">
             <h1 className="text-[34px] md:text-[40px] font-bold tracking-tight leading-none text-gradient-brand">
-              Good{" "}
-              {now.getHours() < 12 ? "morning" : now.getHours() < 18 ? "afternoon" : "evening"},
-              {" "}analyst
+              {now
+                ? (() => {
+                    const h = now.getHours();
+                    const part =
+                      h >= 5  && h < 12 ? "morning"   :
+                      h >= 12 && h < 17 ? "afternoon" :
+                      h >= 17 && h < 22 ? "evening"   :
+                      "night"; // 22:00–04:59 local
+                    return `Good ${part}, analyst`;
+                  })()
+                : "Welcome, analyst"}
             </h1>
             <p className="text-sm text-slate-400 mt-3 max-w-xl">
               {criticalAlerts > 0
@@ -438,7 +452,7 @@ export default function DashboardPage() {
             <div>
               <h3 className="text-sm font-semibold text-white">Transilience AI Insights</h3>
               <p className="text-[10px] text-slate-500">
-                Auto-generated · {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                Auto-generated · {now ? now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"}
               </p>
             </div>
             <Link

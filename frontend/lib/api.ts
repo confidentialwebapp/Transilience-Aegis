@@ -349,6 +349,36 @@ export const api = {
     apiFetch<SkillInvokeResult>("/api/v1/skills/invoke", { method: "POST", body, orgId }),
   getSkillUsage: (orgId: string, days = 7) =>
     apiFetch<SkillUsage>(`/api/v1/skills/usage?days=${days}`, { orgId }),
+
+  // Transilience AI Chat
+  listAiConversations: (orgId: string) =>
+    apiFetch<{ data: AiConversation[] }>("/api/v1/transilience-ai/conversations", { orgId }),
+  createAiConversation: (orgId: string, body?: { title?: string; default_model?: string }) =>
+    apiFetch<AiConversation>("/api/v1/transilience-ai/conversations", { method: "POST", body: body ?? {}, orgId }),
+  getAiConversation: (orgId: string, id: string) =>
+    apiFetch<AiConversation>(`/api/v1/transilience-ai/conversations/${id}`, { orgId }),
+  renameAiConversation: (orgId: string, id: string, title: string) =>
+    apiFetch<AiConversation>(`/api/v1/transilience-ai/conversations/${id}`, { method: "PATCH", body: { title }, orgId }),
+  deleteAiConversation: (orgId: string, id: string) =>
+    apiFetch<{ archived: string }>(`/api/v1/transilience-ai/conversations/${id}`, { method: "DELETE", orgId }),
+  listAiMessages: (orgId: string, convId: string) =>
+    apiFetch<{ data: AiMessage[] }>(`/api/v1/transilience-ai/conversations/${convId}/messages`, { orgId }),
+  sendAiMessage: (
+    orgId: string,
+    convId: string,
+    body: { content: string; attachments?: AiAttachment[]; model?: string }
+  ) =>
+    apiFetch<AiSendReply>(`/api/v1/transilience-ai/conversations/${convId}/messages`, {
+      method: "POST",
+      body,
+      orgId,
+    }),
+  quickAiChat: (orgId: string, prompt: string, model?: string) =>
+    apiFetch<AiSendReply>("/api/v1/transilience-ai/quick", {
+      method: "POST",
+      body: { prompt, ...(model ? { model } : {}) },
+      orgId,
+    }),
 };
 
 export interface AuditEvent {
@@ -794,4 +824,52 @@ export interface SkillUsage {
   total_calls: number;
   total_cost_usd: number;
   by_skill: Array<{ skill: string; calls: number; cost_usd: number }>;
+}
+
+// ----- Transilience AI Chat types -----
+
+export interface AiConversation {
+  id: string;
+  org_id: string;
+  title: string | null;
+  default_model: string | null;
+  total_cost_usd: number;
+  message_count: number;
+  last_message_at: string | null;
+  created_at: string;
+}
+
+export interface AiMessage {
+  id: string;
+  conversation_id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  attachments: AiAttachment[] | null;
+  model: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  cost_usd: number | null;
+  duration_ms: number | null;
+  cached: boolean | null;
+  error: string | null;
+  created_at: string;
+}
+
+export interface AiAttachment {
+  type: "image" | "text";
+  name: string;
+  mime: string;
+  size_bytes: number;
+  data_b64: string;
+}
+
+export interface AiSendReply {
+  ok: boolean;
+  reply?: string;
+  model?: string;
+  input_tokens?: number;
+  output_tokens?: number;
+  cost_usd?: number;
+  duration_ms?: number;
+  error?: string;
 }

@@ -23,6 +23,10 @@ const APIFY_TASK_ID_CACHE: Record<string, string> = {
   "tai-aegis/creditaccessgrameen-feat-022-defacement": "DtbyoEpN0OFL24ePz",
   "tai-aegis/creditaccessgrameen-feat-024-naukri": "CSAx4I7Tby3buSr13",
   "tai-aegis/creditaccessgrameen-feat-026-fake-branches": "98XdLWnzeJUk8GaoU",
+  // FEAT-001 — Google Play Rogue App Detection per Phase 1 Step 10
+  "creditaccessgrameen-feat-001-google-play-en": "zIDOVmO0qC3xgvDCY",
+  "creditaccessgrameen-feat-001-google-play-hi": "janvSfh1TXg5mmnQB",
+  "creditaccessgrameen-feat-001-google-play-kn": "92LkRMTkIFGPHpRMP",
 };
 
 interface AssetRow {
@@ -38,7 +42,18 @@ function buildApifyInput(featureId: string, assets: AssetRow[], baseTemplate: Re
 
   const out = { ...baseTemplate };
   switch (featureId) {
-    case "FEAT-001": case "FEAT-002": {
+    case "FEAT-001": {
+      // canadesk/google-play-store-ppe schema: keyword (array), lang, country, maximum.
+      // Pull top 3 brand_name + keyword assets — actor will scan one keyword
+      // per run; rotation across keywords happens via separate Apify schedules.
+      const search = (brandNames[0] || keywords[0] || "").trim();
+      out.keyword = [search].filter(Boolean);
+      out.process = "ap";
+      out.country = "in";
+      out.maximum = 30;
+      break;
+    }
+    case "FEAT-002": {
       out.search = brandNames[0] || keywords[0] || "";
       break;
     }

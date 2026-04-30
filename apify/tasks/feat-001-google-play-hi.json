@@ -1,0 +1,29 @@
+{
+  "task_id": "creditaccessgrameen-feat-001-google-play-hi",
+  "tenant_id": "23610954-5fd0-482f-8eb0-11edce1f5c58",
+  "feature_id": "FEAT-001",
+  "feature_label": "Google Play Rogue App Detection (Hindi)",
+  "language": "hi",
+  "actor_id": "canadesk/google-play-store-ppe",
+  "schedule_cron": "10 6 * * *",
+  "keyword_rotation": [
+    "Grameen",
+    "ग्रामीण लोन",
+    "तुरंत लोन",
+    "इंस्टेंट लोन",
+    "Grameen MAHI",
+    "Pragathi loan",
+    "Grameen Koota"
+  ],
+  "input_template": {
+    "process": "ap",
+    "keyword": ["ग्रामीण लोन"],
+    "lang": "hi",
+    "country": "in",
+    "maximum": 30,
+    "delay": 2
+  },
+  "webhook_url": "https://transilience--aegis-n8n-server.modal.run/webhook/feat-001-hi",
+  "proxy_group": null,
+  "proxy_country": "IN"
+}

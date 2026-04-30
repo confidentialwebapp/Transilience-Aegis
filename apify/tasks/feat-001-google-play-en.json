@@ -1,0 +1,31 @@
+{
+  "task_id": "creditaccessgrameen-feat-001-google-play-en",
+  "tenant_id": "23610954-5fd0-482f-8eb0-11edce1f5c58",
+  "feature_id": "FEAT-001",
+  "feature_label": "Google Play Rogue App Detection (en)",
+  "language": "en",
+  "actor_id": "canadesk/google-play-store-ppe",
+  "schedule_cron": "0 6 * * *",
+  "keyword_rotation": [
+    "CreditAccess",
+    "CA Grameen",
+    "Grameen Koota",
+    "Grameen MAHI",
+    "Pragathi loan",
+    "Madura Micro",
+    "Grameen loan",
+    "instant Grameen loan"
+  ],
+  "input_template": {
+    "process": "ap",
+    "keyword": ["CreditAccess Grameen"],
+    "lang": "en",
+    "country": "in",
+    "maximum": 30,
+    "delay": 2
+  },
+  "webhook_url": "https://transilience--aegis-n8n-server.modal.run/webhook/feat-001-en",
+  "proxy_group": null,
+  "proxy_country": "IN",
+  "comment": "Apify actor canadesk/google-play-store-ppe — pay-per-event. ~$0.011/run at maximum=30. Stays under Starter $29/mo cap with daily cadence × en+hi only enabled. process=ap = app search by keyword."
+}

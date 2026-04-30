@@ -333,3 +333,9 @@ body {
   background: linear-gradient(135deg, #7c3aed, #9333ea);
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
 }
+
+/* Thin scrollbar for sidebar */
+.sidebar-scroll::-webkit-scrollbar { width: 4px; }
+.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.15); border-radius: 4px; }
+.sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,0.30); }

@@ -114,6 +114,7 @@ export const SIDEBAR_SECTIONS: NavSection[] = [
     items: [
       { href: "/admin", label: "Admin Console", icon: ShieldAlert, badge: null },
       { href: "/admin/scan", label: "Run Scan", icon: Zap, badge: null },
+      { href: "/admin/schedules", label: "Scan Schedules", icon: Clock, badge: "NEW" },
       { href: "/admin/runs", label: "Scan Runs", icon: History, badge: null },
       { href: "/admin/incidents", label: "Incidents (Grouped)", icon: ShieldAlert, badge: "NEW" },
       { href: "/admin/trust-graph", label: "Trust Graph", icon: Network, badge: "v5" },
@@ -196,6 +197,7 @@ export const PAGE_TITLES: Record<string, string> = {
   "/threat-management/data-loss-recovery": "Data Loss Recovery",
   "/admin/apify": "Apify Console",
   "/admin/incidents": "Incidents (Grouped)",
+  "/admin/schedules": "Scan Schedules",
   "/admin/trust-graph": "Trust Graph & Attribution",
   "/asm/whitelist": "Whitelist Management",
   "/asm/asset-monitoring": "Asset Monitoring",

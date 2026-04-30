@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { checkCostGuard, estimateRunCost } from "@/lib/cost-guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -147,6 +148,14 @@ export async function POST(req: NextRequest) {
     const apifyToken = process.env.APIFY_TOKEN!;
     if (!apifyToken) {
       return NextResponse.json({ ok: false, error: "APIFY_TOKEN not set" }, { status: 500 });
+    }
+
+    // Cost circuit breaker — refuse if Starter $29/mo cap would be breached.
+    // Admin can pass {force: true} to override the soft-cap warning.
+    const adminOverride = ((await req.clone().json().catch(() => ({}))) as { force?: boolean })?.force === true;
+    const guard = await checkCostGuard(sb, tenant_id, estimateRunCost(feature_id), { adminOverride });
+    if (!guard.ok) {
+      return NextResponse.json({ ok: false, error: `cost guard refused: ${guard.reason}`, guard }, { status: 402 });
     }
 
     // Read tenant + assets + apify task

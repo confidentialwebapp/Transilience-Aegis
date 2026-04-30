@@ -183,17 +183,25 @@ export async function POST(req: NextRequest) {
       kept += 1;
     }
 
-    // 4. Insert findings (dedupe via existing unique index on (apify_task_id, item_id))
+    // 4. Insert findings — manual dedup since PostgREST onConflict doesn't
+    //    honor the partial unique index ux_findings_apify_dedup.
+    //    Pre-filter rows whose (apify_task_id, item_id) already exists.
     let inserted = 0; let conflicts = 0;
     if (findingRows.length > 0) {
-      const { count, error } = await sb.from("findings").upsert(findingRows, {
-        onConflict: "apify_task_id,item_id",
-        ignoreDuplicates: true,
-      }).select("id", { count: "exact", head: true });
-      inserted = count ?? 0;
-      conflicts = findingRows.length - inserted;
-      if (error) {
-        return NextResponse.json({ ok: false, error: `findings insert: ${error.message}`, items_seen: items.length }, { status: 500 });
+      const itemIds = findingRows.map((r) => r.item_id).filter(Boolean) as string[];
+      const { data: existing } = await sb.from("findings")
+        .select("item_id")
+        .eq("apify_task_id", body.task_id ?? "")
+        .in("item_id", itemIds);
+      const existingIds = new Set((existing ?? []).map((r) => r.item_id));
+      const toInsert = findingRows.filter((r) => !existingIds.has(r.item_id as string));
+      conflicts = findingRows.length - toInsert.length;
+      if (toInsert.length > 0) {
+        const { error } = await sb.from("findings").insert(toInsert);
+        if (error) {
+          return NextResponse.json({ ok: false, error: `findings insert: ${error.message}`, items_seen: items.length }, { status: 500 });
+        }
+        inserted = toInsert.length;
       }
     }
 

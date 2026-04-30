@@ -27,6 +27,8 @@ const APIFY_TASK_ID_CACHE: Record<string, string> = {
   "creditaccessgrameen-feat-001-google-play-en": "zIDOVmO0qC3xgvDCY",
   "creditaccessgrameen-feat-001-google-play-hi": "janvSfh1TXg5mmnQB",
   "creditaccessgrameen-feat-001-google-play-kn": "92LkRMTkIFGPHpRMP",
+  // FEAT-002 — Apple App Store Rogue App Detection per Phase 1 Step 11
+  "creditaccessgrameen-feat-002-app-store-en":   "zRqurEY2KbxaUQuio",
 };
 
 interface AssetRow {
@@ -57,7 +59,16 @@ function buildApifyInput(featureId: string, assets: AssetRow[], baseTemplate: Re
       break;
     }
     case "FEAT-002": {
-      out.search = brandNames[0] || keywords[0] || "";
+      // automation-lab/apple-app-store-scraper PPE schema:
+      //   mode: "search", searchTerm, country, maxItems, includeReviews
+      delete (out as { apify_task_id?: unknown }).apify_task_id;
+      delete (out as { label?: unknown }).label;
+      const search = (brandNames[0] || keywords[0] || "").trim();
+      out.mode = "search";
+      out.searchTerm = search;
+      out.country = "in";
+      out.maxItems = 30;
+      out.includeReviews = false;
       break;
     }
     case "FEAT-007": {

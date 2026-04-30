@@ -1,0 +1,27 @@
+{
+  "task_id": "creditaccessgrameen-feat-002-app-store-en",
+  "tenant_id": "23610954-5fd0-482f-8eb0-11edce1f5c58",
+  "feature_id": "FEAT-002",
+  "feature_label": "Apple App Store Rogue App Detection (en)",
+  "language": "en",
+  "actor_id": "automation-lab/apple-app-store-scraper",
+  "schedule_cron": "0 8 * * 1",
+  "keyword_rotation": [
+    "CreditAccess Grameen",
+    "Grameen Koota",
+    "Madura Micro Finance",
+    "CA Grameen",
+    "Grameen MAHI"
+  ],
+  "input_template": {
+    "mode": "search",
+    "searchTerm": "CreditAccess Grameen",
+    "country": "in",
+    "maxItems": 30,
+    "includeReviews": false
+  },
+  "webhook_url": "https://transilience--aegis-n8n-server.modal.run/webhook/feat-002-en",
+  "proxy_group": null,
+  "proxy_country": "IN",
+  "comment": "FEAT-002 iOS App Store rogue app detection. Weekly cadence — iOS volume is low for Indian MFI fraud (Apple Developer review filters most). PPE actor: ~$0.01/run × 5 keywords × weekly × 4 weeks = ~$0.20/mo, well within Starter budget."
+}

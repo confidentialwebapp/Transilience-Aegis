@@ -147,13 +147,15 @@ async function runKaliArm(assets: AssetRow[]): Promise<{ ok: boolean; results: u
 
 export async function POST(req: NextRequest) {
   try {
-    const { tenant_id, feature_id, apify_task_id, brand, run_kali } = (await req.json()) as {
+    const body = (await req.json()) as {
       tenant_id?: string;
       feature_id?: string;
       apify_task_id?: string;
       brand?: string;
       run_kali?: boolean;
+      force?: boolean;
     };
+    const { tenant_id, feature_id, apify_task_id, brand, run_kali } = body;
 
     if (!tenant_id || !feature_id || !apify_task_id) {
       return NextResponse.json({ ok: false, error: "tenant_id, feature_id, apify_task_id required" }, { status: 400 });
@@ -167,8 +169,7 @@ export async function POST(req: NextRequest) {
 
     // Cost circuit breaker — refuse if Starter $29/mo cap would be breached.
     // Admin can pass {force: true} to override the soft-cap warning.
-    const adminOverride = ((await req.clone().json().catch(() => ({}))) as { force?: boolean })?.force === true;
-    const guard = await checkCostGuard(sb, tenant_id, estimateRunCost(feature_id), { adminOverride });
+    const guard = await checkCostGuard(sb, tenant_id, estimateRunCost(feature_id), { adminOverride: body.force === true });
     if (!guard.ok) {
       return NextResponse.json({ ok: false, error: `cost guard refused: ${guard.reason}`, guard }, { status: 402 });
     }

@@ -63,6 +63,8 @@ export async function POST(req: NextRequest) {
     const counts: Record<string, number> = {};
     let aiFallbackUsed = 0;
     let cacheHits = 0;
+    let persistErrors = 0;
+    const errSamples: string[] = [];
     const results = [];
     for (const r of (rows ?? []) as Row[]) {
       const finding: FindingForAttribution = {
@@ -76,10 +78,14 @@ export async function POST(req: NextRequest) {
         timestamp_source: r.timestamp_source,
         language_detected: r.language_detected,
       };
-      const out = await attributeFinding(sb, ctx, finding);
+      const out = await attributeFinding(sb, ctx, finding) as ReturnType<typeof attributeFinding> extends Promise<infer T> ? T & { _persist_error?: string } : never;
       counts[out.decision] = (counts[out.decision] ?? 0) + 1;
       if (out.audit.resolver === "ai_fallback") aiFallbackUsed += 1;
       if (out.audit.resolver === "cache") cacheHits += 1;
+      if (out._persist_error) {
+        persistErrors += 1;
+        if (errSamples.length < 3) errSamples.push(out._persist_error);
+      }
       results.push({ finding_id: r.id, decision: out.decision, matched_entity: out.matched_entity?.entity_id, severity_modifier: out.severity_modifier });
     }
 
@@ -89,6 +95,8 @@ export async function POST(req: NextRequest) {
       counts,
       ai_fallback_used: aiFallbackUsed,
       cache_hits: cacheHits,
+      persist_errors: persistErrors,
+      persist_error_samples: errSamples,
       results,
     });
   } catch (e) {

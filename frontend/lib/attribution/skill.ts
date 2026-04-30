@@ -114,8 +114,9 @@ export async function attributeFinding(
     result = detResult;
   }
 
-  // Persist
-  await sb.from("attribution_decisions").upsert({
+  // Persist — surface errors via result.audit so the caller can see them
+  // instead of silently dropping writes (the prior version did fire-and-forget).
+  const upsertRes = await sb.from("attribution_decisions").upsert({
     finding_id: finding.finding_id,
     tenant_id: ctx.tenant_id,
     customer_id: ctx.customer_id,
@@ -126,12 +127,12 @@ export async function attributeFinding(
     used_ai_fallback: result.audit.resolver === "ai_fallback",
     match_strength: result.matched_entity?.match_strength ?? null,
     severity_modifier: result.severity_modifier,
-    reason: result.reason,
+    reason: result.reason?.slice(0, 500) ?? null,
     ai_tokens_in: result.audit.ai_tokens_in ?? null,
     ai_tokens_out: result.audit.ai_tokens_out ?? null,
   }, { onConflict: "finding_id" });
 
-  await sb.from("findings").update({
+  const updRes = await sb.from("findings").update({
     attribution_decision: result.decision,
     matched_entity_id: result.matched_entity?.entity_id ?? null,
     matched_entity_kind: result.matched_entity?.entity_kind ?? null,
@@ -139,6 +140,10 @@ export async function attributeFinding(
     attribution_audit: result.audit,
   }).eq("id", finding.finding_id);
 
+  if (upsertRes.error || updRes.error) {
+    (result as AttributionResult & { _persist_error?: string })._persist_error =
+      [upsertRes.error?.message, updRes.error?.message].filter(Boolean).join(" / ");
+  }
   return result;
 }
 

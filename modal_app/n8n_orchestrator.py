@@ -51,8 +51,10 @@ n8n_image = (
             "DB_TYPE": "sqlite",
             "DB_SQLITE_DATABASE": "/data/database.sqlite",
 
-            # Auth — basic auth turned on, encryption key from secret
-            "N8N_BASIC_AUTH_ACTIVE": "true",
+            # Auth — user management is the n8n 1.x default; basic auth is deprecated
+            # The owner is created via /rest/owner/setup (one-time, scripted).
+            "N8N_BASIC_AUTH_ACTIVE": "false",
+            "N8N_USER_MANAGEMENT_DISABLED": "false",
 
             # Sane defaults
             "EXECUTIONS_DATA_PRUNE": "true",
@@ -83,7 +85,7 @@ app = modal.App("aegis-n8n")
     max_containers=1,        # SQLite is single-writer; never scale up
     scaledown_window=3600,
     timeout=86400,           # 24h ceiling — Modal does rolling recycle
-    cpu=2.1,
+    cpu=2.05,
     memory=2048,
 )
 @modal.web_server(port=5678, startup_timeout=240)
@@ -150,7 +152,12 @@ def server():
         except Exception as e:
             print(f"[server] bootstrap warning: {e}")
 
-    print("[server] starting n8n...")
+    print("[server] starting n8n (Popen, Python stays alive for Modal proxy)...")
+    # IMPORTANT: with @modal.web_server, the Python process must keep running so
+    # Modal's internal ASGI proxy can forward requests to the child's port.
+    # execvp would replace Python and break the proxy. Popen + don't-block lets
+    # Modal initialize the proxy before this function returns; n8n keeps running
+    # as a child of the still-alive Python process.
     subprocess.Popen(
         ["n8n", "start"],
         env=env,
@@ -223,6 +230,56 @@ def import_workflows():
         print(f"volume commit warning: {e}")
 
     return {"imported": imported, "count": len(imported)}
+
+
+@app.function(
+    image=n8n_image,
+    volumes={"/data": n8n_volume},
+    secrets=[modal.Secret.from_name("aegis-n8n-env")],
+    timeout=60,
+    cpu=0.5,
+    memory=256,
+)
+def latest_execution_error():
+    """Print the most recent failed execution's error context."""
+    import sqlite3, json as _j
+    try:
+        n8n_volume.reload()
+    except Exception:
+        pass
+    conn = sqlite3.connect("/data/database.sqlite")
+    cur = conn.cursor()
+    row = cur.execute(
+        "SELECT id, status, finished, data FROM execution_entity ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    if not row:
+        print("no executions yet")
+        return
+    eid, st, fin, data = row
+    print(f"execution id={eid} status={st} finished={fin}")
+    try:
+        arr = _j.loads(data) if isinstance(data, str) else data
+        txt = _j.dumps(arr) if not isinstance(arr, str) else arr
+    except Exception as e:
+        print(f"parse error: {e}")
+        return
+    # Surface any error-y context
+    keywords = ['"message":"', 'invalid input', 'NodeOperationError', 'Cannot read', 'undefined',
+                'is not defined', 'AxiosError', 'ENOTFOUND', 'ECONNREFUSED', '"name":"NodeApi',
+                'Authentication required', '402 ', '401 ', '403 ', '429 ',
+                '"description":"', '"httpCode":']
+    seen = set()
+    for kw in keywords:
+        idx = 0
+        while idx < len(txt):
+            i = txt.find(kw, idx)
+            if i == -1: break
+            snippet = txt[max(0, i-40):i+220].replace('\\n', ' ').replace('\\"', '"')
+            if snippet not in seen:
+                seen.add(snippet)
+                print(f"  ... {snippet} ...")
+            idx = i + len(kw)
+    conn.close()
 
 
 @app.function(

@@ -23,6 +23,7 @@
         "method": "PATCH",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/scan_runs?id=eq.{{ $json.body.run_id }}",
         "sendHeaders": true,
+        "specifyHeaders": "keypair",
         "headerParameters": {
           "parameters": [
             {
@@ -62,8 +63,9 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.apify.com/v2/acts/apify~google-search-scraper/run-sync-get-dataset-items?token={{ $env.APIFY_TOKEN }}",
+        "url": "=https://api.apify.com/v2/acts/apify~google-search-scraper/run-sync-get-dataset-items?token={{ $env.APIFY_TOKEN }}",
         "sendHeaders": true,
+        "specifyHeaders": "keypair",
         "headerParameters": {
           "parameters": [
             {
@@ -74,232 +76,46 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"queries\": \"{{ $('Webhook').item.json.body.brand }} login\\n{{ $('Webhook').item.json.body.brand }} verify\\n{{ $('Webhook').item.json.body.brand }} loan apply\\nsite:t.me {{ $('Webhook').item.json.body.brand }}\\n{{ $('Webhook').item.json.body.brand }} giveaway\",\n  \"maxPagesPerQuery\": 1,\n  \"resultsPerPage\": 20,\n  \"countryCode\": \"in\",\n  \"languageCode\": \"en\",\n  \"saveHtml\": false,\n  \"includeUnfilteredResults\": false\n}",
+        "jsonBody": "={\n  \"queries\": \"{{ $('Webhook').item.json.body.brand }} login\\n{{ $('Webhook').item.json.body.brand }} loan apply\\n{{ $('Webhook').item.json.body.brand }} giveaway\\nsite:t.me {{ $('Webhook').item.json.body.brand }}\",\n  \"maxPagesPerQuery\": 1,\n  \"resultsPerPage\": 15,\n  \"countryCode\": \"in\",\n  \"languageCode\": \"en\"\n}",
         "options": {
-          "timeout": 180000,
           "response": {
             "response": {
               "neverError": true
             }
-          }
+          },
+          "timeout": 120000
         }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -1120,
-        100
+        -1100,
+        400
       ],
       "id": "33333333-3333-4333-8333-333333333333",
       "name": "Apify Google Search"
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.apify.com/v2/acts/apify~instagram-search-scraper/run-sync-get-dataset-items?token={{ $env.APIFY_TOKEN }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"search\": \"{{ $('Webhook').item.json.body.brand }}\",\n  \"searchType\": \"user\",\n  \"searchLimit\": 20\n}",
-        "options": {
-          "timeout": 180000,
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const ctx = $('Webhook').item.json.body || {};\nconst owned = (ctx.owned_domains || []).map(s => (s||'').toLowerCase());\nconst whitelisted = (ctx.whitelisted_handles || []).map(s => (s||'').toLowerCase().replace('@',''));\nconst tenantId = ctx.tenant_id;\nconst runId = ctx.run_id;\n\nconst apifyItems = $input.all();\nconst rows = [];\n\nfor (const itm of apifyItems) {\n  const j = itm.json;\n  const queryArr = Array.isArray(j) ? j : (Array.isArray(j?.body) ? j.body : [j]);\n  for (const queryItem of queryArr) {\n    const q = queryItem?.searchQuery?.term || '';\n    const organic = queryItem?.organicResults || [];\n    for (const r of organic) {\n      const url = (r.url || '').toLowerCase();\n      const title = r.title || '';\n      const desc = r.description || '';\n      if (!url) continue;\n      if (owned.some(d => d && url.includes(d))) continue;\n      if (whitelisted.some(h => h && (url.includes(h) || title.toLowerCase().includes(h)))) continue;\n\n      let kind = 'fraud', severity = 'Low', confidence = 0.4, action = 'monitor';\n      const blob = (url + ' ' + title + ' ' + desc).toLowerCase();\n      if (q.toLowerCase().includes('login') && blob.includes('login')) {\n        kind = 'phishing'; severity = 'Substantial'; confidence = 0.65;\n      } else if (q.toLowerCase().includes('giveaway') || blob.includes('giveaway') || blob.includes('prize')) {\n        kind = 'fraud'; severity = 'Moderate'; confidence = 0.5;\n      } else if (url.includes('t.me/') || url.includes('telegram.me/')) {\n        kind = 'username_squat'; severity = 'Moderate'; confidence = 0.55;\n      } else if (url.includes('play.google.com') || url.includes('apkpure.com') || url.includes('.apk')) {\n        kind = 'fraud'; severity = 'Substantial'; confidence = 0.6;\n      } else if (url.includes('instagram.com') || url.includes('facebook.com') || url.includes('twitter.com') || url.includes('x.com')) {\n        kind = 'brand_impersonation'; severity = 'Moderate'; confidence = 0.45;\n      }\n\n      rows.push({\n        tenant_id: tenantId,\n        scan_run_id: runId,\n        source: 'apify:google-search',\n        kind, severity, confidence,\n        url_or_value: r.url,\n        evidence: { title, description: desc.slice(0, 200), query: q },\n        ai_filtered: false,\n        ai_reason: 'Heuristic match (' + kind + ')',\n        recommended_action: action,\n      });\n    }\n  }\n}\n\nreturn [{ json: { rows, count: rows.length, run_id: runId } }];"
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        -1120,
-        280
+        -820,
+        400
       ],
       "id": "44444444-4444-4444-8444-444444444444",
-      "name": "Apify Instagram Search"
-    },
-    {
-      "parameters": {
-        "method": "GET",
-        "url": "=https://transilience--aegis-osint-api-web.modal.run/sherlock?username={{ ($('Webhook').item.json.body.brand || '').toString().toLowerCase().replace(/\\s+/g, '') }}",
-        "options": {
-          "timeout": 240000,
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -1120,
-        460
-      ],
-      "id": "55555555-5555-4555-8555-555555555555",
-      "name": "Kali Sherlock"
-    },
-    {
-      "parameters": {
-        "method": "GET",
-        "url": "=https://haveibeenpwned.com/api/v3/breaches?domain={{ $('Webhook').item.json.body.owned_domains[0] }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "hibp-api-key",
-              "value": "={{ $env.HIBP_API_KEY }}"
-            },
-            {
-              "name": "User-Agent",
-              "value": "TransilienceAegis"
-            }
-          ]
-        },
-        "options": {
-          "timeout": 30000,
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -1120,
-        640
-      ],
-      "id": "66666666-6666-4666-8666-666666666666",
-      "name": "HIBP Breaches"
-    },
-    {
-      "parameters": {
-        "mode": "combine",
-        "combinationMode": "mergeByPosition",
-        "numberInputs": 4,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
-      "position": [
-        -840,
-        400
-      ],
-      "id": "77777777-7777-4777-8777-777777777777",
-      "name": "Merge All Sources"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Flatten all 4 source outputs into a single array of {source, kind, value, evidence}\nconst raw = $input.all();\nconst out = [];\n\nconst pickArr = (n) => {\n  const j = raw[n]?.json;\n  if (!j) return [];\n  if (Array.isArray(j)) return j;\n  if (Array.isArray(j.body)) return j.body;\n  if (Array.isArray(j.organicResults)) return j.organicResults;\n  return [j];\n};\n\n// Index 0 = Apify google\nfor (const item of pickArr(0)) {\n  if (item?.organicResults) {\n    for (const r of item.organicResults) {\n      out.push({ source: 'apify:google-search', kind: 'web_search_hit', value: r.url,\n                 evidence: { title: r.title, description: r.description, query: item.searchQuery?.term } });\n    }\n  } else if (item?.url) {\n    out.push({ source: 'apify:google-search', kind: 'web_search_hit', value: item.url,\n               evidence: { title: item.title, description: item.description } });\n  }\n}\n\n// Index 1 = Apify Instagram\nfor (const item of pickArr(1)) {\n  if (!item) continue;\n  out.push({ source: 'apify:instagram', kind: 'social_handle_candidate',\n             value: item.username || item.url || '',\n             evidence: { full_name: item.fullName, followers: item.followersCount, is_private: item.private, bio: item.biography, url: item.url } });\n}\n\n// Index 2 = Kali Sherlock\nconst sherlock = raw[2]?.json || {};\nfor (const hit of (sherlock.hits || [])) {\n  out.push({ source: 'kali:sherlock', kind: 'username_squat', value: typeof hit === 'string' ? hit : (hit.url || JSON.stringify(hit)),\n             evidence: { username: sherlock.username, raw: hit } });\n}\n\n// Index 3 = HIBP\nfor (const breach of pickArr(3)) {\n  if (!breach || !breach.Name) continue;\n  out.push({ source: 'hibp', kind: 'credential_breach', value: breach.Name,\n             evidence: { breach_name: breach.Name, title: breach.Title, breach_date: breach.BreachDate,\n                         pwn_count: breach.PwnCount, data_classes: breach.DataClasses,\n                         description: breach.Description, domain: breach.Domain } });\n}\n\nreturn [{ json: { findings: out, count: out.length, context: $('Webhook').item.json.body } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -600,
-        400
-      ],
-      "id": "88888888-8888-4888-8888-888888888888",
-      "name": "Flatten Findings"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "x-api-key",
-              "value": "={{ $env.ANTHROPIC_API_KEY }}"
-            },
-            {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"claude-haiku-4-5-20251001\",\n  \"max_tokens\": 4000,\n  \"system\": \"You are a brand-protection analyst filtering raw OSINT findings. Drop false positives ruthlessly. Output ONLY a JSON array of {kind, severity, confidence, url_or_value, evidence_summary, source, recommended_action}. kind \u2208 phishing|brand_impersonation|exec_impersonation|credential_breach|leaked_asset|fraud|domain_typosquat|username_squat. severity \u2208 Critical|Substantial|Moderate|Low. confidence 0..1. recommended_action \u2208 takedown|monitor|notify_user. Rules: drop URLs whose host is in owned_domains; drop handles in whitelisted_handles; HIBP with Passwords in DataClasses \u2192 Critical, else Substantial; Sherlock exact-brand-handle on major platform \u2192 brand_impersonation Substantial; reserve takedown for confidence \u2265 0.75.\",\n  \"messages\": [{ \"role\": \"user\", \"content\": {{ JSON.stringify(JSON.stringify($json)) }} }]\n}",
-        "options": {
-          "timeout": 90000
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -360,
-        400
-      ],
-      "id": "99999999-9999-4999-8999-999999999999",
-      "name": "Anthropic Filter"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Parse Claude's JSON array response and shape rows for Supabase\nconst resp = $input.first().json;\nconst text = resp?.content?.[0]?.text || '[]';\nlet cleaned = [];\ntry {\n  const m = text.match(/\\[[\\s\\S]*\\]/);\n  cleaned = JSON.parse(m ? m[0] : text);\n} catch (e) { cleaned = []; }\n\nconst ctx = $('Webhook').item.json.body;\nconst rows = cleaned.map(f => ({\n  tenant_id: ctx.tenant_id,\n  scan_run_id: ctx.run_id,\n  source: f.source,\n  kind: f.kind,\n  severity: f.severity,\n  confidence: typeof f.confidence === 'number' ? f.confidence : null,\n  url_or_value: f.url_or_value,\n  evidence: { summary: f.evidence_summary },\n  ai_filtered: true,\n  ai_reason: f.evidence_summary,\n  recommended_action: f.recommended_action,\n}));\n\n// Return ONE item carrying the whole array, plus a count for the next nodes\nreturn [{ json: { rows, count: rows.length } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -120,
-        400
-      ],
-      "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-      "name": "Parse AI Output"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "has-rows",
-              "leftValue": "={{ $json.count }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "gt"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        120,
-        400
-      ],
-      "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-      "name": "Has Findings?"
+      "name": "Classify"
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/findings",
         "sendHeaders": true,
+        "specifyHeaders": "keypair",
         "headerParameters": {
           "parameters": [
             {
@@ -322,7 +138,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.rows) }}",
+        "jsonBody": "={{ $json.rows }}",
         "options": {
           "timeout": 30000
         }
@@ -330,17 +146,20 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        360,
-        280
+        -540,
+        400
       ],
-      "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-      "name": "Bulk Insert Findings"
+      "id": "66666666-6666-4666-8666-666666666666",
+      "name": "Bulk Insert Findings",
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "method": "PATCH",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/scan_runs?id=eq.{{ $('Webhook').item.json.body.run_id }}",
         "sendHeaders": true,
+        "specifyHeaders": "keypair",
         "headerParameters": {
           "parameters": [
             {
@@ -363,7 +182,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"status\": \"completed\",\n  \"completed_at\": \"{{ $now.toISO() }}\",\n  \"finding_count\": {{ $('Parse AI Output').item.json.count }}\n}",
+        "jsonBody": "={\n  \"status\": \"completed\",\n  \"completed_at\": \"{{ $now.toISO() }}\",\n  \"finding_count\": {{ $('Classify').first().json.count }}\n}",
         "options": {
           "timeout": 15000
         }
@@ -371,24 +190,25 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        600,
+        -260,
         400
       ],
-      "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "id": "77777777-7777-4777-8777-777777777777",
       "name": "Mark Completed"
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"ok\": true,\n  \"run_id\": \"{{ $('Webhook').item.json.body.run_id }}\",\n  \"finding_count\": {{ $('Parse AI Output').item.json.count }}\n}"
+        "responseBody": "={\n  \"ok\": true,\n  \"run_id\": \"{{ $('Webhook').item.json.body.run_id }}\",\n  \"finding_count\": {{ $('Classify').first().json.count }}\n}",
+        "options": {}
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        840,
+        20,
         400
       ],
-      "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      "id": "88888888-8888-4888-8888-888888888888",
       "name": "Respond OK"
     }
   ],
@@ -411,21 +231,6 @@
             "node": "Apify Google Search",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Apify Instagram Search",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Kali Sherlock",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "HIBP Breaches",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -434,102 +239,18 @@
       "main": [
         [
           {
-            "node": "Merge All Sources",
+            "node": "Classify",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Apify Instagram Search": {
-      "main": [
-        [
-          {
-            "node": "Merge All Sources",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Kali Sherlock": {
-      "main": [
-        [
-          {
-            "node": "Merge All Sources",
-            "type": "main",
-            "index": 2
-          }
-        ]
-      ]
-    },
-    "HIBP Breaches": {
-      "main": [
-        [
-          {
-            "node": "Merge All Sources",
-            "type": "main",
-            "index": 3
-          }
-        ]
-      ]
-    },
-    "Merge All Sources": {
-      "main": [
-        [
-          {
-            "node": "Flatten Findings",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Flatten Findings": {
-      "main": [
-        [
-          {
-            "node": "Anthropic Filter",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Anthropic Filter": {
-      "main": [
-        [
-          {
-            "node": "Parse AI Output",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse AI Output": {
-      "main": [
-        [
-          {
-            "node": "Has Findings?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Has Findings?": {
+    "Classify": {
       "main": [
         [
           {
             "node": "Bulk Insert Findings",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Mark Completed",
             "type": "main",
             "index": 0
           }
@@ -560,22 +281,9 @@
     }
   },
   "settings": {
-    "executionOrder": "v1",
-    "saveExecutionProgress": true,
-    "saveDataSuccessExecution": "all",
-    "saveDataErrorExecution": "all"
+    "executionOrder": "v1"
   },
-  "staticData": null,
+  "staticData": {},
   "pinData": {},
-  "versionId": "v1-brand-monitoring",
-  "triggerCount": 1,
-  "tags": [
-    {
-      "name": "aegis"
-    },
-    {
-      "name": "brand-monitoring"
-    }
-  ],
   "active": false
 }

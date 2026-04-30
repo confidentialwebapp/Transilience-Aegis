@@ -22,8 +22,23 @@
       },
       {
         "parameters": {
+          "mode": "runOnceForAllItems",
+          "language": "javaScript",
+          "jsCode": "const top = $input.first().json || {};\nconst body = top.body || top;\nconst resource = (body && body.resource) || top.resource || {};\nconst eventData = (body && body.eventData) || top.eventData || {};\nconst dataset_id = resource.defaultDatasetId || body.defaultDatasetId || top.defaultDatasetId || '';\nconst run_id = resource.id || body.run_id || eventData.actorRunId || '';\nconst task_id = eventData.actorTaskId || body.task_id || top['X-Apify-Task-Id'] || '';\nconst tenant_id = body.tenant_id || top.tenant_id || '23610954-5fd0-482f-8eb0-11edce1f5c58';\nconst feature_id = body.feature_id || top.feature_id || '';\nreturn [{ json: { dataset_id, run_id, task_id, tenant_id, feature_id, body, resource, eventData } }];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -1480,
+          400
+        ],
+        "id": "ababab10-aaaa-4aaa-8aaa-aaaaaaaaaaab",
+        "name": "Normalize Body"
+      },
+      {
+        "parameters": {
           "method": "GET",
-          "url": "=https://api.apify.com/v2/datasets/{{ $json.body.resource.defaultDatasetId }}/items?token={{ $env.APIFY_TOKEN }}&format=json&clean=true",
+          "url": "=https://api.apify.com/v2/datasets/{{ $json.dataset_id }}/items?token={{ $env.APIFY_TOKEN }}&format=json&clean=true",
           "sendHeaders": false,
           "sendBody": false,
           "options": {
@@ -101,7 +116,7 @@
       {
         "parameters": {
           "method": "PATCH",
-          "url": "={{ $env.SUPABASE_URL }}/rest/v1/scan_runs?apify_run_id=eq.{{ $('Webhook').item.json.body.resource.id }}",
+          "url": "={{ $env.SUPABASE_URL }}/rest/v1/scan_runs?apify_run_id=eq.{{ $('Normalize Body').item.json.run_id }}",
           "sendHeaders": true,
           "specifyHeaders": "keypair",
           "headerParameters": {
@@ -145,7 +160,7 @@
       {
         "parameters": {
           "respondWith": "json",
-          "responseBody": "={\n  \"ok\": true,\n  \"run_id\": \"{{ $('Webhook').item.json.body.resource.id }}\",\n  \"feature_id\": \"FEAT-019\",\n  \"finding_count\": {{ $('Code').first().json.count }}\n}",
+          "responseBody": "={\n  \"ok\": true,\n  \"run_id\": \"{{ $('Normalize Body').item.json.run_id }}\",\n  \"feature_id\": \"FEAT-019\",\n  \"finding_count\": {{ $('Code').first().json.count }}\n}",
           "options": {}
         },
         "type": "n8n-nodes-base.respondToWebhook",
@@ -163,7 +178,7 @@
         "main": [
           [
             {
-              "node": "Fetch Dataset",
+              "node": "Normalize Body",
               "type": "main",
               "index": 0
             }
@@ -208,6 +223,17 @@
           [
             {
               "node": "Respond OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Normalize Body": {
+        "main": [
+          [
+            {
+              "node": "Fetch Dataset",
               "type": "main",
               "index": 0
             }

@@ -21,10 +21,7 @@
     ],
     "pageFunction": "async function pageFunction({page, request}){const dom=await page.content();const crypto=require('crypto');const hash=crypto.createHash('sha256').update(dom).digest('hex');const scripts=await page.$$eval('script[src]',ss=>ss.map(s=>s.src));const externalScripts=scripts.filter(s=>!s.includes('creditaccessgrameen.in'));const title=await page.title();return{url:request.url,dom_hash:hash,title,external_scripts:externalScripts,captured_at:new Date().toISOString()};}",
     "proxyConfiguration": {
-      "apifyProxyGroups": [
-        "DATACENTER"
-      ],
-      "apifyProxyCountry": "IN"
+      "useApifyProxy": true
     }
   },
   "webhook_url": "https://transilience--aegis-n8n-server.modal.run/webhook/feat-022",

@@ -85,7 +85,7 @@ app = modal.App("aegis-n8n")
     max_containers=1,        # SQLite is single-writer; never scale up
     scaledown_window=3600,
     timeout=86400,           # 24h ceiling — Modal does rolling recycle
-    cpu=2.05,
+    cpu=2.0,
     memory=2048,
 )
 @modal.web_server(port=5678, startup_timeout=240)

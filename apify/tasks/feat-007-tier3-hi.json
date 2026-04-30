@@ -1,0 +1,25 @@
+{
+  "task_id": "tai-aegis/creditaccessgrameen-feat-007-tier3-hi",
+  "tenant_id": "23610954-5fd0-482f-8eb0-11edce1f5c58",
+  "feature_id": "FEAT-007",
+  "feature_label": "Brand Mention SERP Tier3 (Hindi)",
+  "language": "hi",
+  "actor_id": "apify/google-search-scraper",
+  "schedule_cron": "0 4 * * *",
+  "keyword_rotation": [],
+  "input_template": {
+    "queries": "\u0915\u094d\u0930\u0947\u0921\u093f\u091f\u090f\u0915\u094d\u0938\u0947\u0938 \u0917\u094d\u0930\u093e\u092e\u0940\u0923 \u0932\u094b\u0928\n\u0917\u094d\u0930\u093e\u092e\u0940\u0923 \u0915\u094b\u091f\u093e \u0932\u094b\u0928\n\u0907\u0902\u0938\u094d\u091f\u0947\u0902\u091f \u0917\u094d\u0930\u093e\u092e\u0940\u0923 \u0932\u094b\u0928\n\u0924\u0941\u0930\u0902\u0924 \u0932\u094b\u0928 CreditAccess",
+    "maxPagesPerQuery": 1,
+    "resultsPerPage": 20,
+    "countryCode": "in",
+    "languageCode": "hi",
+    "proxyConfiguration": {
+      "apifyProxyGroups": [
+        "GOOGLE_SERP"
+      ]
+    }
+  },
+  "webhook_url": "https://transilience--aegis-n8n-server.modal.run/webhook/feat-007-tier1",
+  "proxy_group": "GOOGLE_SERP",
+  "proxy_country": "IN"
+}

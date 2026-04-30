@@ -1,0 +1,33 @@
+{
+  "task_id": "tai-aegis/creditaccessgrameen-feat-022-defacement",
+  "tenant_id": "23610954-5fd0-482f-8eb0-11edce1f5c58",
+  "feature_id": "FEAT-022",
+  "feature_label": "Defacement Detection on Owned Sites",
+  "language": "en",
+  "actor_id": "apify/web-scraper",
+  "schedule_cron": "0 * * * *",
+  "keyword_rotation": [],
+  "input_template": {
+    "startUrls": [
+      {
+        "url": "https://www.creditaccessgrameen.in/"
+      },
+      {
+        "url": "https://www.creditaccessgrameen.in/investor-relations/"
+      },
+      {
+        "url": "https://www.creditaccessgrameen.in/products/microfinance-group-lending/income-generation-loan/"
+      }
+    ],
+    "pageFunction": "async function pageFunction({page, request}){const dom=await page.content();const crypto=require('crypto');const hash=crypto.createHash('sha256').update(dom).digest('hex');const scripts=await page.$$eval('script[src]',ss=>ss.map(s=>s.src));const externalScripts=scripts.filter(s=>!s.includes('creditaccessgrameen.in'));const title=await page.title();return{url:request.url,dom_hash:hash,title,external_scripts:externalScripts,captured_at:new Date().toISOString()};}",
+    "proxyConfiguration": {
+      "apifyProxyGroups": [
+        "DATACENTER"
+      ],
+      "apifyProxyCountry": "IN"
+    }
+  },
+  "webhook_url": "https://transilience--aegis-n8n-server.modal.run/webhook/feat-022",
+  "proxy_group": "DATACENTER",
+  "proxy_country": "IN"
+}

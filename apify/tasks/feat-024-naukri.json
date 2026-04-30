@@ -1,0 +1,23 @@
+{
+  "task_id": "tai-aegis/creditaccessgrameen-feat-024-naukri",
+  "tenant_id": "23610954-5fd0-482f-8eb0-11edce1f5c58",
+  "feature_id": "FEAT-024",
+  "feature_label": "Recruitment Scam Detection",
+  "language": "en",
+  "actor_id": "agentx/all-jobs-scraper",
+  "schedule_cron": "0 6 * * *",
+  "keyword_rotation": [],
+  "input_template": {
+    "search": "CreditAccess Grameen OR Grameen Koota OR \"loan officer\" Bengaluru",
+    "platforms": [
+      "naukri",
+      "linkedin",
+      "indeed"
+    ],
+    "country": "IN",
+    "maxItems": 100
+  },
+  "webhook_url": "https://transilience--aegis-n8n-server.modal.run/webhook/feat-024",
+  "proxy_group": "RESIDENTIAL",
+  "proxy_country": "IN"
+}

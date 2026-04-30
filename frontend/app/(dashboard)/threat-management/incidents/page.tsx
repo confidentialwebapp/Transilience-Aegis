@@ -2,14 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Globe, Hash, Award, AlertTriangle, ToggleLeft, Inbox, Activity } from "lucide-react";
-import { PageHeader, FilterCard, FilterInput, FilterSelect, DataTable, StatusPill, SeverityBar } from "@/components/platform";
+import { Globe, Hash, Award, AlertTriangle, ToggleLeft, Inbox, Activity, Layers } from "lucide-react";
+import { PageHeader, FilterCard, FilterInput, FilterSelect, DataTable, StatusPill, SeverityBar, TagPill } from "@/components/platform";
 import type { Column, SeverityLevel } from "@/components/platform";
 import { useFindings, useTenantId, type FindingRow, formatKind, actionToStatus, shortHash } from "@/lib/realtime";
 import { BRANDS } from "@/lib/mock-data";
 
 // kinds we surface on the Incidents board (everything except credential breaches,
-// which live on the DLR page)
+// which live on the DLR page; mobile-app fraud also routes through here so
+// recruiters / fake branches / fake apps all surface in one place for the SOC)
 const INCIDENT_KINDS = new Set([
   "phishing",
   "brand_impersonation",
@@ -18,7 +19,38 @@ const INCIDENT_KINDS = new Set([
   "domain_typosquat",
   "leaked_asset",
   "username_squat",
+  "fake_app",
+  "fake_branch",
+  "job_scam",
+  "defacement",
+  "domain_intel",
+  "supply_chain",
 ]);
+
+// Friendly fraud-pattern labels for the filter dropdown
+const FRAUD_PATTERN_OPTIONS = [
+  "Phishing",
+  "Fake App",
+  "Fake Branch",
+  "Recruitment Scam",
+  "Recovery Scam",
+  "Impersonation",
+  "Defacement",
+  "Domain Typosquat",
+  "Credential Leak",
+];
+
+const FRAUD_PATTERN_TO_DB: Record<string, string> = {
+  "Phishing": "phishing",
+  "Fake App": "fake_app",
+  "Fake Branch": "fake_branch",
+  "Recruitment Scam": "job_scam",
+  "Recovery Scam": "recovery_scam",
+  "Impersonation": "impersonation",
+  "Defacement": "defacement",
+  "Domain Typosquat": "domain_typosquat",
+  "Credential Leak": "leak",
+};
 
 interface IncidentDisplay {
   id: string;
@@ -27,6 +59,8 @@ interface IncidentDisplay {
   type: string;
   url: string;
   brand: string;
+  feature: string | null;
+  fraudPattern: string | null;
   severity: SeverityLevel;
   uptimeMin: number;
   addedAt: string;
@@ -48,6 +82,8 @@ function toDisplay(r: FindingRow): IncidentDisplay {
     type: formatKind(r.kind),
     url: r.url_or_value ?? "—",
     brand: deriveBrand(r),
+    feature: r.feature_id ?? null,
+    fraudPattern: r.fraud_pattern ?? null,
     severity: (r.severity as SeverityLevel) ?? "Low",
     uptimeMin,
     addedAt: added.toLocaleString(),
@@ -63,8 +99,19 @@ export default function IncidentsPage() {
   const [filterSeverity, setFilterSeverity] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterKind, setFilterKind] = useState("");
+  const [filterFeature, setFilterFeature] = useState("");
+  const [filterFraudPattern, setFilterFraudPattern] = useState("");
   const [urlSearch, setUrlSearch] = useState("");
   const [caseSearch, setCaseSearch] = useState("");
+
+  // Distinct feature_ids surfaced from current findings (for the filter dropdown)
+  const featureOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const f of findings) {
+      if (f.feature_id) set.add(f.feature_id);
+    }
+    return Array.from(set).sort();
+  }, [findings]);
 
   const pageSize = 100;
 
@@ -79,6 +126,11 @@ export default function IncidentsPage() {
       if (filterSeverity && r.severity !== filterSeverity) return false;
       if (filterStatus && r.status !== filterStatus) return false;
       if (filterKind && !r.type.toLowerCase().includes(filterKind.toLowerCase())) return false;
+      if (filterFeature && r.feature !== filterFeature) return false;
+      if (filterFraudPattern) {
+        const dbVal = FRAUD_PATTERN_TO_DB[filterFraudPattern];
+        if (r.fraudPattern !== dbVal) return false;
+      }
       if (urlSearch) {
         const needles = urlSearch.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
         if (needles.length && !needles.some((n) => r.url.toLowerCase().includes(n))) return false;
@@ -89,7 +141,7 @@ export default function IncidentsPage() {
       }
       return true;
     });
-  }, [incidents, filterBrand, filterSeverity, filterStatus, filterKind, urlSearch, caseSearch]);
+  }, [incidents, filterBrand, filterSeverity, filterStatus, filterKind, filterFeature, filterFraudPattern, urlSearch, caseSearch]);
 
   const total = filtered.length;
   const startIdx = (page - 1) * pageSize;
@@ -119,6 +171,11 @@ export default function IncidentsPage() {
       ),
     },
     { key: "brand", header: "Brand", render: (r) => <span className="text-[12px] text-slate-300">{r.brand}</span> },
+    {
+      key: "feature",
+      header: "Feature",
+      render: (r) => (r.feature ? <TagPill label={r.feature} /> : <span className="text-[11px] text-slate-600">—</span>),
+    },
     { key: "threat", header: "Threat", render: (r) => <SeverityBar level={r.severity} /> },
     {
       key: "uptime",
@@ -166,6 +223,8 @@ export default function IncidentsPage() {
           setFilterSeverity("");
           setFilterStatus("");
           setFilterKind("");
+          setFilterFeature("");
+          setFilterFraudPattern("");
           setUrlSearch("");
           setCaseSearch("");
           setPage(1);
@@ -178,6 +237,8 @@ export default function IncidentsPage() {
           <FilterSelect icon={AlertTriangle} label="Threat Level" options={["Critical", "Substantial", "Moderate", "Low"]} value={filterSeverity} onChange={setFilterSeverity} />
           <FilterSelect icon={ToggleLeft} label="Status" options={["OPEN", "CLOSED", "WAITING", "ON HOLD"]} value={filterStatus} onChange={setFilterStatus} />
           <FilterSelect icon={Hash} label="Incident Type" options={["Phishing", "Brand Impersonation", "Exec Impersonation", "Domain Typosquat", "Leaked Asset", "Fraud"]} value={filterKind} onChange={setFilterKind} />
+          <FilterSelect icon={Layers} label="Feature" options={featureOptions} value={filterFeature} onChange={setFilterFeature} />
+          <FilterSelect icon={AlertTriangle} label="Fraud Pattern" options={FRAUD_PATTERN_OPTIONS} value={filterFraudPattern} onChange={setFilterFraudPattern} />
         </div>
       </FilterCard>
 

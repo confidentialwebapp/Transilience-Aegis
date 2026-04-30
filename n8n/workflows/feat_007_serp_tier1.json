@@ -1,0 +1,225 @@
+[
+  {
+    "name": "FEAT-007 SERP Tier1",
+    "active": false,
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "feat-007-tier1",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -1700,
+          400
+        ],
+        "id": "11111111-1111-4111-8111-111111111111",
+        "name": "Webhook",
+        "webhookId": "feat-007-tier1"
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "=https://api.apify.com/v2/datasets/{{ $json.body.resource.defaultDatasetId }}/items?token={{ $env.APIFY_TOKEN }}&format=json&clean=true",
+          "sendHeaders": false,
+          "sendBody": false,
+          "options": {
+            "timeout": 60000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -1450,
+          400
+        ],
+        "id": "22222222-2222-4222-8222-222222222222",
+        "name": "Fetch Dataset"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "language": "javaScript",
+          "jsCode": "// FEAT-007 SERP Tier1 classifier\nconst items = $input.all();\nconst ev = $('Webhook').item.json.body || {};\nconst headers = ev.headers || {};\nconst tenantId = headers['x-tenant-id'] || '23610954-5fd0-482f-8eb0-11edce1f5c58';\nconst taskId = ev.eventData?.actorTaskId || null;\nconst runId = ev.resource?.id || null;\nconst datasetId = ev.resource?.defaultDatasetId || null;\n\nconst OWNED = ['creditaccessgrameen.in', 'grameenkoota.in', 'creditaccess.com', 'creditaccesslife.in'];\nconst WHITELIST = ['icra.in', 'screener.in', 'bseindia.com', 'nseindia.com', 'moneycontrol.com',\n                   'cleartax.in', 'arihantcapital.com', 'indiaadvantage.co.in', 'bajajfinserv.in',\n                   'shriramfinance.in'];\n\nfunction classify(url, title, desc, query) {\n  const u = (url || '').toLowerCase();\n  const blob = ((url || '') + ' ' + (title || '') + ' ' + (desc || '')).toLowerCase();\n  const q = (query || '').toLowerCase();\n  if (u.includes('t.me/') || u.includes('telegram.me/'))\n    return { kind: 'username_squat', severity: 'Moderate', confidence: 0.55 };\n  if (q.includes('login') || q.includes('verify'))\n    return { kind: 'phishing', severity: 'Substantial', confidence: 0.65 };\n  if (q.includes('giveaway') || blob.includes('giveaway') || blob.includes('prize'))\n    return { kind: 'fraud', severity: 'Moderate', confidence: 0.5 };\n  if (u.includes('play.google.com') || u.includes('apkpure'))\n    return { kind: 'fraud', severity: 'Substantial', confidence: 0.6 };\n  if (u.includes('instagram.com') || u.includes('facebook.com') || u.includes('twitter.com') || u.includes('x.com'))\n    return { kind: 'brand_impersonation', severity: 'Moderate', confidence: 0.45 };\n  return { kind: 'fraud', severity: 'Low', confidence: 0.4 };\n}\n\nconst rows = [];\nfor (const itm of items) {\n  const j = itm.json || {};\n  const queryArr = Array.isArray(j) ? j : [j];\n  for (const qi of queryArr) {\n    const term = qi?.searchQuery?.term || '';\n    const organic = qi?.organicResults || [];\n    for (let i = 0; i < organic.length; i++) {\n      const r = organic[i];\n      const url = (r.url || '').toLowerCase();\n      if (!url) continue;\n      if (OWNED.some(d => url.includes(d))) continue;\n      if (WHITELIST.some(h => url.includes(h))) continue;\n      const c = classify(url, r.title, r.description, term);\n      rows.push({\n        tenant_id: tenantId,\n        apify_task_id: taskId,\n        apify_run_id: runId,\n        apify_dataset_id: datasetId,\n        feature_id: 'FEAT-007',\n        source: 'apify:google-search',\n        kind: c.kind,\n        fraud_pattern: c.kind === 'phishing' ? 'phishing' :\n                       c.kind === 'fraud' ? 'recovery_scam' :\n                       c.kind === 'username_squat' || c.kind === 'brand_impersonation' ? 'impersonation' : null,\n        severity: c.severity,\n        confidence: c.confidence,\n        item_id: r.url,\n        url_or_value: r.url,\n        evidence: { title: r.title, description: (r.description || '').slice(0, 250), query: term, position: i + 1 },\n        language_detected: qi.searchQuery?.languageCode || null,\n        matched_keywords: term ? [term] : [],\n        ai_filtered: false,\n        ai_reason: `Heuristic match (${c.kind}) on ${term ? 'query: ' + term : 'organic result'}`,\n        recommended_action: 'monitor',\n      });\n    }\n  }\n}\nreturn [{ json: { rows, count: rows.length } }];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -1200,
+          400
+        ],
+        "id": "33333333-3333-4333-8333-333333333333",
+        "name": "Code"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $env.SUPABASE_URL }}/rest/v1/findings",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              },
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Prefer",
+                "value": "resolution=merge-duplicates,return=minimal"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ $json.rows }}",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -950,
+          400
+        ],
+        "id": "44444444-4444-4444-8444-444444444444",
+        "name": "Bulk Insert",
+        "continueOnFail": true,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "method": "PATCH",
+          "url": "={{ $env.SUPABASE_URL }}/rest/v1/scan_runs?apify_run_id=eq.{{ $('Webhook').item.json.body.resource.id }}",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              },
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Prefer",
+                "value": "return=minimal"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"status\": \"completed\",\n  \"completed_at\": \"{{ $now.toISO() }}\",\n  \"finding_count\": {{ $('Code').first().json.count }}\n}",
+          "options": {
+            "timeout": 15000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -700,
+          400
+        ],
+        "id": "55555555-5555-4555-8555-555555555555",
+        "name": "Mark scan_runs",
+        "continueOnFail": true,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"ok\": true,\n  \"run_id\": \"{{ $('Webhook').item.json.body.resource.id }}\",\n  \"feature_id\": \"FEAT-007\",\n  \"finding_count\": {{ $('Code').first().json.count }}\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          -450,
+          400
+        ],
+        "id": "66666666-6666-4666-8666-666666666666",
+        "name": "Respond OK"
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Fetch Dataset",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Dataset": {
+        "main": [
+          [
+            {
+              "node": "Code",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code": {
+        "main": [
+          [
+            {
+              "node": "Bulk Insert",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Bulk Insert": {
+        "main": [
+          [
+            {
+              "node": "Mark scan_runs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Mark scan_runs": {
+        "main": [
+          [
+            {
+              "node": "Respond OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "pinData": {},
+    "staticData": {},
+    "tags": []
+  }
+]

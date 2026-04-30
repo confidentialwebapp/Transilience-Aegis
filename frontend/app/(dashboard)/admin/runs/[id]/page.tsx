@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ExternalLink, FileBadge, ArrowLeft, Activity, Clock } from "lucide-react";
+import { ExternalLink, FileBadge, ArrowLeft, Activity, Clock, Database, Workflow } from "lucide-react";
 import { PageHeader, StatusPill, DataTable, EmptyState } from "@/components/platform";
 import type { Column } from "@/components/platform";
 import { useLiveTable, type ScanRunRow, type FindingRow, formatKind, shortHash } from "@/lib/realtime";

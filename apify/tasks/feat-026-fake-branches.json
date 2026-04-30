@@ -1,0 +1,33 @@
+{
+  "task_id": "tai-aegis/creditaccessgrameen-feat-026-fake-branches",
+  "tenant_id": "23610954-5fd0-482f-8eb0-11edce1f5c58",
+  "feature_id": "FEAT-026",
+  "feature_label": "Google Maps Fake Branch Detection",
+  "language": "en",
+  "actor_id": "compass/crawler-google-places",
+  "schedule_cron": "0 6 * * 1",
+  "keyword_rotation": [],
+  "input_template": {
+    "searchStringsArray": [
+      "CreditAccess Grameen branch",
+      "Grameen Koota office",
+      "CreditAccess Grameen Bengaluru",
+      "CreditAccess Grameen Mysore",
+      "CreditAccess Grameen Chennai",
+      "Grameen Koota Hyderabad"
+    ],
+    "maxCrawledPlacesPerSearch": 50,
+    "language": "en",
+    "country": "in",
+    "proxyConfig": {
+      "useApifyProxy": true,
+      "apifyProxyGroups": [
+        "RESIDENTIAL"
+      ],
+      "apifyProxyCountry": "IN"
+    }
+  },
+  "webhook_url": "https://transilience--aegis-n8n-server.modal.run/webhook/feat-026",
+  "proxy_group": "RESIDENTIAL",
+  "proxy_country": "IN"
+}

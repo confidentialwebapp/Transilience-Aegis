@@ -137,6 +137,19 @@ export interface FindingRow {
   ai_reason: string | null;
   recommended_action: string | null;
   created_at: string;
+  // Apify v2 expansion fields (added 2026-04-30 migration)
+  feature_id: string | null;
+  apify_task_id: string | null;
+  apify_run_id: string | null;
+  apify_dataset_id: string | null;
+  item_id: string | null;
+  language_detected: string | null;
+  fraud_pattern: string | null;
+  engagement: Record<string, unknown> | null;
+  matched_keywords: string[] | null;
+  timestamp_source: string | null;
+  needs_review: boolean | null;
+  alert_sent: boolean | null;
 }
 
 export function useFindings(tenantId: string | null) {
@@ -182,6 +195,10 @@ export interface ScanRunRow {
   completed_at: string | null;
   finding_count: number;
   payload: Record<string, unknown> | null;
+  // Apify v2 expansion
+  feature_id: string | null;
+  apify_run_id: string | null;
+  apify_task_id: string | null;
 }
 
 export function useScanRuns(tenantId: string | null) {

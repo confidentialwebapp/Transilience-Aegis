@@ -1,0 +1,21 @@
+{
+  "task_id": "tai-aegis/creditaccessgrameen-feat-019-whois",
+  "tenant_id": "23610954-5fd0-482f-8eb0-11edce1f5c58",
+  "feature_id": "FEAT-019",
+  "feature_label": "Domain WHOIS/DNS/SSL/Tech-stack",
+  "language": "en",
+  "actor_id": "sovereigntaylor/domain-whois-scraper",
+  "schedule_cron": "0 2 * * *",
+  "keyword_rotation": [],
+  "input_template": {
+    "domains": [
+      "creditaccessgrameen.in",
+      "grameenkoota.in",
+      "creditaccess.com",
+      "creditaccesslife.in"
+    ]
+  },
+  "webhook_url": "https://transilience--aegis-n8n-server.modal.run/webhook/feat-019",
+  "proxy_group": "DATACENTER",
+  "proxy_country": "IN"
+}

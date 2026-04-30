@@ -1,0 +1,25 @@
+{
+  "task_id": "tai-aegis/creditaccessgrameen-feat-007-tier1-en",
+  "tenant_id": "23610954-5fd0-482f-8eb0-11edce1f5c58",
+  "feature_id": "FEAT-007",
+  "feature_label": "Brand Mention SERP Tier1",
+  "language": "en",
+  "actor_id": "apify/google-search-scraper",
+  "schedule_cron": "0 * * * *",
+  "keyword_rotation": [],
+  "input_template": {
+    "queries": "CreditAccess Grameen\n\"CreditAccess Grameen\"\nCreditAccess Grameen Limited",
+    "maxPagesPerQuery": 1,
+    "resultsPerPage": 30,
+    "countryCode": "in",
+    "languageCode": "en",
+    "proxyConfiguration": {
+      "apifyProxyGroups": [
+        "GOOGLE_SERP"
+      ]
+    }
+  },
+  "webhook_url": "https://transilience--aegis-n8n-server.modal.run/webhook/feat-007-tier1",
+  "proxy_group": "GOOGLE_SERP",
+  "proxy_country": "IN"
+}

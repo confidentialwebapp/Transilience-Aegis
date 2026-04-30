@@ -1,0 +1,225 @@
+[
+  {
+    "name": "FEAT-026 Fake Branches",
+    "active": false,
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "feat-026",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -1700,
+          400
+        ],
+        "id": "11111111-1111-4111-8111-111111111111",
+        "name": "Webhook",
+        "webhookId": "feat-026"
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "=https://api.apify.com/v2/datasets/{{ $json.body.resource.defaultDatasetId }}/items?token={{ $env.APIFY_TOKEN }}&format=json&clean=true",
+          "sendHeaders": false,
+          "sendBody": false,
+          "options": {
+            "timeout": 60000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -1450,
+          400
+        ],
+        "id": "22222222-2222-4222-8222-222222222222",
+        "name": "Fetch Dataset"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "language": "javaScript",
+          "jsCode": "// FEAT-026 Google Maps Fake Branches classifier\n// TODO: Cross-reference lat/lng against official branch CSV when available \u2014 for\n//       now we flag every non-allowlisted Maps listing for analyst review and\n//       escalate based on review sentiment + rating.\nconst items = $input.all();\nconst ev = $('Webhook').item.json.body || {};\nconst headers = ev.headers || {};\nconst tenantId = headers['x-tenant-id'] || '23610954-5fd0-482f-8eb0-11edce1f5c58';\nconst taskId = ev.eventData?.actorTaskId || null;\nconst runId = ev.resource?.id || null;\nconst datasetId = ev.resource?.defaultDatasetId || null;\n\nconst RED_KW = ['fraud', 'fake', 'scam', '\u0927\u094b\u0916\u093e', '\u0cae\u0ccb\u0cb8', '\u0bae\u0bcb\u0b9a\u0bae\u0bcd'];\n\nfunction hasRedReview(reviews) {\n  if (!Array.isArray(reviews)) return false;\n  return reviews.some(r => {\n    const t = (r?.text || r?.snippet || '').toLowerCase();\n    return RED_KW.some(k => t.includes(k.toLowerCase()));\n  });\n}\n\nconst rows = [];\nfor (const itm of items) {\n  const p = itm.json || {};\n  const placeId = p.placeId || p.place_id || p.id || p.url;\n  if (!placeId) continue;\n  const reviews = p.reviews || p.placeDetails?.reviews || [];\n  const red = hasRedReview(reviews);\n  const rating = typeof p.totalScore === 'number' ? p.totalScore\n               : typeof p.rating === 'number' ? p.rating : null;\n\n  let severity = 'Low';\n  if (red) severity = 'Critical';\n  else if (rating !== null && rating < 2.0) severity = 'Substantial';\n  else if (rating !== null && rating < 3.5) severity = 'Moderate';\n\n  const confidence = red ? 0.85 : 0.6;\n  const action = severity === 'Critical' ? 'takedown' : 'monitor';\n  const lat = p.location?.lat || p.lat || null;\n  const lng = p.location?.lng || p.lng || null;\n\n  rows.push({\n    tenant_id: tenantId,\n    apify_task_id: taskId,\n    apify_run_id: runId,\n    apify_dataset_id: datasetId,\n    feature_id: 'FEAT-026',\n    source: 'apify:google-maps',\n    kind: 'fake_branch',\n    fraud_pattern: 'fake_branch',\n    severity,\n    confidence,\n    item_id: placeId,\n    url_or_value: p.url || placeId,\n    evidence: {\n      place_id: placeId,\n      name: p.title || p.name,\n      address: p.address || p.fullAddress,\n      phone: p.phone || p.phoneUnformatted,\n      rating,\n      reviewsCount: p.reviewsCount || p.totalReviews || (reviews?.length || 0),\n      lat, lng,\n      opening_hours: p.openingHours || p.hours || null,\n      top_review_excerpts: reviews.slice(0, 3).map(r => (r?.text || r?.snippet || '').slice(0, 200)),\n    },\n    language_detected: p.language || null,\n    ai_filtered: false,\n    ai_reason: red ? 'Reviews mention fraud/scam keywords' :\n               rating !== null && rating < 2.0 ? 'Very low rating' :\n               rating !== null && rating < 3.5 ? 'Below-average rating' :\n               'Listing flagged for analyst review',\n    recommended_action: action,\n  });\n}\nreturn [{ json: { rows, count: rows.length } }];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -1200,
+          400
+        ],
+        "id": "33333333-3333-4333-8333-333333333333",
+        "name": "Code"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $env.SUPABASE_URL }}/rest/v1/findings",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              },
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Prefer",
+                "value": "resolution=merge-duplicates,return=minimal"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ $json.rows }}",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -950,
+          400
+        ],
+        "id": "44444444-4444-4444-8444-444444444444",
+        "name": "Bulk Insert",
+        "continueOnFail": true,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "method": "PATCH",
+          "url": "={{ $env.SUPABASE_URL }}/rest/v1/scan_runs?apify_run_id=eq.{{ $('Webhook').item.json.body.resource.id }}",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              },
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Prefer",
+                "value": "return=minimal"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"status\": \"completed\",\n  \"completed_at\": \"{{ $now.toISO() }}\",\n  \"finding_count\": {{ $('Code').first().json.count }}\n}",
+          "options": {
+            "timeout": 15000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -700,
+          400
+        ],
+        "id": "55555555-5555-4555-8555-555555555555",
+        "name": "Mark scan_runs",
+        "continueOnFail": true,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"ok\": true,\n  \"run_id\": \"{{ $('Webhook').item.json.body.resource.id }}\",\n  \"feature_id\": \"FEAT-026\",\n  \"finding_count\": {{ $('Code').first().json.count }}\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          -450,
+          400
+        ],
+        "id": "66666666-6666-4666-8666-666666666666",
+        "name": "Respond OK"
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Fetch Dataset",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Dataset": {
+        "main": [
+          [
+            {
+              "node": "Code",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code": {
+        "main": [
+          [
+            {
+              "node": "Bulk Insert",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Bulk Insert": {
+        "main": [
+          [
+            {
+              "node": "Mark scan_runs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Mark scan_runs": {
+        "main": [
+          [
+            {
+              "node": "Respond OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "pinData": {},
+    "staticData": {},
+    "tags": []
+  }
+]

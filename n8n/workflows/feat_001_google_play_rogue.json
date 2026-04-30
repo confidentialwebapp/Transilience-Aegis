@@ -1,0 +1,225 @@
+[
+  {
+    "name": "FEAT-001 Google Play Rogue Apps",
+    "active": false,
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "feat-001",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -1700,
+          400
+        ],
+        "id": "11111111-1111-4111-8111-111111111111",
+        "name": "Webhook",
+        "webhookId": "feat-001"
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "=https://api.apify.com/v2/datasets/{{ $json.body.resource.defaultDatasetId }}/items?token={{ $env.APIFY_TOKEN }}&format=json&clean=true",
+          "sendHeaders": false,
+          "sendBody": false,
+          "options": {
+            "timeout": 60000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -1450,
+          400
+        ],
+        "id": "22222222-2222-4222-8222-222222222222",
+        "name": "Fetch Dataset"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "language": "javaScript",
+          "jsCode": "// FEAT-001 Google Play Rogue Apps classifier\nconst items = $input.all();\nconst ev = $('Webhook').item.json.body || {};\nconst headers = ev.headers || {};\nconst tenantId = headers['x-tenant-id'] || '23610954-5fd0-482f-8eb0-11edce1f5c58';\nconst taskId = ev.eventData?.actorTaskId || null;\nconst runId = ev.resource?.id || null;\nconst datasetId = ev.resource?.defaultDatasetId || null;\n\nconst OFFICIAL_DEV = 'CreditAccess Grameen Limited';\nconst OFFICIAL_APP_IDS = ['com.creditaccessgrameen.mahi'];\nconst HIGH_RISK_PERMS = [\n  'android.permission.READ_SMS',\n  'android.permission.READ_CONTACTS',\n  'android.permission.SYSTEM_ALERT_WINDOW',\n  'android.permission.BIND_ACCESSIBILITY_SERVICE',\n];\n\nconst rows = [];\nfor (const itm of items) {\n  const a = itm.json || {};\n  const appId = a.appId || a.id || a.bundleId;\n  if (!appId) continue;\n  if (OFFICIAL_APP_IDS.includes(appId)) continue;\n  const developer = a.developer || a.developerName || a.developer_id || '';\n  if (developer === OFFICIAL_DEV) continue;\n\n  const permissions = Array.isArray(a.permissions) ? a.permissions : [];\n  const hasCriticalPerm = permissions.some(p => HIGH_RISK_PERMS.includes(p));\n\n  const severity = hasCriticalPerm ? 'Critical' : 'Substantial';\n  const confidence = hasCriticalPerm ? 0.95 : 0.7;\n  const action = hasCriticalPerm ? 'takedown' : 'monitor';\n\n  rows.push({\n    tenant_id: tenantId,\n    apify_task_id: taskId,\n    apify_run_id: runId,\n    apify_dataset_id: datasetId,\n    feature_id: 'FEAT-001',\n    source: 'apify:google-play',\n    kind: 'fake_app',\n    fraud_pattern: 'fake_app',\n    severity,\n    confidence,\n    item_id: appId,\n    url_or_value: `https://play.google.com/store/apps/details?id=${appId}`,\n    evidence: {\n      app_id: appId,\n      title: a.title || a.name,\n      developer,\n      rating: a.score || a.rating,\n      installs: a.installs || a.minInstalls,\n      last_updated: a.updated || a.lastUpdated,\n      permissions,\n      brand_keyword_matched: a.searchTerm || a.query,\n    },\n    language_detected: a.language || null,\n    matched_keywords: a.searchTerm ? [a.searchTerm] : [],\n    timestamp_source: a.released || a.updated || null,\n    ai_filtered: false,\n    ai_reason: hasCriticalPerm\n      ? 'Non-official developer + invasive permissions (SMS/Contacts/Overlay/Accessibility)'\n      : 'Non-official developer using brand keyword',\n    recommended_action: action,\n  });\n}\nreturn [{ json: { rows, count: rows.length } }];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -1200,
+          400
+        ],
+        "id": "33333333-3333-4333-8333-333333333333",
+        "name": "Code"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $env.SUPABASE_URL }}/rest/v1/findings",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              },
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Prefer",
+                "value": "resolution=merge-duplicates,return=minimal"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ $json.rows }}",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -950,
+          400
+        ],
+        "id": "44444444-4444-4444-8444-444444444444",
+        "name": "Bulk Insert",
+        "continueOnFail": true,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "method": "PATCH",
+          "url": "={{ $env.SUPABASE_URL }}/rest/v1/scan_runs?apify_run_id=eq.{{ $('Webhook').item.json.body.resource.id }}",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              },
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Prefer",
+                "value": "return=minimal"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"status\": \"completed\",\n  \"completed_at\": \"{{ $now.toISO() }}\",\n  \"finding_count\": {{ $('Code').first().json.count }}\n}",
+          "options": {
+            "timeout": 15000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -700,
+          400
+        ],
+        "id": "55555555-5555-4555-8555-555555555555",
+        "name": "Mark scan_runs",
+        "continueOnFail": true,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"ok\": true,\n  \"run_id\": \"{{ $('Webhook').item.json.body.resource.id }}\",\n  \"feature_id\": \"FEAT-001\",\n  \"finding_count\": {{ $('Code').first().json.count }}\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          -450,
+          400
+        ],
+        "id": "66666666-6666-4666-8666-666666666666",
+        "name": "Respond OK"
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Fetch Dataset",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Dataset": {
+        "main": [
+          [
+            {
+              "node": "Code",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code": {
+        "main": [
+          [
+            {
+              "node": "Bulk Insert",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Bulk Insert": {
+        "main": [
+          [
+            {
+              "node": "Mark scan_runs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Mark scan_runs": {
+        "main": [
+          [
+            {
+              "node": "Respond OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "pinData": {},
+    "staticData": {},
+    "tags": []
+  }
+]

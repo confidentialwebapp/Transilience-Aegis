@@ -1,74 +1,104 @@
 "use client";
 
-import { Calendar, ShieldX, Activity, KeyRound, Mail, Radar, CheckCircle, Download, FileBadge } from "lucide-react";
-import { PageHeader, FilterCard, FilterInput, FilterSelect, KPICard } from "@/components/platform";
-import { MonthlyLineChart, DonutBreakdown, CountryBarH } from "@/components/platform/ReportChart";
+import { useMemo, useState } from "react";
+import { Calendar, FileBadge, Download } from "lucide-react";
+import { PageHeader, FilterCard, FilterInput, FilterSelect, Pagination } from "@/components/platform";
 import { BRANDS } from "@/lib/mock-data";
 
+interface LedgerRow {
+  title: string;
+  generatedAt: string;
+}
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+function makeReports(): LedgerRow[] {
+  const rows: LedgerRow[] = [];
+  // 227 entries — produced monthly per brand for the last ~24 months
+  for (let i = 0; i < 227; i++) {
+    const brand = BRANDS[i % BRANDS.length];
+    const monthIdx = i % 12;
+    const yearOffset = Math.floor(i / 12) % 3; // covers 2024, 2025, 2026
+    const year = 2026 - yearOffset;
+    const monthName = MONTHS[monthIdx];
+    const lastDay = new Date(year, monthIdx + 1, 0).getDate();
+    const seedHour = (i * 13) % 12;
+    const seedMin = (i * 17) % 60;
+    const seedSec = (i * 29) % 60;
+    const ts = `${(monthIdx + 1).toString().padStart(2, "0")}/${lastDay}/${year} ${seedHour.toString().padStart(2, "0")}:${seedMin.toString().padStart(2, "0")}:${seedSec.toString().padStart(2, "0")} AM`;
+    rows.push({
+      title: `${brand} - Executive Summary Report - ${monthName} 1 ${year} to ${monthName} ${lastDay} ${year}`,
+      generatedAt: ts,
+    });
+  }
+  return rows;
+}
+
+const ALL = makeReports();
+
 export default function ExecutiveSummaryReport() {
+  const [page, setPage] = useState(1);
+  const perPage = 50;
+  const totalPages = Math.ceil(ALL.length / perPage);
+  const visible = useMemo(() => ALL.slice((page - 1) * perPage, page * perPage), [page]);
+
   return (
     <>
       <PageHeader
-        title="Executive Summary"
-        description="Single-page board-ready overview of incidents, exposure, takedown effectiveness, and overall security posture."
-        rightSlot={
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white"
-            style={{ background: "linear-gradient(135deg,#8b5cf6,#7c3aed)" }}>
-            <Download className="w-3 h-3" /> Export PDF
-          </button>
-        }
+        title="Executive Summary Report"
+        description="Complete summary report of all major services (Incident, Monitoring, Darkweb, WSS, etc.) — generated monthly per brand. The library of every executive summary ever produced for this tenant."
       />
-
       <FilterCard onSearch={() => {}} onReset={() => {}}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <FilterSelect label="Brand" options={BRANDS} />
+          <FilterSelect label="Year" options={["2026", "2025", "2024"]} />
           <FilterInput icon={Calendar} placeholder="From" />
           <FilterInput icon={Calendar} placeholder="To" />
         </div>
       </FilterCard>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
-        <KPICard label="Active Incidents" value={318} accent="red" icon={ShieldX} />
-        <KPICard label="Cases Closed" value={1202} accent="green" icon={CheckCircle} />
-        <KPICard label="Credentials Recovered" value={"24,134"} accent="blue" icon={KeyRound} />
-        <KPICard label="DMARC Compliance" value="96.4%" accent="purple" icon={Mail} />
-        <KPICard label="Surface Coverage" value="74%" accent="amber" icon={Radar} />
-        <KPICard label="Avg TTD" value="08h 42m" accent="slate" icon={Activity} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-        <div className="lg:col-span-2">
-          <MonthlyLineChart
-            title="Incidents over time"
-            series={[
-              { name: "Critical", data: [3, 4, 2, 3, 5, 6, 4, 5, 8, 9, 6], color: "#ef4444" },
-              { name: "Substantial", data: [5, 6, 4, 5, 6, 7, 5, 6, 9, 11, 8], color: "#f97316" },
-              { name: "Moderate", data: [8, 7, 9, 8, 10, 12, 9, 11, 14, 16, 13], color: "#eab308" },
-            ]}
-            yMax={20}
-          />
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(139,92,246,0.10)" }}
+      >
+        <div className="px-4 py-2.5 border-b grid grid-cols-[1fr_240px]" style={{ borderColor: "rgba(139,92,246,0.10)" }}>
+          <span className="text-[10px] font-bold tracking-[0.13em] uppercase text-slate-400">Report Title</span>
+          <span className="text-[10px] font-bold tracking-[0.13em] uppercase text-slate-400 text-right">Generated</span>
         </div>
-        <DonutBreakdown
-          title="Incident type mix"
-          data={[
-            { name: "Phishing", value: 124, color: "#ef4444" },
-            { name: "Brand Abuse", value: 98, color: "#a855f7" },
-            { name: "Social Media", value: 72, color: "#ec4899" },
-            { name: "Email", value: 24, color: "#3b82f6" },
-          ]}
-        />
+        <div className="divide-y divide-purple-500/[0.05]">
+          {visible.map((r, i) => (
+            <button
+              key={`${page}-${i}`}
+              className="w-full grid grid-cols-[1fr_240px] items-center gap-3 px-4 py-2.5 text-left hover:bg-white/[0.02] transition-colors group"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
+                  style={{ background: "rgba(168,85,247,0.10)", border: "1px solid rgba(168,85,247,0.25)" }}
+                >
+                  <FileBadge className="w-3.5 h-3.5 text-purple-300" />
+                </div>
+                <span className="text-[12.5px] text-slate-200 group-hover:text-purple-200 truncate">{r.title}</span>
+              </div>
+              <div className="flex items-center justify-end gap-3">
+                <span className="text-[11px] text-slate-500 font-mono tabular-nums">{r.generatedAt}</span>
+                <Download className="w-3.5 h-3.5 text-slate-500 group-hover:text-purple-300" />
+              </div>
+            </button>
+          ))}
+        </div>
+        <div
+          className="flex items-center justify-between px-4 py-2.5 border-t"
+          style={{ borderColor: "rgba(139,92,246,0.10)", background: "rgba(255,255,255,0.015)" }}
+        >
+          <span className="text-[11px] text-slate-500">
+            Showing <span className="text-slate-300 font-medium">{(page - 1) * perPage + 1}</span> to{" "}
+            <span className="text-slate-300 font-medium">{Math.min(page * perPage, ALL.length)}</span> of{" "}
+            <span className="text-slate-300 font-medium">{ALL.length}</span> entries
+          </span>
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+        </div>
       </div>
-
-      <CountryBarH
-        title="Top hosting countries"
-        rows={[
-          { name: "United States", count: 142 },
-          { name: "Russia", count: 89 },
-          { name: "China", count: 76 },
-          { name: "Germany", count: 54 },
-          { name: "Netherlands", count: 41 },
-        ]}
-      />
     </>
   );
 }

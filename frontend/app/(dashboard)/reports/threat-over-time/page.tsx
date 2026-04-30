@@ -2,43 +2,52 @@
 
 import { Calendar } from "lucide-react";
 import { PageHeader, FilterCard, FilterInput, FilterSelect } from "@/components/platform";
-import { MonthlyBar, DonutBreakdown } from "@/components/platform/ReportChart";
+import { GraphViewCard, SeverityLineChart, DualPanelLines } from "@/components/platform/ReportChart";
 import { BRANDS } from "@/lib/mock-data";
+
+const MONTHS_12 = [
+  "May 25", "Jun 25", "Jul 25", "Aug 25", "Sep 25", "Oct 25",
+  "Nov 25", "Dec 25", "Jan 26", "Feb 26", "Mar 26", "Apr 26",
+];
 
 export default function ThreatOverTimeReport() {
   return (
     <>
       <PageHeader
-        title="Threat Over Time"
-        description="Aggregate count and severity mix of incidents across the entire monitored portfolio over time."
+        title="Threats Over Time"
+        description="Recent or historic data of all incidents summarised on threat level. View severity concentration and 12-month trends per series."
       />
       <FilterCard onSearch={() => {}} onReset={() => {}}>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <FilterSelect label="Brand" options={BRANDS} />
-          <FilterSelect label="Severity" options={["Critical", "Substantial", "Moderate", "Low"]} />
+          <FilterSelect label="Severity" options={["Critical", "High", "Substantial", "Moderate", "Low"]} />
           <FilterInput icon={Calendar} placeholder="From" />
           <FilterInput icon={Calendar} placeholder="To" />
         </div>
       </FilterCard>
-      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
-        <MonthlyBar
-          title="Threats by month and severity"
-          series={[
-            { name: "Critical", data: [3, 4, 2, 3, 5, 6, 4, 5, 8, 9, 6], color: "#ef4444" },
-            { name: "Substantial", data: [5, 6, 4, 5, 6, 7, 5, 6, 9, 11, 8], color: "#f97316" },
-            { name: "Moderate", data: [8, 7, 9, 8, 10, 12, 9, 11, 14, 16, 13], color: "#eab308" },
-            { name: "Low", data: [12, 11, 14, 13, 15, 18, 14, 16, 19, 22, 18], color: "#10b981" },
-          ]}
-        />
-        <DonutBreakdown
-          title="Severity mix (last 30d)"
-          data={[
-            { name: "Critical", value: 24, color: "#ef4444" },
-            { name: "Substantial", value: 38, color: "#f97316" },
-            { name: "Moderate", value: 56, color: "#eab308" },
-            { name: "Low", value: 102, color: "#10b981" },
-          ]}
-        />
+
+      <div className="space-y-4">
+        <GraphViewCard
+          title="Graph View"
+          descriptor="Threats of each brand in selected date range"
+        >
+          {/* Severity peak — Critical · High · Substantial · Moderate · Low; peaks at Substantial */}
+          <SeverityLineChart data={[0, 0, 1, 0, 0]} max={1} />
+        </GraphViewCard>
+
+        <GraphViewCard
+          title="Graph View"
+          descriptor="Threats over the time of past 12 months"
+        >
+          <DualPanelLines
+            xLabels={MONTHS_12}
+            yMax={4}
+            series={[
+              { name: "Acme Bank",        data: [0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 4, 1], color: "#f97316" },
+              { name: "Globex Insurance", data: [0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 4, 2], color: "#ef4444" },
+            ]}
+          />
+        </GraphViewCard>
       </div>
     </>
   );

@@ -1,51 +1,67 @@
 "use client";
 
 import { Calendar } from "lucide-react";
-import { PageHeader, FilterCard, FilterInput, FilterSelect } from "@/components/platform";
-import { CountryBarH, DonutBreakdown } from "@/components/platform/ReportChart";
+import { PageHeader, FilterCard, FilterInput, FilterSelect, DataTable } from "@/components/platform";
+import type { Column } from "@/components/platform";
+import { GraphViewCard, PieWithLabels } from "@/components/platform/ReportChart";
 import { BRANDS } from "@/lib/mock-data";
 
+interface CountryRow {
+  country: string;
+  count: number;
+}
+
+const ROWS: CountryRow[] = [
+  { country: "United States of America", count: 18 },
+  { country: "France",       count: 3 },
+  { country: "Cyprus",       count: 1 },
+  { country: "Germany",      count: 1 },
+  { country: "South Africa", count: 1 },
+  { country: "Ireland",      count: 1 },
+];
+
+const PIE_DATA = ROWS.map((r, i) => ({
+  name: r.country,
+  value: r.count,
+  color: ["#a855f7", "#ec4899", "#3b82f6", "#10b981", "#f59e0b", "#06b6d4"][i % 6],
+}));
+
 export default function IncidentByCountryReport() {
+  const cols: Column<CountryRow>[] = [
+    { key: "country", header: "Country", render: (r) => <span className="text-[12.5px] font-semibold text-slate-200">{r.country}</span> },
+    {
+      key: "count",
+      header: "Count",
+      align: "right",
+      render: (r) => <span className="text-[12px] text-purple-300 tabular-nums font-bold">{r.count}</span>,
+    },
+  ];
   return (
     <>
       <PageHeader
-        title="Incident By Host Country"
-        description="Where the malicious infrastructure is hosted. Helps inform takedown partner selection and ISP escalation paths."
+        title="Incident by Host Country"
+        description="Recent or historic data of all incidents summarised on the webhost country — where the offending content is physically hosted."
       />
       <FilterCard onSearch={() => {}} onReset={() => {}}>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <FilterSelect label="Brand" options={BRANDS} />
-          <FilterSelect label="Incident Type" options={["Phishing", "Fake Website", "Brand Abuse"]} />
+          <FilterSelect label="Incident Type" options={["Phishing", "Social Media", "Brand Abuse"]} />
           <FilterInput icon={Calendar} placeholder="From" />
           <FilterInput icon={Calendar} placeholder="To" />
         </div>
       </FilterCard>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <CountryBarH
-          title="Top hosting countries (last 90d)"
-          rows={[
-            { name: "United States", count: 142 },
-            { name: "Russia", count: 89 },
-            { name: "China", count: 76 },
-            { name: "Germany", count: 54 },
-            { name: "Netherlands", count: 41 },
-            { name: "United Kingdom", count: 35 },
-            { name: "India", count: 29 },
-            { name: "Brazil", count: 24 },
-            { name: "Singapore", count: 18 },
-            { name: "France", count: 12 },
-          ]}
-        />
-        <DonutBreakdown
-          title="Continent distribution"
-          data={[
-            { name: "North America", value: 178, color: "#a855f7" },
-            { name: "Europe", value: 142, color: "#ec4899" },
-            { name: "Asia", value: 124, color: "#3b82f6" },
-            { name: "South America", value: 28, color: "#10b981" },
-            { name: "Africa", value: 12, color: "#f59e0b" },
-          ]}
-        />
+
+      <DataTable<CountryRow>
+        columns={cols}
+        rows={ROWS}
+        totalEntries={ROWS.length}
+        rowAction={false}
+      />
+
+      <div className="mt-4">
+        <GraphViewCard title="Graph View" descriptor="Hosting country distribution">
+          <PieWithLabels data={PIE_DATA} />
+        </GraphViewCard>
       </div>
     </>
   );

@@ -6,7 +6,7 @@ import {
   Building2, Smartphone, UserCircle, FileCheck, Award, Database, Hash,
   HelpCircle, Phone, Wrench, Plus, Inbox, Box, LayoutDashboard, Scan,
   Target, MessageSquare, FileBadge, FileLock, Banknote, Server, Download,
-  Code, Settings as SettingsIcon, Lock, RotateCcw, UserCog, Globe2,
+  Code, Settings as SettingsIcon, Lock, RotateCcw, UserCog, Globe2, Package,
   type LucideIcon,
 } from "lucide-react";
 
@@ -66,12 +66,12 @@ export const SIDEBAR_SECTIONS: NavSection[] = [
   {
     title: "REPORTS",
     items: [
-      { href: "/reports/brand-targeted", label: "Brand Targeted", icon: TrendingUp, badge: null },
-      { href: "/reports/threat-over-time", label: "Threat Over Time", icon: BarChart3, badge: null },
+      { href: "/reports/brand-targeted", label: "Brands Targeted", icon: TrendingUp, badge: null },
+      { href: "/reports/threat-over-time", label: "Threats Over Time", icon: BarChart3, badge: null },
       { href: "/reports/site-takedown-time", label: "Site Take Down Time", icon: Clock, badge: null },
       { href: "/reports/incident-by-country", label: "Incident By Host Country", icon: MapPin, badge: null },
-      { href: "/reports/executive-summary", label: "Executive Summary", icon: FileBadge, badge: null },
-      { href: "/reports/wss", label: "Website Scanning Suite", icon: FileSearch, badge: null },
+      { href: "/reports/executive-summary", label: "Executive Summary Report", icon: FileBadge, badge: null },
+      { href: "/reports/wss", label: "Website Scanning Suite Reports", icon: FileSearch, badge: null },
       { href: "/reports/incidents-reopened", label: "Incidents Reopened", icon: RotateCcw, badge: null },
       { href: "/reports/moved-cases", label: "Moved Cases", icon: Inbox, badge: null },
     ],
@@ -80,7 +80,8 @@ export const SIDEBAR_SECTIONS: NavSection[] = [
     title: "MANAGEMENT",
     items: [
       { href: "/management/client-users", label: "Client Users", icon: Users, badge: null },
-      { href: "/management/subscription", label: "Subscription", icon: CreditCard, badge: null },
+      { href: "/management/services-license", label: "Services (Subscription & License)", icon: Package, badge: null },
+      { href: "/management/subscription", label: "Plan & Billing", icon: CreditCard, badge: null },
     ],
   },
   {
@@ -203,7 +204,8 @@ export const PAGE_TITLES: Record<string, string> = {
   "/reports/incidents-reopened": "Incidents Reopened",
   "/reports/moved-cases": "Moved Cases",
   "/management/client-users": "Client Users",
-  "/management/subscription": "Subscription",
+  "/management/services-license": "Services (Subscription & License)",
+  "/management/subscription": "Plan & Billing",
   "/knowledge/whitelist": "Knowledge — Whitelist",
   "/knowledge/incident-monitoring": "Knowledge — Incident & Monitoring",
   "/knowledge/data-loss-recovery": "Knowledge — Data Loss Recovery",

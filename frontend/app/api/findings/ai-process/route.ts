@@ -142,10 +142,28 @@ export async function POST(req: NextRequest) {
       })),
     };
 
-    const aiResp = await callClaude({ system: FILTER_PROMPT, user: userPayload, maxTokens: 4000 });
-    const verdicts = extractJson<Verdict[]>(aiResp.text);
-    if (!verdicts || !Array.isArray(verdicts)) {
-      return NextResponse.json({ ok: false, error: "AI returned malformed JSON" }, { status: 500 });
+    // ~150 tokens per verdict × findings, plus framing slack.
+    const budget = Math.min(8000, 800 + findings.length * 180);
+    const aiResp = await callClaude({ system: FILTER_PROMPT, user: userPayload, maxTokens: budget });
+    const parsed = extractJson<Verdict[] | { verdicts?: Verdict[]; results?: Verdict[] }>(aiResp.text);
+    let verdicts: Verdict[] | null = null;
+    if (Array.isArray(parsed)) verdicts = parsed;
+    else if (parsed && typeof parsed === "object") {
+      const obj = parsed as { verdicts?: Verdict[]; results?: Verdict[] };
+      verdicts = obj.verdicts ?? obj.results ?? null;
+    }
+    if (!verdicts || !Array.isArray(verdicts) || verdicts.length === 0) {
+      return NextResponse.json({
+        ok: false,
+        error: "AI returned malformed JSON",
+        debug: {
+          stop_reason: aiResp.stop_reason,
+          tokens: { in: aiResp.tokens_in, out: aiResp.tokens_out },
+          budget,
+          response_head: aiResp.text.slice(0, 400),
+          response_tail: aiResp.text.slice(-300),
+        },
+      }, { status: 500 });
     }
     const verdictMap = new Map<string, Verdict>(verdicts.map((v) => [v.id, v]));
 

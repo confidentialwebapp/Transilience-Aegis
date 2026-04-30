@@ -40,11 +40,20 @@ n8n_image = (
     .env(
         {
             # Network
+            # IMPORTANT — Modal terminates TLS at its edge proxy. Inside the
+            # container n8n speaks plain HTTP on 5678. If we set
+            # N8N_PROTOCOL=https here, n8n issues redirect responses to its
+            # own URL which collides with Modal's proxy semantics and hangs.
+            # Keep N8N_PROTOCOL=http; only the *generated webhook/editor URLs*
+            # need to be https (handled via WEBHOOK_URL + N8N_EDITOR_BASE_URL).
             "N8N_PORT": "5678",
-            "N8N_PROTOCOL": "https",
+            "N8N_LISTEN_ADDRESS": "0.0.0.0",
+            "N8N_PROTOCOL": "http",
             "N8N_HOST": "transilience--aegis-n8n-server.modal.run",
+            "N8N_PROXY_HOPS": "1",
             "WEBHOOK_URL": "https://transilience--aegis-n8n-server.modal.run/",
             "N8N_EDITOR_BASE_URL": "https://transilience--aegis-n8n-server.modal.run/",
+            "N8N_SECURE_COOKIE": "false",
 
             # Persistence
             "N8N_USER_FOLDER": "/data",

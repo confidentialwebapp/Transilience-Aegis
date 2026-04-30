@@ -150,16 +150,24 @@ def find_existing_top_webhook(request_url: str, condition_task_id: str) -> str |
 
 def upsert_webhook(task_apify_id: str, cfg: dict) -> str:
     # Apify v2 webhooks live at top-level /webhooks; condition filters the task.
+    # NOTE: top-level idempotencyKey at CREATE time uniquely identifies the
+    # webhook — using a template like {{run.id}} caused all 6 feature webhooks
+    # to collide on the same key, so only the last one persisted. Use a
+    # per-feature literal key here. Run-time delivery dedup is handled by
+    # n8n via X-Apify-Run-Id header (set in headersTemplate below).
+    feature_lit = cfg["feature_id"].lower().replace("-", "")
+    idempotency_key = f"tai-aegis-{feature_lit}-{task_apify_id}"
     body = {
         "eventTypes": ["ACTOR.RUN.SUCCEEDED", "ACTOR.RUN.FAILED"],
+        "idempotencyKey": idempotency_key,
         "condition": {"actorTaskId": task_apify_id},
         "requestUrl": cfg["webhook_url"],
-        "idempotencyKey": "{{run.id}}",
         "headersTemplate": json.dumps(
             {
                 "X-Feature-Id": cfg["feature_id"],
                 "X-Tenant-Id": cfg["tenant_id"],
                 "X-Apify-Task-Id": cfg["task_id"],
+                "X-Apify-Run-Id": "{{run.id}}",
             }
         ),
         "payloadTemplate": (

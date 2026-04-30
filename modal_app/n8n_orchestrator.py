@@ -88,13 +88,17 @@ app = modal.App("aegis-n8n")
     cpu=1.0,                 # Right-sized for idle n8n + occasional webhook bursts.
     memory=1024,             # Larger requests can starve on Modal capacity.
 )
-@modal.web_server(port=5678, startup_timeout=240)
+@modal.web_server(port=5678, startup_timeout=300)
 def server():
     """Start n8n — Modal proxies external HTTPS to this internal port.
 
-    Before booting n8n, syncs /data/imports/*.json into the SQLite workflow
-    table. This sidesteps Modal volume sync delays between containers: the
-    server always boots with the freshest workflow definitions.
+    The first time this runs, the workflow_entity table doesn't exist yet
+    and we need to let n8n create the schema before importing workflows.
+    On every subsequent boot, we SKIP the re-import — the SQLite volume
+    already has the latest workflows, and re-importing every container
+    start adds 30-60s to startup which can exceed Modal's startup_timeout
+    and trigger a death-loop respawn. To refresh workflows, run the
+    explicit reset_and_reimport function.
     """
     import os
     import sqlite3
@@ -104,59 +108,40 @@ def server():
     env = os.environ.copy()
     os.makedirs("/data", exist_ok=True)
 
-    # Bootstrap workflows from /data/imports/ into SQLite before n8n starts.
-    # This way every server restart picks up the latest workflow JSONs.
     db_path = "/data/database.sqlite"
-    imports_dir = Path("/data/imports")
 
-    # Ensure n8n has run once before us so the schema exists
+    # First-boot only: let n8n create the schema (CLI exits quickly because
+    # there's nothing to migrate). Skipped on every subsequent restart.
     if not Path(db_path).exists():
-        # First-ever boot: let n8n create the DB, then we'll sync on next restart
-        print("[server] no database yet; running n8n once to create schema")
-        subprocess.run(["n8n", "start", "--tunnel=false"], env=env, timeout=15,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                       check=False)
-        # The above will time out / get killed; we ignore — schema will exist
-
-    if Path(db_path).exists() and imports_dir.exists():
-        try:
+        print("[server] no database yet; bootstrapping schema via n8n CLI")
+        subprocess.run(
+            ["n8n", "start", "--tunnel=false"],
+            env=env, timeout=20,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        # The above is killed by timeout; that's fine — schema persists.
+        # Now do a one-time import on this fresh DB.
+        imports_dir = Path("/data/imports")
+        if imports_dir.exists():
+            for f in sorted(imports_dir.glob("*.json")):
+                print(f"[server] first-boot import {f.name}")
+                subprocess.run(
+                    ["n8n", "import:workflow", f"--input={f}"],
+                    env=env, capture_output=True, text=True, timeout=60,
+                    check=False,
+                )
             conn = sqlite3.connect(db_path)
             cur = conn.cursor()
-            # Confirm workflow_entity table exists
-            existing = cur.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='workflow_entity'"
-            ).fetchone()
-            if existing:
-                # Use the n8n CLI to do clean import: wipe then re-insert
-                cur.execute("DELETE FROM workflow_entity")
-                cur.execute("DELETE FROM webhook_entity")
-                conn.commit()
-                conn.close()
-                # Now use CLI import (works because n8n is NOT running yet)
-                for f in sorted(imports_dir.glob("*.json")):
-                    print(f"[server] importing {f.name}")
-                    subprocess.run(
-                        ["n8n", "import:workflow", f"--input={f}"],
-                        env=env, capture_output=True, text=True, timeout=60,
-                        check=False,
-                    )
-                # Activate
-                conn = sqlite3.connect(db_path)
-                cur = conn.cursor()
-                cur.execute("UPDATE workflow_entity SET active=1")
-                print(f"[server] activated {cur.rowcount} workflows")
-                conn.commit()
-                conn.close()
-            else:
-                print("[server] workflow_entity table not yet present, skipping bootstrap")
-        except Exception as e:
-            print(f"[server] bootstrap warning: {e}")
+            cur.execute("UPDATE workflow_entity SET active=1")
+            print(f"[server] first-boot activated {cur.rowcount} workflows")
+            conn.commit()
+            conn.close()
 
-    print("[server] starting n8n and waiting on subprocess...")
+    print("[server] starting n8n (proc.wait keeps container alive)...")
     # @modal.web_server keeps the container alive only while THIS function is
-    # still executing. If we return after Popen, Modal tears down the container
-    # and the proxy stops working — that's why earlier deploys returned 000.
-    # Block on the n8n process so the container stays up as long as n8n does.
+    # executing. If we return after Popen, Modal tears down the container —
+    # block on the subprocess so it lives as long as n8n does.
     proc = subprocess.Popen(["n8n", "start"], env=env)
     try:
         proc.wait()

@@ -8,6 +8,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { callClaude, extractJson } from "@/lib/anthropic";
+import { attributeFinding, loadTrustGraph,
+  AUTO_SUPPRESS_DECISIONS, AUTO_ELEVATE_DECISIONS } from "@/lib/attribution/skill";
+import type { FindingForAttribution } from "@/lib/attribution/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -98,11 +101,80 @@ export async function POST(req: NextRequest) {
     if (scan_run_id) q = q.eq("scan_run_id", scan_run_id);
     if (tenant_id) q = q.eq("tenant_id", tenant_id);
     const { data: findingsData } = await q;
-    const findings = (findingsData ?? []) as FindingRow[];
+    let findings = (findingsData ?? []) as FindingRow[];
     if (findings.length === 0) {
       return NextResponse.json({ ok: true, processed: 0, message: "no pending findings" });
     }
     const tenantIdResolved = findings[0].tenant_id;
+
+    // 1b. v5 — Attribution Skill pre-pass.
+    // For each finding, resolve against the customer's Trust Graph BEFORE
+    // sending to the AI false-positive filter. Auto-suppress / auto-elevate
+    // findings the skill is sure about; only the remainder reaches the AI
+    // filter (cuts AI cost ~30-60% on a stable Trust Graph).
+    let attribStats = { suppressed: 0, elevated: 0, passed_through: 0, ai_fallback: 0, cache_hits: 0 };
+    const attribLoad = await loadTrustGraph(sb, tenantIdResolved);
+    const remainingForAi: FindingRow[] = [];
+    if ("ctx" in attribLoad) {
+      const ctx = attribLoad.ctx;
+      for (const f of findings) {
+        const ev = (f.evidence ?? {}) as { content?: string; title?: string; description?: string; raw?: string };
+        const adapt: FindingForAttribution = {
+          finding_id: f.id, feature_id: f.feature_id, source: f.source,
+          url: f.url_or_value, title: ev.title ?? null,
+          content: ev.content ?? ev.description ?? ev.raw ?? null,
+          timestamp_source: null,
+        };
+        const out = await attributeFinding(sb, ctx, adapt);
+        if (out.audit.resolver === "ai_fallback") attribStats.ai_fallback += 1;
+        if (out.audit.resolver === "cache") attribStats.cache_hits += 1;
+
+        if (AUTO_SUPPRESS_DECISIONS.has(out.decision)) {
+          // Skill says: this is legitimate / collision / customer-owned.
+          // Mark dropped, no need for AI filter.
+          await sb.from("findings").update({
+            ai_filter_status: "dropped",
+            ai_summary: out.reason.slice(0, 200),
+            ai_reason: `Auto-suppressed by attribution skill (${out.decision}).`,
+            recommended_action: "drop",
+            severity: "Low",
+            final_risk_score: 0,
+          }).eq("id", f.id);
+          attribStats.suppressed += 1;
+          continue;
+        }
+        if (AUTO_ELEVATE_DECISIONS.has(out.decision)) {
+          // Skill says: impersonation of historical/sister entity.
+          // Auto-keep at high severity with skill's fraud pattern.
+          await sb.from("findings").update({
+            ai_filter_status: "kept",
+            ai_summary: out.reason.slice(0, 200),
+            ai_reason: `Auto-elevated by attribution skill (${out.decision}).`,
+            recommended_action: "takedown",
+            severity: "Critical",
+            final_risk_score: 95,
+            fraud_pattern: out.new_fraud_pattern ?? f.fraud_pattern,
+          }).eq("id", f.id);
+          attribStats.elevated += 1;
+          continue;
+        }
+        // sibling_out_of_scope, needs_attribution_check, no_match → still pass to AI Filter
+        remainingForAi.push(f);
+        attribStats.passed_through += 1;
+      }
+      findings = remainingForAi;
+    }
+    if (findings.length === 0) {
+      return NextResponse.json({
+        ok: true,
+        processed: attribStats.suppressed + attribStats.elevated,
+        kept: attribStats.elevated, dropped: attribStats.suppressed,
+        review: 0, skipped: 0, unmatched_by_id: 0,
+        attribution: attribStats,
+        incidents_created: 0, incidents_updated: 0,
+        message: "all findings resolved by attribution skill; AI filter not needed.",
+      });
+    }
 
     // 2. Read tenant context
     const { data: tenant } = await sb
@@ -267,12 +339,13 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      processed: writesKept + writesDropped + writesReview,
-      kept: writesKept,
-      dropped: writesDropped,
+      processed: writesKept + writesDropped + writesReview + attribStats.suppressed + attribStats.elevated,
+      kept: writesKept + attribStats.elevated,
+      dropped: writesDropped + attribStats.suppressed,
       review: writesReview,
       skipped: writesSkipped,
-      unmatched_by_id: unmatchedById,  // verdicts whose id Claude rewrote
+      unmatched_by_id: unmatchedById,
+      attribution: attribStats,
       incidents_created: incidentsCreated,
       incidents_updated: incidentsUpdated,
       tokens: { in: aiResp.tokens_in, out: aiResp.tokens_out },

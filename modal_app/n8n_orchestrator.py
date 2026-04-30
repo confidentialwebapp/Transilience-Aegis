@@ -85,8 +85,8 @@ app = modal.App("aegis-n8n")
     max_containers=1,        # SQLite is single-writer; never scale up
     scaledown_window=3600,
     timeout=86400,           # 24h ceiling — Modal does rolling recycle
-    cpu=2.0,
-    memory=2048,
+    cpu=1.0,                 # Right-sized for idle n8n + occasional webhook bursts.
+    memory=1024,             # Larger requests can starve on Modal capacity.
 )
 @modal.web_server(port=5678, startup_timeout=240)
 def server():
@@ -152,18 +152,17 @@ def server():
         except Exception as e:
             print(f"[server] bootstrap warning: {e}")
 
-    print("[server] starting n8n (Popen, Python stays alive for Modal proxy)...")
-    # IMPORTANT: with @modal.web_server, the Python process must keep running so
-    # Modal's internal ASGI proxy can forward requests to the child's port.
-    # execvp would replace Python and break the proxy. Popen + don't-block lets
-    # Modal initialize the proxy before this function returns; n8n keeps running
-    # as a child of the still-alive Python process.
-    subprocess.Popen(
-        ["n8n", "start"],
-        env=env,
-        stdout=None,
-        stderr=None,
-    )
+    print("[server] starting n8n and waiting on subprocess...")
+    # @modal.web_server keeps the container alive only while THIS function is
+    # still executing. If we return after Popen, Modal tears down the container
+    # and the proxy stops working — that's why earlier deploys returned 000.
+    # Block on the n8n process so the container stays up as long as n8n does.
+    proc = subprocess.Popen(["n8n", "start"], env=env)
+    try:
+        proc.wait()
+    except KeyboardInterrupt:
+        proc.terminate()
+        raise
 
 
 @app.function(
@@ -249,14 +248,30 @@ def latest_execution_error():
         pass
     conn = sqlite3.connect("/data/database.sqlite")
     cur = conn.cursor()
+    # In n8n 1.x, execution_entity holds metadata and execution_data holds the
+    # workflow run blob. Join them.
+    # Show recent execution status mix
+    rows = cur.execute(
+        "SELECT id, status, workflowId FROM execution_entity ORDER BY id DESC LIMIT 12"
+    ).fetchall()
+    print("Recent executions:")
+    for r in rows:
+        print(f"  id={r[0]} workflow={r[2]} status={r[1]}")
+    # Find latest failed execution
     row = cur.execute(
-        "SELECT id, status, finished, data FROM execution_entity ORDER BY id DESC LIMIT 1"
+        """
+        SELECT e.id, e.status, e.finished, d.data, e.workflowId
+        FROM execution_entity e
+        LEFT JOIN execution_data d ON d.executionId = e.id
+        WHERE e.status IN ('error','crashed','failed')
+        ORDER BY e.id DESC LIMIT 1
+        """
     ).fetchone()
     if not row:
-        print("no executions yet")
+        print("no failed executions yet")
         return
-    eid, st, fin, data = row
-    print(f"execution id={eid} status={st} finished={fin}")
+    eid, st, fin, data, wid = row
+    print(f"\nLatest failed: id={eid} workflow={wid} status={st} finished={fin}")
     try:
         arr = _j.loads(data) if isinstance(data, str) else data
         txt = _j.dumps(arr) if not isinstance(arr, str) else arr

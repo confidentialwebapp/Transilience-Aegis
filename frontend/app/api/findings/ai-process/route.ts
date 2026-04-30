@@ -165,22 +165,31 @@ export async function POST(req: NextRequest) {
         },
       }, { status: 500 });
     }
-    const verdictMap = new Map<string, Verdict>(verdicts.map((v) => [v.id, v]));
+    // Match verdicts to findings: prefer id-keyed lookup, but fall back to
+    // positional alignment when Claude truncates or rewrites the id (which
+    // happens in practice with long UUIDs and tight token budgets).
+    const verdictMap = new Map<string, Verdict>(
+      verdicts.filter((v) => v.id).map((v) => [v.id, v]),
+    );
 
     // 4. Apply verdicts: update findings, group into incidents
     const incidentBuckets = new Map<string, { findings: FindingRow[]; verdicts: Verdict[]; severity: string }>();
 
-    for (const f of findings) {
-      const v = verdictMap.get(f.id);
-      if (!v) {
-        // No verdict — leave for next run
-        continue;
+    let unmatchedById = 0;
+    let writesKept = 0, writesDropped = 0, writesReview = 0, writesSkipped = 0;
+    for (let i = 0; i < findings.length; i++) {
+      const f = findings[i];
+      let v = verdictMap.get(f.id);
+      if (!v && verdicts.length === findings.length) {
+        v = verdicts[i];
+        unmatchedById += 1;
       }
+      if (!v) { writesSkipped += 1; continue; }
       const status = v.is_false_positive ? (v.confidence && v.confidence > 0.85 ? "dropped" : "review") : "kept";
       const severity = v.suggested_severity ?? f.severity;
       const finalRisk = (SEV_RANK[severity] ?? 25) * (v.confidence ?? 0.5);
 
-      await sb.from("findings").update({
+      const { error: updErr } = await sb.from("findings").update({
         ai_filter_status: status,
         ai_summary: v.ai_summary ?? null,
         ai_reason: v.reasoning ?? null,
@@ -189,6 +198,10 @@ export async function POST(req: NextRequest) {
         confidence: v.confidence ?? f.confidence,
         final_risk_score: finalRisk,
       }).eq("id", f.id);
+      if (updErr) { writesSkipped += 1; continue; }
+      if (status === "kept") writesKept += 1;
+      else if (status === "dropped") writesDropped += 1;
+      else writesReview += 1;
 
       // Group by cluster_key (skip false positives — they don't need incidents)
       if (status !== "dropped" && v.cluster_key) {
@@ -254,10 +267,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      processed: verdicts.length,
-      kept: verdicts.filter((v) => !v.is_false_positive).length,
-      dropped: verdicts.filter((v) => v.is_false_positive && (v.confidence ?? 0) > 0.85).length,
-      review: verdicts.filter((v) => v.is_false_positive && (v.confidence ?? 0) <= 0.85).length,
+      processed: writesKept + writesDropped + writesReview,
+      kept: writesKept,
+      dropped: writesDropped,
+      review: writesReview,
+      skipped: writesSkipped,
+      unmatched_by_id: unmatchedById,  // verdicts whose id Claude rewrote
       incidents_created: incidentsCreated,
       incidents_updated: incidentsUpdated,
       tokens: { in: aiResp.tokens_in, out: aiResp.tokens_out },

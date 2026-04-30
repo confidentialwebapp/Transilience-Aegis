@@ -72,6 +72,59 @@
       {
         "parameters": {
           "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-api-key",
+                "value": "={{ $env.ANTHROPIC_API_KEY }}"
+              },
+              {
+                "name": "anthropic-version",
+                "value": "2023-06-01"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"model\": \"claude-haiku-4-5-20251001\",\n  \"max_tokens\": 4000,\n  \"system\": \"You are a brand-protection analyst. INPUT: a JSON object with a `rows` array of pre-classified findings. Drop owned/whitelisted/legitimate-news rows ruthlessly. Tighten severity (Critical/Substantial/Moderate/Low). Re-classify kind from this enum only: phishing|brand_impersonation|exec_impersonation|fraud|domain_typosquat|leaked_asset|fraud|fake_app|fake_branch|job_scam|defacement|domain_intel|username_squat. OUTPUT only a JSON array of the kept rows with same shape (preserve all fields), updated severity/confidence/ai_reason. No prose. NO markdown fences.\",\n  \"messages\": [{ \"role\": \"user\", \"content\": \"={{ JSON.stringify({ rows: $json.rows, brand: \\\"CreditAccess Grameen\\\", owned_domains: [\\\"creditaccessgrameen.in\\\",\\\"grameenkoota.in\\\",\\\"creditaccess.com\\\",\\\"creditaccesslife.in\\\"] }) }}\" }]\n}",
+          "options": {
+            "timeout": 60000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -380,
+          400
+        ],
+        "id": "abcd1111-aabb-4ccc-8ddd-eeeeeeeeeeee",
+        "name": "AI Filter (Anthropic)"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "language": "javaScript",
+          "jsCode": "// Parse Claude's JSON array; fall back to original rows if parse fails.\nconst resp = $input.first().json;\nconst text = resp?.content?.[0]?.text || '[]';\nlet cleaned = [];\ntry {\n  const m = text.match(/\\[[\\s\\S]*\\]/);\n  cleaned = JSON.parse(m ? m[0] : text);\n} catch (e) {\n  // If AI fails, use the upstream Classify rows unchanged\n  const orig = $('Classify').first?.()?.json?.rows || [];\n  cleaned = orig;\n}\nreturn [{ json: { rows: cleaned, count: cleaned.length, run_id: $('Normalize Body').item.json.run_id } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -180,
+          400
+        ],
+        "id": "abcd2222-aabb-4ccc-8ddd-ffffffffffff",
+        "name": "Parse AI Output"
+      },
+      {
+        "parameters": {
+          "method": "POST",
           "url": "={{ $env.SUPABASE_URL }}/rest/v1/findings",
           "sendHeaders": true,
           "specifyHeaders": "keypair",
@@ -200,7 +253,7 @@
         "main": [
           [
             {
-              "node": "Bulk Insert",
+              "node": "AI Filter (Anthropic)",
               "type": "main",
               "index": 0
             }
@@ -234,6 +287,28 @@
           [
             {
               "node": "Fetch Dataset",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AI Filter (Anthropic)": {
+        "main": [
+          [
+            {
+              "node": "Parse AI Output",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse AI Output": {
+        "main": [
+          [
+            {
+              "node": "Bulk Insert",
               "type": "main",
               "index": 0
             }

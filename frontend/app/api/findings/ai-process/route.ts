@@ -347,8 +347,37 @@ export async function POST(req: NextRequest) {
       incidents_created: incidentsCreated,
       incidents_updated: incidentsUpdated,
       tokens: { in: aiResp.tokens_in, out: aiResp.tokens_out },
+      alerts_routing: await routeAlertsForKeptFindings(sb, tenantIdResolved),
     });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }
+}
+
+/** After ai-process commits findings, route the kept ones through
+ *  alert_routing_rules. Best-effort — failures don't block the response. */
+async function routeAlertsForKeptFindings(
+  sb: ReturnType<typeof createClient>, tenantId: string,
+): Promise<{ findings_routed: number; alerts_inserted: number; takedown_drafts: number }> {
+  try {
+    const { data: kept } = await sb.from("findings")
+      .select("id").eq("tenant_id", tenantId).eq("ai_filter_status", "kept")
+      .is("alert_sent", false).limit(50);
+    const ids = (kept ?? []).map((r) => r.id);
+    if (ids.length === 0) return { findings_routed: 0, alerts_inserted: 0, takedown_drafts: 0 };
+
+    const r = await fetch("https://tai-aegis.vercel.app/api/alerts/route-finding", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenant_id: tenantId, finding_ids: ids }),
+      signal: AbortSignal.timeout(40000),
+    });
+    if (!r.ok) return { findings_routed: ids.length, alerts_inserted: 0, takedown_drafts: 0 };
+    const j = (await r.json()) as { alerts_inserted?: number; takedown_drafts_inserted?: number };
+    await sb.from("findings").update({ alert_sent: true }).in("id", ids);
+    return {
+      findings_routed: ids.length,
+      alerts_inserted: j.alerts_inserted ?? 0,
+      takedown_drafts: j.takedown_drafts_inserted ?? 0,
+    };
+  } catch { return { findings_routed: 0, alerts_inserted: 0, takedown_drafts: 0 }; }
 }

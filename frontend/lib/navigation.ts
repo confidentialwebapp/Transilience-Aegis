@@ -120,7 +120,7 @@ export const SIDEBAR_SECTIONS: NavSection[] = [
       { href: "/admin/incidents", label: "Incidents (Grouped)", icon: ShieldAlert, badge: "NEW" },
       { href: "/admin/alerts", label: "Alerts", icon: Bell, badge: "NEW" },
       { href: "/admin/takedowns", label: "Takedown Drafts", icon: Lock, badge: "NEW" },
-      { href: "/admin/trust-graph", label: "Trust Graph", icon: Network, badge: "v5" },
+      { href: "/admin/trust-graph", label: "Trust Graph", icon: Network, badge: "NEW" },
       { href: "/admin/apify", label: "Apify Console", icon: Workflow, badge: null },
       { href: "/admin/tenants", label: "Tenants", icon: Building2, badge: null },
       { href: "/admin/audit", label: "Audit Log", icon: FileText, badge: null },

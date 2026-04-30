@@ -13,6 +13,7 @@ import { TransilienceDock } from "@/components/TransilienceDock";
 import { TopMegaMenu } from "@/components/platform/TopMegaMenu";
 import { ClientSelector } from "@/components/platform/ClientSelector";
 import { SIDEBAR_SECTIONS, PAGE_TITLES } from "@/lib/navigation";
+import { useAdminCheck } from "@/lib/admin";
 import {
   Bell, Search as SearchIcon, ChevronLeft, ChevronRight, Menu, Activity,
   LogOut, User, ChevronDown, Command, HelpCircle, Keyboard, Gift, Shield,
@@ -23,6 +24,12 @@ import {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { isAdmin } = useAdminCheck();
+  // Filter the sidebar — non-admins should not see the ADMIN section.
+  // Admin-only routes still get a server-side guard via /admin/layout.tsx.
+  const visibleSections = isAdmin
+    ? SIDEBAR_SECTIONS
+    : SIDEBAR_SECTIONS.filter((s) => s.title !== "ADMIN");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [orgId, setOrgIdState] = useState("");
@@ -137,7 +144,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Nav sections */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-3.5 sidebar-scroll">
-          {SIDEBAR_SECTIONS.map((section) => (
+          {visibleSections.map((section) => (
             <div key={section.title}>
               {!collapsed && (
                 <div className="px-3 mb-1.5">

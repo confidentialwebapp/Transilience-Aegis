@@ -43,12 +43,15 @@ function buildApifyInput(featureId: string, assets: AssetRow[], baseTemplate: Re
   const out = { ...baseTemplate };
   switch (featureId) {
     case "FEAT-001": {
-      // canadesk/google-play-store-ppe schema: keyword (array), lang, country, maximum.
-      // Pull top 3 brand_name + keyword assets — actor will scan one keyword
-      // per run; rotation across keywords happens via separate Apify schedules.
+      // canadesk/google-play-store-ppe enum:
+      //   ap=Search by AppId | se=Search by Keyword | pe=Get Permissions
+      // For FEAT-001 rogue-app discovery we use "se" (search by keyword).
+      // Strip metadata-only keys that leak from apify_tasks.config.
+      delete (out as { apify_task_id?: unknown }).apify_task_id;
+      delete (out as { label?: unknown }).label;
       const search = (brandNames[0] || keywords[0] || "").trim();
+      out.process = "se";
       out.keyword = [search].filter(Boolean);
-      out.process = "ap";
       out.country = "in";
       out.maximum = 30;
       break;

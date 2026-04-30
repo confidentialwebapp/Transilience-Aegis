@@ -1,0 +1,122 @@
+[
+  {
+    "name": "tai-aegis-sub-attribution-skill",
+    "nodes": [
+      {
+        "id": "e631eca8-a4a3-4a77-b15e-e9b11031b9bd",
+        "name": "Trigger",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          240,
+          300
+        ],
+        "webhookId": "188d0904-7e72-46da-a24c-ed1d3a66dfdc",
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "tai-aegis-sub-attribution-skill-trigger",
+          "options": {},
+          "responseMode": "lastNode"
+        }
+      },
+      {
+        "id": "9401d266-1fdf-4e02-bebb-26c500a0f3f1",
+        "name": "Extract body",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [
+          480,
+          300
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\n// Pass through the trigger's body to the HTTP node\nreturn $input.all().map(i => ({ json: i.json.body || i.json }));\n"
+        }
+      },
+      {
+        "id": "5825e7ae-cecb-428c-aebd-5403db9d2131",
+        "name": "Call /skills/attribution",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          720,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://tai-aegis.vercel.app/api/skills/attribution",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 55000
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json) }}"
+        }
+      },
+      {
+        "id": "fe4c43c8-42db-4f4b-9701-88bd18853297",
+        "name": "Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          960,
+          300
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ $json }}"
+        }
+      }
+    ],
+    "connections": {
+      "Trigger": {
+        "main": [
+          [
+            {
+              "node": "Extract body",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract body": {
+        "main": [
+          [
+            {
+              "node": "Call /skills/attribution",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Call /skills/attribution": {
+        "main": [
+          [
+            {
+              "node": "Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "pinData": {},
+    "active": false
+  }
+]

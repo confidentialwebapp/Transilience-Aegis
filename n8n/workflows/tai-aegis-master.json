@@ -1,0 +1,886 @@
+[
+  {
+    "name": "tai-aegis-master",
+    "nodes": [
+      {
+        "id": "a204560f-2785-4f28-8c19-886e212ae210",
+        "name": "Manual scan webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          120,
+          200
+        ],
+        "webhookId": "f7bac950-5d88-457e-ba45-8181a809b927",
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "tai-aegis-master",
+          "options": {},
+          "responseMode": "lastNode"
+        }
+      },
+      {
+        "id": "87bb2b40-561c-4d4d-96e7-d4d3aac983c3",
+        "name": "Schedule trigger",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          120,
+          360
+        ],
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "hours",
+                "hoursInterval": 12
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "24911757-162f-4ac9-95ca-06679d089940",
+        "name": "Load tenant context",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          360,
+          280
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "https://tai-aegis.vercel.app/api/admin/cost-guard?tenant_id={{ $json.tenant_id || '23610954-5fd0-482f-8eb0-11edce1f5c58' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 55000
+          }
+        }
+      },
+      {
+        "id": "8fe539b2-a48e-42c9-9c87-96fba8c92b81",
+        "name": "Asset Enricher",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          600,
+          280
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-asset-enricher",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "f9f81855-2599-4e43-86f1-a2eb276d91bf",
+        "name": "Detection Planner",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          840,
+          280
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-detection-planner",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "f7b92226-68e4-47b3-ba83-8977fefe8c65",
+        "name": "Domain switch",
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 1,
+        "position": [
+          1080,
+          280
+        ],
+        "parameters": {
+          "mode": "rules",
+          "rules": {
+            "rules": [
+              {
+                "conditions": {
+                  "conditions": [
+                    {
+                      "value1": "true",
+                      "operation": "equal",
+                      "value2": "true"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "b15bc641-97b2-48a7-8806-c0103898c6eb",
+        "name": "Sub-WF A (domain-website)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1320,
+          80
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-feat-domain-website",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "620625c6-5536-44ff-abb9-89f2c30077f9",
+        "name": "Sub-WF B (mobile-apps)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1560,
+          80
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-feat-mobile-apps",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "24d20bbc-540d-4f1e-8c8b-bc9b58a699c3",
+        "name": "Sub-WF C (social-impersonation)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1320,
+          180
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-feat-social-impersonation",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "b9021c00-df5f-42e0-a172-a860a929a398",
+        "name": "Sub-WF D (people-impersonation)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1560,
+          180
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-feat-people-impersonation",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "cbb38e11-76be-4b40-b5bb-ddaa4324242b",
+        "name": "Sub-WF E (ip-trademark)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1320,
+          280
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-feat-ip-trademark",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "dc330988-9578-43d2-b267-3f28788769ff",
+        "name": "Sub-WF F (counterfeit)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1560,
+          280
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-feat-counterfeit",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "a815e4f7-5aa2-40cc-b112-be79a05d9166",
+        "name": "Sub-WF G (recruitment)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1320,
+          380
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-feat-recruitment",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "e40476b6-0c55-4a43-abfc-43210ed7e2ca",
+        "name": "Sub-WF H (financial-scams)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1560,
+          380
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-feat-financial-scams",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "39bc62dc-2280-4073-b82d-ce66e89eafca",
+        "name": "Sub-WF I (search-messaging)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1320,
+          480
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-feat-search-messaging",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "1dcbb6b5-3444-4fd2-93a8-8b8c8948c9d6",
+        "name": "Sub-WF J (synthetic-media)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1560,
+          480
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-feat-synthetic-media",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "22c5946b-5bd3-4d82-b783-fb3c351c81e4",
+        "name": "Sub-WF K (data-leaks)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1320,
+          580
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-feat-data-leaks",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "9346eb74-4530-4a90-8724-119f5e3d35e6",
+        "name": "Sub-WF L (dark-web)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1560,
+          580
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-feat-dark-web",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "af178f63-648f-4d2c-9fa1-7c596e8cc69d",
+        "name": "Sub-WF M (reputation)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1320,
+          680
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-feat-reputation",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "92d5844f-8689-4913-8452-6b1d1c555711",
+        "name": "Sub-WF N (phishing-campaigns)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1560,
+          680
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-feat-phishing-campaigns",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "e094f9be-4bc0-4dde-a531-0c8fdf78f449",
+        "name": "Sync gate (merge all)",
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 1,
+        "position": [
+          1880,
+          280
+        ],
+        "parameters": {
+          "mode": "combine",
+          "combineBy": "combineByPosition",
+          "options": {
+            "clashHandling": {
+              "values": {
+                "resolveClash": "preferInput2"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "8235ba9b-435d-4500-9468-15c6cbd07e42",
+        "name": "Normalize + dedupe",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [
+          2120,
+          280
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\n// Phase 1 stub \u2014 flatten + dedupe by url_or_value\nconst all = $input.all().flatMap(i => i.json.findings || []);\nconst seen = new Set();\nconst out = [];\nfor (const f of all) {\n  const k = (f.url_or_value || f.item_id || JSON.stringify(f)).toLowerCase();\n  if (seen.has(k)) continue;\n  seen.add(k);\n  out.push(f);\n}\nreturn [{ json: { count: out.length, findings: out } }];\n"
+        }
+      },
+      {
+        "id": "fec822a4-81f5-40de-ae13-bc0a5089c78b",
+        "name": "Attribution Skill",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          2360,
+          280
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-attribution-skill",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "26767898-ed12-4d18-afe5-ef5577f4c83c",
+        "name": "AI Filter",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          2600,
+          280
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-ai-filter",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "b16d714b-7e7b-45a5-a3e0-df40b4aed993",
+        "name": "AI Dashboard Prep",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          2840,
+          280
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-ai-dashboard-prep",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "3488ca30-eb5b-4912-9036-05e22fead8d5",
+        "name": "Alert Router",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          3080,
+          280
+        ],
+        "parameters": {
+          "source": "parameter",
+          "workflowId": {
+            "__rl": true,
+            "value": "tai-aegis-sub-alert-router",
+            "mode": "name"
+          },
+          "mode": "each"
+        }
+      },
+      {
+        "id": "3a60076e-8ee4-4580-a25b-b78d28d9de65",
+        "name": "Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          3320,
+          280
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ $json }}"
+        }
+      }
+    ],
+    "connections": {
+      "Manual scan webhook": {
+        "main": [
+          [
+            {
+              "node": "Load tenant context",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Schedule trigger": {
+        "main": [
+          [
+            {
+              "node": "Load tenant context",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Load tenant context": {
+        "main": [
+          [
+            {
+              "node": "Asset Enricher",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Asset Enricher": {
+        "main": [
+          [
+            {
+              "node": "Detection Planner",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Detection Planner": {
+        "main": [
+          [
+            {
+              "node": "Domain switch",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Domain switch": {
+        "main": [
+          [
+            {
+              "node": "Sub-WF A (domain-website)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Sub-WF B (mobile-apps)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Sub-WF C (social-impersonation)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Sub-WF D (people-impersonation)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Sub-WF E (ip-trademark)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Sub-WF F (counterfeit)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Sub-WF G (recruitment)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Sub-WF H (financial-scams)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Sub-WF I (search-messaging)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Sub-WF J (synthetic-media)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Sub-WF K (data-leaks)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Sub-WF L (dark-web)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Sub-WF M (reputation)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Sub-WF N (phishing-campaigns)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sub-WF A (domain-website)": {
+        "main": [
+          [
+            {
+              "node": "Sync gate (merge all)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sub-WF B (mobile-apps)": {
+        "main": [
+          [
+            {
+              "node": "Sync gate (merge all)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sub-WF C (social-impersonation)": {
+        "main": [
+          [
+            {
+              "node": "Sync gate (merge all)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sub-WF D (people-impersonation)": {
+        "main": [
+          [
+            {
+              "node": "Sync gate (merge all)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sub-WF E (ip-trademark)": {
+        "main": [
+          [
+            {
+              "node": "Sync gate (merge all)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sub-WF F (counterfeit)": {
+        "main": [
+          [
+            {
+              "node": "Sync gate (merge all)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sub-WF G (recruitment)": {
+        "main": [
+          [
+            {
+              "node": "Sync gate (merge all)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sub-WF H (financial-scams)": {
+        "main": [
+          [
+            {
+              "node": "Sync gate (merge all)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sub-WF I (search-messaging)": {
+        "main": [
+          [
+            {
+              "node": "Sync gate (merge all)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sub-WF J (synthetic-media)": {
+        "main": [
+          [
+            {
+              "node": "Sync gate (merge all)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sub-WF K (data-leaks)": {
+        "main": [
+          [
+            {
+              "node": "Sync gate (merge all)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sub-WF L (dark-web)": {
+        "main": [
+          [
+            {
+              "node": "Sync gate (merge all)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sub-WF M (reputation)": {
+        "main": [
+          [
+            {
+              "node": "Sync gate (merge all)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sub-WF N (phishing-campaigns)": {
+        "main": [
+          [
+            {
+              "node": "Sync gate (merge all)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sync gate (merge all)": {
+        "main": [
+          [
+            {
+              "node": "Normalize + dedupe",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Normalize + dedupe": {
+        "main": [
+          [
+            {
+              "node": "Attribution Skill",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Attribution Skill": {
+        "main": [
+          [
+            {
+              "node": "AI Filter",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AI Filter": {
+        "main": [
+          [
+            {
+              "node": "AI Dashboard Prep",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AI Dashboard Prep": {
+        "main": [
+          [
+            {
+              "node": "Alert Router",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Alert Router": {
+        "main": [
+          [
+            {
+              "node": "Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "pinData": {},
+    "active": false
+  }
+]

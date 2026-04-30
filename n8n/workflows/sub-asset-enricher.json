@@ -1,0 +1,122 @@
+[
+  {
+    "name": "tai-aegis-sub-asset-enricher",
+    "nodes": [
+      {
+        "id": "119dd9c5-8dbd-4fe7-9f72-e053cb8789cf",
+        "name": "Trigger",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          240,
+          300
+        ],
+        "webhookId": "9f763a59-f5b4-45d6-81ae-1bc765f0bce5",
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "tai-aegis-sub-asset-enricher-trigger",
+          "options": {},
+          "responseMode": "lastNode"
+        }
+      },
+      {
+        "id": "ab589797-a52b-4ebc-af5e-5e5a086327c5",
+        "name": "Extract body",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [
+          480,
+          300
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\n// Pass through the trigger's body to the HTTP node\nreturn $input.all().map(i => ({ json: i.json.body || i.json }));\n"
+        }
+      },
+      {
+        "id": "4a2fe516-2c92-4416-9ffe-51eda6d190f7",
+        "name": "Call /admin/asset-enrich",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          720,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://tai-aegis.vercel.app/api/admin/asset-enrich",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 55000
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json) }}"
+        }
+      },
+      {
+        "id": "5273ee1e-7905-4939-a4cd-3fbfbcf14dd2",
+        "name": "Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          960,
+          300
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ $json }}"
+        }
+      }
+    ],
+    "connections": {
+      "Trigger": {
+        "main": [
+          [
+            {
+              "node": "Extract body",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract body": {
+        "main": [
+          [
+            {
+              "node": "Call /admin/asset-enrich",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Call /admin/asset-enrich": {
+        "main": [
+          [
+            {
+              "node": "Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "pinData": {},
+    "active": false
+  }
+]

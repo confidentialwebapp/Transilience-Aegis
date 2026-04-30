@@ -1,0 +1,82 @@
+[
+  {
+    "name": "tai-aegis-sub-feat-phishing-campaigns",
+    "nodes": [
+      {
+        "id": "a7f54b87-9275-46d3-bd36-c6a8c1bf1460",
+        "name": "Trigger",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          240,
+          300
+        ],
+        "webhookId": "ddfc0d2f-6742-45b8-8fbc-0c7561406efe",
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "tai-aegis-sub-feat-phishing-campaigns-trigger",
+          "options": {},
+          "responseMode": "lastNode"
+        }
+      },
+      {
+        "id": "f96078ab-244c-4da8-a3b2-175b5c9518b6",
+        "name": "Log invocation",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [
+          480,
+          300
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\nconsole.log('[sub-feat-N] invoked with', JSON.stringify($input.all().map(i => i.json), null, 2).slice(0, 300));\nreturn [{ json: { stub: true, source: 'sub-feat-N', findings: [] } }];\n"
+        }
+      },
+      {
+        "id": "5228444b-b3f7-4a14-ace3-80e3fe1fd079",
+        "name": "Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          720,
+          300
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ $json }}"
+        }
+      }
+    ],
+    "connections": {
+      "Trigger": {
+        "main": [
+          [
+            {
+              "node": "Log invocation",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Log invocation": {
+        "main": [
+          [
+            {
+              "node": "Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "pinData": {},
+    "active": false
+  }
+]

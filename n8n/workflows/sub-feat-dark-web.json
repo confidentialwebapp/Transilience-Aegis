@@ -1,0 +1,82 @@
+[
+  {
+    "name": "tai-aegis-sub-feat-dark-web",
+    "nodes": [
+      {
+        "id": "550b5ca8-9568-4213-9aed-d7e692a71c1d",
+        "name": "Trigger",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          240,
+          300
+        ],
+        "webhookId": "0e0a3786-4c52-4aa5-a039-bda46df89ebe",
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "tai-aegis-sub-feat-dark-web-trigger",
+          "options": {},
+          "responseMode": "lastNode"
+        }
+      },
+      {
+        "id": "f494a6b9-6065-491d-b9fc-03d3c651eff7",
+        "name": "Log invocation",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [
+          480,
+          300
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\nconsole.log('[sub-feat-L] invoked with', JSON.stringify($input.all().map(i => i.json), null, 2).slice(0, 300));\nreturn [{ json: { stub: true, source: 'sub-feat-L', findings: [] } }];\n"
+        }
+      },
+      {
+        "id": "6c67d407-3773-4e0f-99b6-8a0ae294b74d",
+        "name": "Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          720,
+          300
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ $json }}"
+        }
+      }
+    ],
+    "connections": {
+      "Trigger": {
+        "main": [
+          [
+            {
+              "node": "Log invocation",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Log invocation": {
+        "main": [
+          [
+            {
+              "node": "Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "pinData": {},
+    "active": false
+  }
+]

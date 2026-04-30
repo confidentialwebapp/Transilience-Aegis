@@ -1,0 +1,82 @@
+[
+  {
+    "name": "tai-aegis-sub-feat-search-messaging",
+    "nodes": [
+      {
+        "id": "e4e90bb9-b630-4548-bab2-76653b6fca1a",
+        "name": "Trigger",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          240,
+          300
+        ],
+        "webhookId": "9f45a2bf-84a3-4498-9d0f-17311a4c17c6",
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "tai-aegis-sub-feat-search-messaging-trigger",
+          "options": {},
+          "responseMode": "lastNode"
+        }
+      },
+      {
+        "id": "e16a7379-4f11-4f15-a69b-782852fd5861",
+        "name": "Log invocation",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [
+          480,
+          300
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\nconsole.log('[sub-feat-I] invoked with', JSON.stringify($input.all().map(i => i.json), null, 2).slice(0, 300));\nreturn [{ json: { stub: true, source: 'sub-feat-I', findings: [] } }];\n"
+        }
+      },
+      {
+        "id": "79bfbb84-8c87-4721-ae54-ad73169c3831",
+        "name": "Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          720,
+          300
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ $json }}"
+        }
+      }
+    ],
+    "connections": {
+      "Trigger": {
+        "main": [
+          [
+            {
+              "node": "Log invocation",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Log invocation": {
+        "main": [
+          [
+            {
+              "node": "Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "pinData": {},
+    "active": false
+  }
+]

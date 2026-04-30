@@ -1,0 +1,122 @@
+[
+  {
+    "name": "tai-aegis-sub-detection-planner",
+    "nodes": [
+      {
+        "id": "56612e1d-6ffe-411d-a250-6a8f720f2459",
+        "name": "Trigger",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          240,
+          300
+        ],
+        "webhookId": "e6b828f0-9933-46a4-b885-bc86c7331647",
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "tai-aegis-sub-detection-planner-trigger",
+          "options": {},
+          "responseMode": "lastNode"
+        }
+      },
+      {
+        "id": "ffb60200-5122-447a-bc75-7fb7e1411638",
+        "name": "Extract body",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [
+          480,
+          300
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\n// Pass through the trigger's body to the HTTP node\nreturn $input.all().map(i => ({ json: i.json.body || i.json }));\n"
+        }
+      },
+      {
+        "id": "5a7ea947-362f-45f3-9c8f-0b3b3a7286e3",
+        "name": "Call /admin/scan-plan",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          720,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://tai-aegis.vercel.app/api/admin/scan-plan",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 55000
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json) }}"
+        }
+      },
+      {
+        "id": "809555e5-7133-4dc5-8a08-5d4c95a7327e",
+        "name": "Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          960,
+          300
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ $json }}"
+        }
+      }
+    ],
+    "connections": {
+      "Trigger": {
+        "main": [
+          [
+            {
+              "node": "Extract body",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract body": {
+        "main": [
+          [
+            {
+              "node": "Call /admin/scan-plan",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Call /admin/scan-plan": {
+        "main": [
+          [
+            {
+              "node": "Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "pinData": {},
+    "active": false
+  }
+]

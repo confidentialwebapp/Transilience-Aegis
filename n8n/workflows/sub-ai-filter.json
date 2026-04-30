@@ -1,0 +1,122 @@
+[
+  {
+    "name": "tai-aegis-sub-ai-filter",
+    "nodes": [
+      {
+        "id": "67f001f8-1896-44fd-867e-f1555113f9b3",
+        "name": "Trigger",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          240,
+          300
+        ],
+        "webhookId": "a98c75cc-0c6f-4014-8dba-83ad79c349bb",
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "tai-aegis-sub-ai-filter-trigger",
+          "options": {},
+          "responseMode": "lastNode"
+        }
+      },
+      {
+        "id": "e086c255-8bd2-446c-8afb-cef04dbb180b",
+        "name": "Extract body",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [
+          480,
+          300
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\n// Pass through the trigger's body to the HTTP node\nreturn $input.all().map(i => ({ json: i.json.body || i.json }));\n"
+        }
+      },
+      {
+        "id": "f1350956-a57b-457f-89f6-2549948d1818",
+        "name": "Call /findings/ai-process",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          720,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://tai-aegis.vercel.app/api/findings/ai-process",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 55000
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json) }}"
+        }
+      },
+      {
+        "id": "cd0b87b0-cea4-4603-b10d-2b32ece65564",
+        "name": "Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          960,
+          300
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ $json }}"
+        }
+      }
+    ],
+    "connections": {
+      "Trigger": {
+        "main": [
+          [
+            {
+              "node": "Extract body",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract body": {
+        "main": [
+          [
+            {
+              "node": "Call /findings/ai-process",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Call /findings/ai-process": {
+        "main": [
+          [
+            {
+              "node": "Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "pinData": {},
+    "active": false
+  }
+]

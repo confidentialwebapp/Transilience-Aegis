@@ -1,0 +1,82 @@
+[
+  {
+    "name": "tai-aegis-sub-feat-data-leaks",
+    "nodes": [
+      {
+        "id": "314a82ed-f7cc-4d14-8aa8-24138af91b64",
+        "name": "Trigger",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          240,
+          300
+        ],
+        "webhookId": "b7d0f28b-447c-48ad-bf93-39d919a1c4c6",
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "tai-aegis-sub-feat-data-leaks-trigger",
+          "options": {},
+          "responseMode": "lastNode"
+        }
+      },
+      {
+        "id": "f57d460b-dbb4-48fc-8685-db93e9e78159",
+        "name": "Log invocation",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [
+          480,
+          300
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\nconsole.log('[sub-feat-K] invoked with', JSON.stringify($input.all().map(i => i.json), null, 2).slice(0, 300));\nreturn [{ json: { stub: true, source: 'sub-feat-K', findings: [] } }];\n"
+        }
+      },
+      {
+        "id": "9af651b0-58cc-4ae6-b9e7-654fd0dc64f1",
+        "name": "Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          720,
+          300
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ $json }}"
+        }
+      }
+    ],
+    "connections": {
+      "Trigger": {
+        "main": [
+          [
+            {
+              "node": "Log invocation",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Log invocation": {
+        "main": [
+          [
+            {
+              "node": "Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "pinData": {},
+    "active": false
+  }
+]

@@ -239,33 +239,66 @@ export async function POST(req: NextRequest) {
       for (const r of kali.results) {
         const tool = (r as { tool?: string })?.tool;
         if (tool === "sherlock" || tool === "maigret-alias") {
-          const hits = (r as { hits?: string[] })?.hits ?? [];
+          const hits = (r as { hits?: string[]; profiles?: string[] })?.hits
+            ?? (r as { profiles?: string[] })?.profiles ?? [];
+          const username = (r as { username?: string })?.username ?? "";
           for (const h of hits) {
             const url = (typeof h === "string" ? h.match(/https?:\/\/\S+/)?.[0] : null) ?? "";
             findingRows.push({
               tenant_id, scan_run_id: scanRun.id, source: `kali:${tool}`,
               kind: "username_squat", severity: "Moderate", confidence: 0.55,
-              url_or_value: url || h, evidence: { raw: h, tool },
+              url_or_value: url || h, evidence: { raw: h, tool, username },
               ai_filtered: false, recommended_action: "monitor",
-              feature_id, item_id: url || `${tool}:${h}`,
+              feature_id, item_id: url || `${tool}:${username}:${h}`,
             });
           }
         } else if (tool === "holehe") {
-          const hits = (r as { hits?: string[]; email?: string })?.hits ?? [];
-          for (const h of hits) {
+          // Modal API returns {email, registered_count, registered_on: [...]}
+          const email = (r as { email?: string }).email ?? "";
+          const registered = (r as { registered_on?: string[] }).registered_on ?? [];
+          for (const svc of registered) {
+            // Filter out the noisy stderr-derived strings ("Email used, [-] ...")
+            if (typeof svc !== "string" || svc.length > 60 || svc.includes("[")) continue;
             findingRows.push({
               tenant_id, scan_run_id: scanRun.id, source: "kali:holehe",
               kind: "leaked_asset", severity: "Substantial", confidence: 0.65,
-              url_or_value: (r as { email?: string }).email ?? "",
-              evidence: { service_hit: h }, ai_filtered: false,
-              recommended_action: "monitor", feature_id,
-              item_id: `holehe:${(r as { email?: string }).email}:${h}`,
+              url_or_value: email, evidence: { service: svc, email },
+              ai_filtered: false, recommended_action: "monitor", feature_id,
+              item_id: `holehe:${email}:${svc}`,
+            });
+          }
+        } else if (tool === "dnstwist") {
+          // Each result row is a possible typosquat. Rows with dns_a populated
+          // (and fuzzer != *original) are registered domains = real risk.
+          const rows = (r as { results?: { domain: string; fuzzer: string; dns_a?: string[]; dns_ns?: string[] }[] }).results ?? [];
+          for (const row of rows) {
+            if (row.fuzzer === "*original") continue;
+            const registered = Array.isArray(row.dns_a) && row.dns_a.length > 0;
+            if (!registered) continue;
+            findingRows.push({
+              tenant_id, scan_run_id: scanRun.id, source: "kali:dnstwist",
+              kind: "domain_typosquat",
+              severity: registered ? "Substantial" : "Low",
+              confidence: 0.7,
+              url_or_value: row.domain,
+              evidence: { fuzzer: row.fuzzer, dns_a: row.dns_a, dns_ns: row.dns_ns },
+              ai_filtered: false,
+              recommended_action: "investigate",
+              feature_id, item_id: `dnstwist:${row.domain}`,
             });
           }
         }
       }
       if (findingRows.length > 0) {
-        await sb.from("findings").upsert(findingRows, { onConflict: "apify_task_id,item_id", ignoreDuplicates: false });
+        // Kali rows have null apify_task_id, so upsert-on-conflict against the
+        // (apify_task_id, item_id) index collapses them. Plain insert is fine —
+        // dedup happens at the AI filter step via cluster_key.
+        const { error: kfErr } = await sb.from("findings").insert(findingRows);
+        if (kfErr) {
+          await sb.from("composite_scan_arms")
+            .update({ error_message: `kali findings insert: ${kfErr.message.slice(0, 300)}` })
+            .eq("scan_run_id", scanRun.id).eq("arm", "kali");
+        }
       }
     }
 

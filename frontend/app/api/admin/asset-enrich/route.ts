@@ -40,11 +40,12 @@ OUTPUT (strict JSON only, no prose, no markdown fences):
 }
 
 CONSTRAINTS:
-- Produce content for EVERY language listed in input.languages (Hindi/Kannada/Tamil/Telugu/Marathi/Bengali for Indian customers).
+- Produce content for the TOP THREE input languages only (e.g. en, hi, kn for Indian MFI). Skip the rest.
 - If the brand has a known historical name (e.g. CreditAccess Grameen → Grameen Koota / Madura Micro Finance), include it.
-- Domain typosquats should be plausible (not random) — focus on letter swaps adjacent on QWERTY, hyphenation, TLD swap (.in → .com, etc).
+- Domain typosquats should be plausible (not random) — letter swaps adjacent on QWERTY, hyphenation, TLD swap.
 - Fraud lexicons should reflect the industry (NBFC/MFI/Bank → loan/recovery/recruitment scams).
-- Keep arrays under 30 items each. Quality over quantity.`;
+- HARD LIMITS: aliases ≤8, misspellings ≤10, transliterations ≤8, related_entities ≤6, related_domains ≤8, domain_typosquats ≤12, each fraud_lexicon array ≤8.
+- No prose, no markdown fences. Output JSON only.`;
 
 interface AssetRow {
   type: string;
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
       aiResp = await callClaude({
         system: SYSTEM_PROMPT,
         user: rawBundle,
-        maxTokens: 3000,
+        maxTokens: 8000,
       });
       enriched = extractJson(aiResp.text);
       if (!enriched) {

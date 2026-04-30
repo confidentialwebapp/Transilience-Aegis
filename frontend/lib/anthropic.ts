@@ -70,46 +70,75 @@ export async function callClaude(opts: ClaudeCallOptions): Promise<ClaudeCallRes
   };
 }
 
-/** Extract a JSON value (object or array) from Claude's response. */
+/** Extract a JSON value (object or array) from Claude's response.
+ *  Robust against:
+ *    - markdown fences (closed or unclosed if Claude hit max_tokens)
+ *    - leading/trailing prose
+ *    - truncation at any depth (auto-closes unbalanced brackets/strings) */
 export function extractJson<T = unknown>(text: string): T | null {
-  // Try plain parse first
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    // ignore
+  try { return JSON.parse(text) as T; } catch { /* fall through */ }
+
+  // Strip markdown fences (closed). If only opening fence is present, drop it.
+  let body = text;
+  const closedFence = body.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (closedFence) {
+    body = closedFence[1].trim();
+    try { return JSON.parse(body) as T; } catch { /* fall through */ }
+  } else {
+    body = body.replace(/```(?:json)?\s*/, "");
   }
-  // Strip markdown fences and find a balanced JSON literal
-  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenceMatch) {
-    try {
-      return JSON.parse(fenceMatch[1].trim()) as T;
-    } catch {
-      // ignore
-    }
-  }
-  // Find first { or [ to last matching } or ]
-  const objStart = text.indexOf("{");
-  const arrStart = text.indexOf("[");
+
+  // Locate the first { or [
+  const objStart = body.indexOf("{");
+  const arrStart = body.indexOf("[");
   let start = -1;
   let isArr = false;
   if (objStart === -1 && arrStart === -1) return null;
-  if (objStart === -1) {
-    start = arrStart;
-    isArr = true;
-  } else if (arrStart === -1) {
-    start = objStart;
-  } else if (arrStart < objStart) {
-    start = arrStart;
-    isArr = true;
-  } else {
-    start = objStart;
+  if (objStart === -1) { start = arrStart; isArr = true; }
+  else if (arrStart === -1) { start = objStart; }
+  else if (arrStart < objStart) { start = arrStart; isArr = true; }
+  else { start = objStart; }
+
+  const candidate = body.slice(start);
+
+  // Walk the candidate: track depth + string state. If we run out of chars
+  // mid-structure, close the open contexts so JSON.parse can succeed.
+  let depthObj = 0, depthArr = 0;
+  let inStr = false, escape = false;
+  const stack: ("{" | "[")[] = [];
+  let lastValidEnd = -1;
+  for (let i = 0; i < candidate.length; i++) {
+    const c = candidate[i];
+    if (escape) { escape = false; continue; }
+    if (inStr) {
+      if (c === "\\") { escape = true; continue; }
+      if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') { inStr = true; continue; }
+    if (c === "{") { depthObj++; stack.push("{"); }
+    else if (c === "[") { depthArr++; stack.push("["); }
+    else if (c === "}") { depthObj--; stack.pop(); if (stack.length === 0) lastValidEnd = i; }
+    else if (c === "]") { depthArr--; stack.pop(); if (stack.length === 0) lastValidEnd = i; }
   }
-  const closer = isArr ? "]" : "}";
-  const lastClose = text.lastIndexOf(closer);
-  if (lastClose <= start) return null;
-  try {
-    return JSON.parse(text.slice(start, lastClose + 1)) as T;
-  } catch {
-    return null;
+
+  if (lastValidEnd >= 0) {
+    try { return JSON.parse(candidate.slice(0, lastValidEnd + 1)) as T; }
+    catch { /* fall through to repair */ }
   }
+
+  // Truncated mid-structure. Repair by closing open string + brackets.
+  let repaired = candidate;
+  // Strip trailing partial token after last comma or bracket open
+  // (Heuristic: chop after the last comma to drop the half-written entry.)
+  const lastCommaIdx = repaired.lastIndexOf(",");
+  if (lastCommaIdx > 0 && stack.length > 0) {
+    repaired = repaired.slice(0, lastCommaIdx);
+  }
+  if (inStr) repaired += '"';
+  while (stack.length) {
+    const open = stack.pop();
+    repaired += open === "{" ? "}" : "]";
+  }
+  try { return JSON.parse(repaired) as T; } catch { return null; }
 }

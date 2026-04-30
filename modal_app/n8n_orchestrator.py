@@ -426,3 +426,40 @@ def reset_and_reimport():
         print(f"volume commit warning: {e}")
 
     return {"ok": True, "files": [f.name for f in files]}
+
+
+# ── 24/7 keep-warm cron ─────────────────────────────────────────────────────
+# Pings n8n every 5 minutes so Modal's edge proxy never drops the route
+# during rolling container recycles. Tiny function, sub-second runtime,
+# negligible cost — saves the 60-100s cold-start when an admin logs in
+# after a multi-hour idle window.
+keepwarm_image = modal.Image.debian_slim(python_version="3.12").pip_install("httpx==0.27.2")
+
+
+@app.function(
+    image=keepwarm_image,
+    schedule=modal.Period(minutes=5),
+    timeout=60,
+    cpu=0.125,
+    memory=128,
+)
+def keepwarm() -> dict:
+    """Cron-driven heartbeat — keeps the n8n container warm across Modal's
+    24h rolling recycle. Logs status; does not block."""
+    import time
+    import httpx
+
+    base = "https://transilience--aegis-n8n-server.modal.run"
+    started = time.time()
+    try:
+        # Two probes back-to-back: first warms the proxy, second is the real read
+        with httpx.Client(timeout=20.0) as c:
+            r1 = c.get(f"{base}/", follow_redirects=False)
+            r2 = c.get(f"{base}/rest/login", follow_redirects=False)
+            elapsed = time.time() - started
+            print(f"[keepwarm] / → HTTP {r1.status_code}  /rest/login → HTTP {r2.status_code}  ({elapsed:.2f}s)")
+            return {"ok": True, "status_root": r1.status_code, "status_login": r2.status_code, "elapsed_s": elapsed}
+    except Exception as e:
+        elapsed = time.time() - started
+        print(f"[keepwarm] FAILED after {elapsed:.2f}s: {type(e).__name__}: {e}")
+        return {"ok": False, "error": f"{type(e).__name__}: {e}", "elapsed_s": elapsed}

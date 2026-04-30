@@ -71,7 +71,7 @@ export default function AssetMonitoringPage() {
     const supabase = createClient();
     const fetch = async () => {
       const { data } = await supabase
-        .from("assets")
+        .from("aegis_assets")
         .select("id, type, value, active, metadata, findings:findings(severity)")
         .eq("tenant_id", tenantId)
         .eq("type", "domain");

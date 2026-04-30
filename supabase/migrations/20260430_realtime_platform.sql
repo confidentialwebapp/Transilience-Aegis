@@ -31,8 +31,8 @@ create table if not exists tenant_services (
   primary key (tenant_id, service)
 );
 
--- ── Canonical assets (post-admin approval) ─────────────────────────────
-create table if not exists assets (
+-- ── Canonical aegis_assets (post-admin approval) ─────────────────────────────
+create table if not exists aegis_assets (
   id         uuid primary key default gen_random_uuid(),
   tenant_id  uuid references tenants(id) on delete cascade,
   type       text not null check (type in (
@@ -44,9 +44,9 @@ create table if not exists assets (
   active     boolean default true,
   created_at timestamptz default now()
 );
-create index if not exists idx_assets_tenant on assets(tenant_id, active);
+create index if not exists idx_aegis_assets_tenant on aegis_assets(tenant_id, active);
 
--- ── Customer-submitted assets awaiting admin approval ──────────────────
+-- ── Customer-submitted aegis_assets awaiting admin approval ──────────────────
 create table if not exists asset_submissions (
   id           uuid primary key default gen_random_uuid(),
   tenant_id    uuid references tenants(id) on delete cascade,
@@ -83,7 +83,7 @@ create index if not exists idx_scan_runs_status on scan_runs(status, started_at 
 create table if not exists findings (
   id                  uuid primary key default gen_random_uuid(),
   tenant_id           uuid references tenants(id) on delete cascade,
-  asset_id            uuid references assets(id) on delete set null,
+  asset_id            uuid references aegis_assets(id) on delete set null,
   scan_run_id         uuid references scan_runs(id) on delete cascade,
   source              text,
   kind                text,
@@ -130,7 +130,7 @@ create table if not exists apify_runs (
 create index if not exists idx_apify_runs_tenant on apify_runs(tenant_id, started_at desc);
 
 -- ── Admin action audit log ─────────────────────────────────────────────
-create table if not exists audit_log (
+create table if not exists aegis_audit_log (
   id        uuid primary key default gen_random_uuid(),
   actor_id  uuid,
   action    text not null,
@@ -138,8 +138,8 @@ create table if not exists audit_log (
   payload   jsonb default '{}'::jsonb,
   at        timestamptz default now()
 );
-create index if not exists idx_audit_at on audit_log(at desc);
-create index if not exists idx_audit_actor on audit_log(actor_id, at desc);
+create index if not exists idx_aegis_audit_at on aegis_audit_log(at desc);
+create index if not exists idx_aegis_audit_actor on aegis_audit_log(actor_id, at desc);
 
 -- ── Admin allowlist ────────────────────────────────────────────────────
 create table if not exists admin_users (
@@ -180,8 +180,8 @@ begin
     (v_tenant_id, 'incident_response',        true, null),
     (v_tenant_id, 'accessibility',            true, null);
 
-  -- Seed assets
-  insert into assets (tenant_id, type, value, metadata) values
+  -- Seed aegis_assets
+  insert into aegis_assets (tenant_id, type, value, metadata) values
     (v_tenant_id, 'domain',         'creditaccessgrameen.in',   '{"primary": true}'::jsonb),
     (v_tenant_id, 'brand_name',     'CreditAccess Grameen',     '{}'::jsonb),
     (v_tenant_id, 'social_handle',  'creditaccessgrameen',      '{"platform_hint":"any"}'::jsonb),

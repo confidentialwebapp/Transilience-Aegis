@@ -32,13 +32,13 @@ $$;
 -- ── Enable RLS on every table ────────────────────────────────────────────
 alter table public.tenants            enable row level security;
 alter table public.tenant_services    enable row level security;
-alter table public.assets             enable row level security;
+alter table public.aegis_assets             enable row level security;
 alter table public.asset_submissions  enable row level security;
 alter table public.scan_runs          enable row level security;
 alter table public.findings           enable row level security;
 alter table public.dlr_records        enable row level security;
 alter table public.apify_runs         enable row level security;
-alter table public.audit_log          enable row level security;
+alter table public.aegis_audit_log          enable row level security;
 alter table public.admin_users        enable row level security;
 
 -- ── tenants ──────────────────────────────────────────────────────────────
@@ -59,13 +59,13 @@ drop policy if exists admin_all_tenant_services on public.tenant_services;
 create policy admin_all_tenant_services on public.tenant_services
   for all using (public.is_admin()) with check (public.is_admin());
 
--- ── assets ───────────────────────────────────────────────────────────────
-drop policy if exists tenant_select_assets on public.assets;
-create policy tenant_select_assets on public.assets
+-- ── aegis_assets ───────────────────────────────────────────────────────────────
+drop policy if exists tenant_select_assets on public.aegis_assets;
+create policy tenant_select_assets on public.aegis_assets
   for select using (tenant_id = public.auth_tenant_id());
 
-drop policy if exists admin_all_assets on public.assets;
-create policy admin_all_assets on public.assets
+drop policy if exists admin_all_assets on public.aegis_assets;
+create policy admin_all_assets on public.aegis_assets
   for all using (public.is_admin()) with check (public.is_admin());
 
 -- ── asset_submissions ────────────────────────────────────────────────────
@@ -120,9 +120,9 @@ drop policy if exists admin_all_apify_runs on public.apify_runs;
 create policy admin_all_apify_runs on public.apify_runs
   for all using (public.is_admin()) with check (public.is_admin());
 
--- ── audit_log (admin SELECT only; INSERTs come from service role) ───────
-drop policy if exists admin_select_audit on public.audit_log;
-create policy admin_select_audit on public.audit_log
+-- ── aegis_audit_log (admin SELECT only; INSERTs come from service role) ───────
+drop policy if exists admin_select_audit on public.aegis_audit_log;
+create policy admin_select_audit on public.aegis_audit_log
   for select using (public.is_admin());
 
 -- ── admin_users (admins manage themselves) ───────────────────────────────

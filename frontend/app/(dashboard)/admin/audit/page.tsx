@@ -22,7 +22,7 @@ interface AdminUserRow {
 }
 
 export default function AdminAuditPage() {
-  const { data: rows, loading } = useLiveTable<AuditRow>("audit_log", {
+  const { data: rows, loading } = useLiveTable<AuditRow>("aegis_audit_log", {
     orderBy: "at",
     ascending: false,
     limit: 100,

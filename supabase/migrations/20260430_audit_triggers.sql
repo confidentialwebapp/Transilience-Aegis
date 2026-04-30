@@ -1,4 +1,4 @@
--- Audit triggers — capture admin mutations to audit_log.
+-- Audit triggers — capture admin mutations to aegis_audit_log.
 -- Service-role calls (where auth.uid() is null) are intentionally skipped:
 --   we don't want to log n8n's billion findings inserts as "admin actions".
 -- Applied AFTER 20260430_realtime_platform.sql and 20260430_rls_policies.sql.
@@ -24,7 +24,7 @@ begin
     v_payload := to_jsonb(new);
   end if;
 
-  insert into public.audit_log(actor_id, action, target, payload, at)
+  insert into public.aegis_audit_log(actor_id, action, target, payload, at)
   values (v_actor, tg_op, v_target, v_payload, now());
 
   return coalesce(new, old);
@@ -42,9 +42,9 @@ create trigger trg_audit_tenant_services
   after insert or update or delete on public.tenant_services
   for each row execute function public.audit_admin_action();
 
-drop trigger if exists trg_audit_assets on public.assets;
+drop trigger if exists trg_audit_assets on public.aegis_assets;
 create trigger trg_audit_assets
-  after insert or update or delete on public.assets
+  after insert or update or delete on public.aegis_assets
   for each row execute function public.audit_admin_action();
 
 drop trigger if exists trg_audit_asset_submissions on public.asset_submissions;

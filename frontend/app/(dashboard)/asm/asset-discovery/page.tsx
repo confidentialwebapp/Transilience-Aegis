@@ -65,7 +65,7 @@ export default function AssetDiscoveryPage() {
     const supabase = createClient();
     const fetch = async () => {
       const { data } = await supabase
-        .from("assets")
+        .from("aegis_assets")
         .select("id, type, value, active, metadata, created_at, findings:findings(severity)")
         .eq("tenant_id", tenantId)
         .eq("type", "subdomain")

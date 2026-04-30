@@ -162,6 +162,54 @@ export default function AdminScanPage() {
     return assets.filter((a) => types.includes(a.type));
   }, [assets, selectedTask]);
 
+  const enrich = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const resp = await fetch("/api/admin/asset-enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenant_id: tenantId }),
+      });
+      const j = await resp.json();
+      if (!resp.ok || !j.ok) throw new Error(j.error ?? `HTTP ${resp.status}`);
+      // Reload assets since enrichment may have inserted new rows
+      const sb = supabase;
+      const { data } = await sb.from("aegis_assets").select("id, type, value, active").eq("tenant_id", tenantId).eq("active", true);
+      setAssets((data ?? []) as AssetRow[]);
+      setError(`✓ Enrichment added ${j.inserted_assets} new assets (run_id ${j.run_id?.slice(0, 8)}).`);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const fullSweep = async () => {
+    if (!selectedTask) { setError("Pick a feature first."); return; }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const resp = await fetch("/api/admin/scan/full-sweep", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenant_id: tenantId,
+          feature_id: selectedTask.feature_id,
+          apify_task_id: selectedTask.task_id,
+          brand: selectedTenant?.primary_brand,
+          run_kali: true,
+        }),
+      });
+      const j = await resp.json();
+      if (!resp.ok || !j.ok) throw new Error(j.error ?? `HTTP ${resp.status}`);
+      router.push(`/admin/runs/${j.scan_run_id}`);
+    } catch (e) {
+      setError((e as Error).message);
+      setSubmitting(false);
+    }
+  };
+
   const submit = async () => {
     if (!selectedTask) { setError("Pick a feature first."); return; }
     if (relevantAssets.length === 0) { setError(`No assets registered for this feature. Add some via /assets/* pages.`); return; }
@@ -357,15 +405,34 @@ export default function AdminScanPage() {
             </div>
           )}
 
-          <div className="flex justify-end gap-2 mt-5">
+          <div className="flex flex-wrap justify-end gap-2 mt-5">
+            <button
+              disabled={submitting || !tenantId}
+              onClick={enrich}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11.5px] font-semibold text-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: "rgba(139,92,246,0.10)", border: "1px solid rgba(139,92,246,0.30)" }}
+              title="Stage 2 — AI Enricher: discover aliases, related entities, fraud lexicons"
+            >
+              {submitting ? "Working…" : "✨ Enrich Assets (Stage 2)"}
+            </button>
+            <button
+              disabled={submitting || !selectedTask}
+              onClick={fullSweep}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11.5px] font-semibold text-amber-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.30)" }}
+              title="Stage 4 — Apify + Kali parallel sweep with sync gate"
+            >
+              {submitting ? "Working…" : "🔥 Run Full Sweep (Apify + Kali)"}
+            </button>
             <button
               disabled={submitting || !selectedTask || relevantAssets.length === 0}
               onClick={submit}
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg,#8b5cf6,#7c3aed)" }}
+              title="Apify-only quick scan"
             >
               <Zap className="w-3.5 h-3.5" />
-              {submitting ? "Starting Apify run…" : "Run Now"}
+              {submitting ? "Starting…" : "Run (Apify only)"}
             </button>
           </div>
         </div>

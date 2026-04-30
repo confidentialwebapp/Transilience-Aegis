@@ -1,12 +1,21 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Globe, Skull } from "lucide-react";
+import { Globe, Skull, Activity } from "lucide-react";
 import { PageHeader, FilterCard, FilterInput, FilterSelect, DataTable, TagGroup, TagPill } from "@/components/platform";
 import type { Column } from "@/components/platform";
 import { genActors, type ActorRow, COUNTRIES } from "@/lib/mock-data";
+import { useFindings, useTenantId } from "@/lib/realtime";
 
 export default function ThreatActorsPage() {
+  const tenantId = useTenantId();
+  const { data: findings, loading } = useFindings(tenantId);
+
+  const liveMentions = useMemo(
+    () => findings.filter((f) => f.kind === "threat_actor_mention").length,
+    [findings]
+  );
+
   const [page, setPage] = useState(1);
   const pageSize = 50;
   const total = 7166;
@@ -35,20 +44,24 @@ export default function ThreatActorsPage() {
       ),
     },
     { key: "country", header: "Country", render: (r) => <span className="text-[12px] text-slate-300">{r.country}</span> },
-    {
-      key: "type",
-      header: "Type",
-      render: (r) => <TagPill label={r.type} />,
-    },
-    {
-      key: "caps",
-      header: "Capabilities",
-      render: (r) => <TagGroup tags={r.capabilities} max={4} />,
-    },
+    { key: "type", header: "Type", render: (r) => <TagPill label={r.type} /> },
+    { key: "caps", header: "Capabilities", render: (r) => <TagGroup tags={r.capabilities} max={4} /> },
   ];
+
+  const livePill = (
+    <span
+      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold tracking-wider"
+      style={{ background: "rgba(16,185,129,0.10)", color: "#6ee7b7", border: "1px solid rgba(16,185,129,0.30)" }}
+      title="Live mentions of threat actors against your assets"
+    >
+      <Activity className="w-2.5 h-2.5 animate-pulse" />
+      {loading ? "LIVE · CONNECTING…" : `LIVE · ${liveMentions} MENTIONS YOUR ASSETS`}
+    </span>
+  );
 
   return (
     <>
+      <div className="flex items-center gap-3 mb-2">{livePill}</div>
       <PageHeader
         title="Threat Actors"
         description="List of individuals, groups, and state-sponsored crews observed in IOC matches, dark web leaks, and partner intel sharing."

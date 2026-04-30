@@ -7,6 +7,7 @@ import {
   HelpCircle, Phone, Wrench, Plus, Inbox, Box, LayoutDashboard, Scan,
   Target, MessageSquare, FileBadge, FileLock, Banknote, Server, Download,
   Code, Settings as SettingsIcon, Lock, RotateCcw, UserCog, Globe2, Package,
+  ShieldAlert, History, Workflow,
   type LucideIcon,
 } from "lucide-react";
 
@@ -106,6 +107,16 @@ export const SIDEBAR_SECTIONS: NavSection[] = [
       { href: "/recon", label: "OSINT Recon", icon: Target, badge: null },
       { href: "/scan", label: "Active Scanners", icon: Zap, badge: null },
       { href: "/researcher-feed", label: "Researcher Feed", icon: Radio, badge: null },
+    ],
+  },
+  {
+    title: "ADMIN",
+    items: [
+      { href: "/admin", label: "Admin Console", icon: ShieldAlert, badge: null },
+      { href: "/admin/scan", label: "Run Scan", icon: Zap, badge: null },
+      { href: "/admin/runs", label: "Scan Runs", icon: History, badge: null },
+      { href: "/admin/tenants", label: "Tenants", icon: Building2, badge: null },
+      { href: "/admin/audit", label: "Audit Log", icon: FileText, badge: null },
     ],
   },
 ];
@@ -236,6 +247,11 @@ export const PAGE_TITLES: Record<string, string> = {
   "/recon": "OSINT Recon",
   "/scan": "Active Scanners",
   "/researcher-feed": "Researcher Feed",
+  "/admin": "Admin Console",
+  "/admin/scan": "Run Scan",
+  "/admin/runs": "Scan Run History",
+  "/admin/tenants": "Tenants",
+  "/admin/audit": "Audit Log",
 };
 
 // ── CLIENT MODES ──────────────────────────────────────────────────────

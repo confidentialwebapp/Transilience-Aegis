@@ -1,0 +1,174 @@
+{
+  "name": "DLR Monitoring",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "run-dlr-sweep",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-1400, 400],
+      "id": "10000000-0000-4000-8000-000000000001",
+      "name": "Webhook",
+      "webhookId": "run-dlr-sweep"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/scan_runs?id=eq.{{ $json.body.run_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"status\": \"running\" }",
+        "options": { "timeout": 15000 }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1180, 400],
+      "id": "10000000-0000-4000-8000-000000000002",
+      "name": "Mark Running"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://haveibeenpwned.com/api/v3/breaches?domain={{ $('Webhook').item.json.body.owned_domains[0] }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "hibp-api-key", "value": "={{ $env.HIBP_API_KEY }}" },
+            { "name": "User-Agent", "value": "TransilienceAegis" }
+          ]
+        },
+        "options": { "timeout": 30000, "response": { "response": { "neverError": true } } }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-940, 400],
+      "id": "10000000-0000-4000-8000-000000000003",
+      "name": "HIBP Domain Breaches"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize each HIBP breach into a dlr_record row\nconst breaches = $input.first().json;\nconst arr = Array.isArray(breaches) ? breaches : (breaches?.body || []);\nconst ctx = $('Webhook').item.json.body;\n\nconst rows = arr.filter(b => b && b.Name).map(b => ({\n  tenant_id: ctx.tenant_id,\n  scan_run_id: ctx.run_id,\n  breach_name: b.Name,\n  data_classes: b.DataClasses || [],\n  affected_email: null,\n  status: 'RECOVERED',\n  source: 'hibp',\n}));\n\nreturn [{ json: { rows, count: rows.length } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-700, 400],
+      "id": "10000000-0000-4000-8000-000000000004",
+      "name": "Normalize Breaches"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            { "id": "has-rows", "leftValue": "={{ $json.count }}", "rightValue": 0, "operator": { "type": "number", "operation": "gt" } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-460, 400],
+      "id": "10000000-0000-4000-8000-000000000005",
+      "name": "Has Breaches?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/dlr_records",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.rows) }}",
+        "options": { "timeout": 30000 }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-220, 280],
+      "id": "10000000-0000-4000-8000-000000000006",
+      "name": "Bulk Insert DLR"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/scan_runs?id=eq.{{ $('Webhook').item.json.body.run_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"completed\",\n  \"completed_at\": \"{{ $now.toISO() }}\",\n  \"finding_count\": {{ $('Normalize Breaches').item.json.count }}\n}",
+        "options": { "timeout": 15000 }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [40, 400],
+      "id": "10000000-0000-4000-8000-000000000007",
+      "name": "Mark Completed"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true,\n  \"run_id\": \"{{ $('Webhook').item.json.body.run_id }}\",\n  \"breach_count\": {{ $('Normalize Breaches').item.json.count }}\n}"
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [280, 400],
+      "id": "10000000-0000-4000-8000-000000000008",
+      "name": "Respond OK"
+    }
+  ],
+  "connections": {
+    "Webhook":              { "main": [[{ "node": "Mark Running", "type": "main", "index": 0 }]] },
+    "Mark Running":         { "main": [[{ "node": "HIBP Domain Breaches", "type": "main", "index": 0 }]] },
+    "HIBP Domain Breaches": { "main": [[{ "node": "Normalize Breaches", "type": "main", "index": 0 }]] },
+    "Normalize Breaches":   { "main": [[{ "node": "Has Breaches?", "type": "main", "index": 0 }]] },
+    "Has Breaches?": {
+      "main": [
+        [{ "node": "Bulk Insert DLR", "type": "main", "index": 0 }],
+        [{ "node": "Mark Completed", "type": "main", "index": 0 }]
+      ]
+    },
+    "Bulk Insert DLR": { "main": [[{ "node": "Mark Completed", "type": "main", "index": 0 }]] },
+    "Mark Completed":  { "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all"
+  },
+  "staticData": null,
+  "pinData": {},
+  "versionId": "v1-dlr-monitoring",
+  "triggerCount": 1,
+  "tags": [{ "name": "aegis" }, { "name": "dlr" }],
+  "active": false
+}

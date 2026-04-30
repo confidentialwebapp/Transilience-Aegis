@@ -2,21 +2,100 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Globe, Hash, Award, AlertTriangle, ToggleLeft, Inbox } from "lucide-react";
+import { Globe, Hash, Award, AlertTriangle, ToggleLeft, Inbox, Activity } from "lucide-react";
 import { PageHeader, FilterCard, FilterInput, FilterSelect, DataTable, StatusPill, SeverityBar } from "@/components/platform";
-import type { Column } from "@/components/platform";
-import { genIncidents, type IncidentRow, BRANDS } from "@/lib/mock-data";
+import type { Column, SeverityLevel } from "@/components/platform";
+import { useFindings, useTenantId, type FindingRow, formatKind, actionToStatus, shortHash } from "@/lib/realtime";
+import { BRANDS } from "@/lib/mock-data";
+
+// kinds we surface on the Incidents board (everything except credential breaches,
+// which live on the DLR page)
+const INCIDENT_KINDS = new Set([
+  "phishing",
+  "brand_impersonation",
+  "exec_impersonation",
+  "fraud",
+  "domain_typosquat",
+  "leaked_asset",
+  "username_squat",
+]);
+
+interface IncidentDisplay {
+  id: string;
+  caseHash: string;
+  status: string;
+  type: string;
+  url: string;
+  brand: string;
+  severity: SeverityLevel;
+  uptimeMin: number;
+  addedAt: string;
+}
+
+function deriveBrand(r: FindingRow): string {
+  const ev = r.evidence as Record<string, unknown> | null;
+  if (ev && typeof ev["brand"] === "string") return ev["brand"] as string;
+  return "—";
+}
+
+function toDisplay(r: FindingRow): IncidentDisplay {
+  const added = new Date(r.created_at);
+  const uptimeMin = Math.max(0, Math.floor((Date.now() - added.getTime()) / 60000));
+  return {
+    id: r.id,
+    caseHash: shortHash(r.id),
+    status: actionToStatus(r.recommended_action),
+    type: formatKind(r.kind),
+    url: r.url_or_value ?? "—",
+    brand: deriveBrand(r),
+    severity: (r.severity as SeverityLevel) ?? "Low",
+    uptimeMin,
+    addedAt: added.toLocaleString(),
+  };
+}
 
 export default function IncidentsPage() {
-  const [page, setPage] = useState(1);
-  const pageSize = 100;
-  const total = 1520;
-  const rows = useMemo<IncidentRow[]>(
-    () => genIncidents(Math.min(pageSize, total - (page - 1) * pageSize), (page - 1) * pageSize),
-    [page]
-  );
+  const tenantId = useTenantId();
+  const { data: findings, loading } = useFindings(tenantId);
 
-  const cols: Column<IncidentRow>[] = [
+  const [page, setPage] = useState(1);
+  const [filterBrand, setFilterBrand] = useState("");
+  const [filterSeverity, setFilterSeverity] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterKind, setFilterKind] = useState("");
+  const [urlSearch, setUrlSearch] = useState("");
+  const [caseSearch, setCaseSearch] = useState("");
+
+  const pageSize = 100;
+
+  const incidents: IncidentDisplay[] = useMemo(() => {
+    const filtered = findings.filter((f) => INCIDENT_KINDS.has(f.kind));
+    return filtered.map(toDisplay);
+  }, [findings]);
+
+  const filtered = useMemo(() => {
+    return incidents.filter((r) => {
+      if (filterBrand && r.brand !== filterBrand) return false;
+      if (filterSeverity && r.severity !== filterSeverity) return false;
+      if (filterStatus && r.status !== filterStatus) return false;
+      if (filterKind && !r.type.toLowerCase().includes(filterKind.toLowerCase())) return false;
+      if (urlSearch) {
+        const needles = urlSearch.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+        if (needles.length && !needles.some((n) => r.url.toLowerCase().includes(n))) return false;
+      }
+      if (caseSearch) {
+        const needles = caseSearch.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+        if (needles.length && !needles.some((n) => r.caseHash.toLowerCase().includes(n))) return false;
+      }
+      return true;
+    });
+  }, [incidents, filterBrand, filterSeverity, filterStatus, filterKind, urlSearch, caseSearch]);
+
+  const total = filtered.length;
+  const startIdx = (page - 1) * pageSize;
+  const rows = filtered.slice(startIdx, startIdx + pageSize);
+
+  const cols: Column<IncidentDisplay>[] = [
     {
       key: "case",
       header: "Case ID",
@@ -25,8 +104,6 @@ export default function IncidentsPage() {
         <div className="leading-snug">
           <p className="text-[12px] font-mono text-purple-300 font-semibold">CASE : {r.caseHash}</p>
           <p className="text-[10px] text-slate-500 mt-0.5">Added: {r.addedAt}</p>
-          <p className="text-[10px] text-slate-500">Opened: {r.openedAt}</p>
-          {r.closedAt && <p className="text-[10px] text-slate-500">Closed: {r.closedAt}</p>}
         </div>
       ),
     },
@@ -37,7 +114,7 @@ export default function IncidentsPage() {
       render: (r) => (
         <div className="leading-snug max-w-[280px]">
           <p className="text-[11px] text-slate-400">{r.type}</p>
-          <a className="text-[12px] text-purple-300 hover:text-purple-200 truncate block" href="#">{r.url}</a>
+          <a className="text-[12px] text-purple-300 hover:text-purple-200 truncate block" href={r.url.startsWith("http") ? r.url : "#"} target="_blank" rel="noopener noreferrer">{r.url}</a>
         </div>
       ),
     },
@@ -55,8 +132,23 @@ export default function IncidentsPage() {
     },
   ];
 
+  const livePill = (
+    <span
+      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold tracking-wider"
+      style={{
+        background: "rgba(16,185,129,0.10)",
+        color: "#6ee7b7",
+        border: "1px solid rgba(16,185,129,0.30)",
+      }}
+    >
+      <Activity className="w-2.5 h-2.5 animate-pulse" />
+      {loading ? "LIVE · CONNECTING…" : incidents.length > 0 ? `LIVE · ${incidents.length} ACTIVE` : "LIVE · NO INCIDENTS YET"}
+    </span>
+  );
+
   return (
     <>
+      <div className="flex items-center gap-3 mb-2">{livePill}</div>
       <PageHeader
         title="Incidents"
         description="Master list of all infringing or malicious content approved for takedown. Each actionable threat carries a unique case ID, lifecycle status, and uptime tracking."
@@ -68,20 +160,28 @@ export default function IncidentsPage() {
             <Inbox className="w-3 h-3" /> Reported Incidents
           </Link>
         }
-        onSearch={() => {}}
-        onReset={() => {}}
+        onSearch={() => setPage(1)}
+        onReset={() => {
+          setFilterBrand("");
+          setFilterSeverity("");
+          setFilterStatus("");
+          setFilterKind("");
+          setUrlSearch("");
+          setCaseSearch("");
+          setPage(1);
+        }}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          <FilterInput icon={Globe} placeholder="Multiple URLs" helper="paste multiple entries separated by commas" />
-          <FilterInput icon={Hash} placeholder="Multiple Case IDs" helper="paste multiple entries separated by commas" />
-          <FilterSelect icon={Award} label="Brand" options={BRANDS} />
-          <FilterSelect icon={AlertTriangle} label="Threat Level" options={["Critical", "Substantial", "Moderate", "Low"]} />
-          <FilterSelect icon={ToggleLeft} label="Status" options={["OPEN", "CLOSED", "WAITING", "ON HOLD"]} />
-          <FilterSelect icon={Hash} label="Incident Type" options={["Phishing", "Brand Abuse", "Social Media", "Email", "Executive"]} />
+          <FilterInput icon={Globe} placeholder="Multiple URLs" helper="paste multiple entries separated by commas" value={urlSearch} onChange={setUrlSearch} />
+          <FilterInput icon={Hash} placeholder="Multiple Case IDs" helper="paste multiple entries separated by commas" value={caseSearch} onChange={setCaseSearch} />
+          <FilterSelect icon={Award} label="Brand" options={BRANDS} value={filterBrand} onChange={setFilterBrand} />
+          <FilterSelect icon={AlertTriangle} label="Threat Level" options={["Critical", "Substantial", "Moderate", "Low"]} value={filterSeverity} onChange={setFilterSeverity} />
+          <FilterSelect icon={ToggleLeft} label="Status" options={["OPEN", "CLOSED", "WAITING", "ON HOLD"]} value={filterStatus} onChange={setFilterStatus} />
+          <FilterSelect icon={Hash} label="Incident Type" options={["Phishing", "Brand Impersonation", "Exec Impersonation", "Domain Typosquat", "Leaked Asset", "Fraud"]} value={filterKind} onChange={setFilterKind} />
         </div>
       </FilterCard>
 
-      <DataTable<IncidentRow>
+      <DataTable<IncidentDisplay>
         columns={cols}
         rows={rows}
         totalEntries={total}
@@ -89,6 +189,7 @@ export default function IncidentsPage() {
         page={page}
         onPageChange={setPage}
         selectable
+        emptyText={loading ? "Loading…" : "No data available."}
       />
     </>
   );

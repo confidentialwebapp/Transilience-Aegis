@@ -65,28 +65,47 @@ export async function POST(req: NextRequest) {
     let cacheHits = 0;
     let persistErrors = 0;
     const errSamples: string[] = [];
-    const results = [];
-    for (const r of (rows ?? []) as Row[]) {
-      const finding: FindingForAttribution = {
-        finding_id: r.id,
-        feature_id: r.feature_id,
-        source: r.source,
-        url: r.url_or_value,
-        domain: r.url_or_value && !r.url_or_value.startsWith("http") ? r.url_or_value : null,
-        title: r.evidence?.title ?? null,
-        content: r.evidence?.content ?? r.evidence?.description ?? r.evidence?.raw ?? null,
-        timestamp_source: r.timestamp_source,
-        language_detected: r.language_detected,
-      };
-      const out = await attributeFinding(sb, ctx, finding) as ReturnType<typeof attributeFinding> extends Promise<infer T> ? T & { _persist_error?: string } : never;
-      counts[out.decision] = (counts[out.decision] ?? 0) + 1;
-      if (out.audit.resolver === "ai_fallback") aiFallbackUsed += 1;
-      if (out.audit.resolver === "cache") cacheHits += 1;
-      if (out._persist_error) {
-        persistErrors += 1;
-        if (errSamples.length < 3) errSamples.push(out._persist_error);
+    const results: { finding_id: string; decision: string; matched_entity?: string; severity_modifier: number }[] = [];
+
+    // Parallelize with concurrency cap so AI fallback calls overlap. With ~12
+    // AI calls × 2-3s each, sequential exceeds Vercel's 60s — pools of 6 keep
+    // the whole batch within ~10-12s comfortably.
+    const findingsList = (rows ?? []) as Row[];
+    const CONCURRENCY = 6;
+    for (let start = 0; start < findingsList.length; start += CONCURRENCY) {
+      const chunk = findingsList.slice(start, start + CONCURRENCY);
+      const settled = await Promise.allSettled(chunk.map((r) => {
+        const finding: FindingForAttribution = {
+          finding_id: r.id,
+          feature_id: r.feature_id,
+          source: r.source,
+          url: r.url_or_value,
+          domain: r.url_or_value && !r.url_or_value.startsWith("http") ? r.url_or_value : null,
+          title: r.evidence?.title ?? null,
+          content: r.evidence?.content ?? r.evidence?.description ?? r.evidence?.raw ?? null,
+          timestamp_source: r.timestamp_source,
+          language_detected: r.language_detected,
+        };
+        return attributeFinding(sb, ctx, finding);
+      }));
+      for (let i = 0; i < settled.length; i++) {
+        const s = settled[i];
+        const r = chunk[i];
+        if (s.status === "rejected") {
+          persistErrors += 1;
+          if (errSamples.length < 3) errSamples.push(`reject: ${(s.reason as Error)?.message?.slice(0, 200) ?? "unknown"}`);
+          continue;
+        }
+        const out = s.value as typeof s.value & { _persist_error?: string };
+        counts[out.decision] = (counts[out.decision] ?? 0) + 1;
+        if (out.audit.resolver === "ai_fallback") aiFallbackUsed += 1;
+        if (out.audit.resolver === "cache") cacheHits += 1;
+        if (out._persist_error) {
+          persistErrors += 1;
+          if (errSamples.length < 3) errSamples.push(out._persist_error);
+        }
+        results.push({ finding_id: r.id, decision: out.decision, matched_entity: out.matched_entity?.entity_id, severity_modifier: out.severity_modifier });
       }
-      results.push({ finding_id: r.id, decision: out.decision, matched_entity: out.matched_entity?.entity_id, severity_modifier: out.severity_modifier });
     }
 
     return NextResponse.json({

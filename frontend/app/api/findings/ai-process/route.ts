@@ -117,50 +117,48 @@ export async function POST(req: NextRequest) {
     const remainingForAi: FindingRow[] = [];
     if ("ctx" in attribLoad) {
       const ctx = attribLoad.ctx;
-      for (const f of findings) {
-        const ev = (f.evidence ?? {}) as { content?: string; title?: string; description?: string; raw?: string };
-        const adapt: FindingForAttribution = {
-          finding_id: f.id, feature_id: f.feature_id, source: f.source,
-          url: f.url_or_value, title: ev.title ?? null,
-          content: ev.content ?? ev.description ?? ev.raw ?? null,
-          timestamp_source: null,
-        };
-        const out = await attributeFinding(sb, ctx, adapt);
-        if (out.audit.resolver === "ai_fallback") attribStats.ai_fallback += 1;
-        if (out.audit.resolver === "cache") attribStats.cache_hits += 1;
-
-        if (AUTO_SUPPRESS_DECISIONS.has(out.decision)) {
-          // Skill says: this is legitimate / collision / customer-owned.
-          // Mark dropped, no need for AI filter.
-          await sb.from("findings").update({
-            ai_filter_status: "dropped",
-            ai_summary: out.reason.slice(0, 200),
-            ai_reason: `Auto-suppressed by attribution skill (${out.decision}).`,
-            recommended_action: "drop",
-            severity: "Low",
-            final_risk_score: 0,
-          }).eq("id", f.id);
-          attribStats.suppressed += 1;
-          continue;
+      // Parallelize attribution; the skill itself is independent per finding.
+      const CONC = 6;
+      for (let start = 0; start < findings.length; start += CONC) {
+        const chunk = findings.slice(start, start + CONC);
+        const outs = await Promise.allSettled(chunk.map((f) => {
+          const ev = (f.evidence ?? {}) as { content?: string; title?: string; description?: string; raw?: string };
+          return attributeFinding(sb, ctx, {
+            finding_id: f.id, feature_id: f.feature_id, source: f.source,
+            url: f.url_or_value, title: ev.title ?? null,
+            content: ev.content ?? ev.description ?? ev.raw ?? null,
+            timestamp_source: null,
+          } as FindingForAttribution);
+        }));
+        for (let i = 0; i < outs.length; i++) {
+          const s = outs[i];
+          const f = chunk[i];
+          if (s.status === "rejected") { remainingForAi.push(f); continue; }
+          const out = s.value;
+          if (out.audit.resolver === "ai_fallback") attribStats.ai_fallback += 1;
+          if (out.audit.resolver === "cache") attribStats.cache_hits += 1;
+          if (AUTO_SUPPRESS_DECISIONS.has(out.decision)) {
+            await sb.from("findings").update({
+              ai_filter_status: "dropped",
+              ai_summary: out.reason.slice(0, 200),
+              ai_reason: `Auto-suppressed by attribution skill (${out.decision}).`,
+              recommended_action: "drop", severity: "Low", final_risk_score: 0,
+            }).eq("id", f.id);
+            attribStats.suppressed += 1; continue;
+          }
+          if (AUTO_ELEVATE_DECISIONS.has(out.decision)) {
+            await sb.from("findings").update({
+              ai_filter_status: "kept",
+              ai_summary: out.reason.slice(0, 200),
+              ai_reason: `Auto-elevated by attribution skill (${out.decision}).`,
+              recommended_action: "takedown", severity: "Critical", final_risk_score: 95,
+              fraud_pattern: out.new_fraud_pattern ?? f.fraud_pattern,
+            }).eq("id", f.id);
+            attribStats.elevated += 1; continue;
+          }
+          remainingForAi.push(f);
+          attribStats.passed_through += 1;
         }
-        if (AUTO_ELEVATE_DECISIONS.has(out.decision)) {
-          // Skill says: impersonation of historical/sister entity.
-          // Auto-keep at high severity with skill's fraud pattern.
-          await sb.from("findings").update({
-            ai_filter_status: "kept",
-            ai_summary: out.reason.slice(0, 200),
-            ai_reason: `Auto-elevated by attribution skill (${out.decision}).`,
-            recommended_action: "takedown",
-            severity: "Critical",
-            final_risk_score: 95,
-            fraud_pattern: out.new_fraud_pattern ?? f.fraud_pattern,
-          }).eq("id", f.id);
-          attribStats.elevated += 1;
-          continue;
-        }
-        // sibling_out_of_scope, needs_attribution_check, no_match → still pass to AI Filter
-        remainingForAi.push(f);
-        attribStats.passed_through += 1;
       }
       findings = remainingForAi;
     }

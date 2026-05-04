@@ -34,6 +34,16 @@ MODULE_REGISTRY: dict[str, str] = {
     "ad_fraud":              "modules.ad_fraud:AdFraudModule",
     "deepfake_intel":        "modules.deepfake_intel:DeepfakeIntelModule",
     "pentest_recon":         "modules.pentest_recon:PentestReconModule",
+    # DRP modules (newly implemented)
+    "asset_discovery":       "modules.asset_discovery:AssetDiscoveryModule",
+    "subdomain_takeover":    "modules.subdomain_takeover:SubdomainTakeoverModule",
+    "cloud_exposure":        "modules.cloud_exposure:CloudExposureModule",
+    "supply_chain":          "modules.supply_chain:SupplyChainModule",
+    "iab_intel":             "modules.iab_intel:IabIntelModule",
+    "stealer_logs":          "modules.stealer_logs:StealerLogsModule",
+    "paste_intel":           "modules.paste_intel:PasteIntelModule",
+    "forum_intel":           "modules.forum_intel:ForumIntelModule",
+    "news_intel":            "modules.news_intel:NewsIntelModule",
 }
 
 

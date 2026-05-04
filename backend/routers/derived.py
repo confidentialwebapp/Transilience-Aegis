@@ -12,6 +12,7 @@ fake fallback data.
 from __future__ import annotations
 
 import asyncio
+import functools
 import json
 import logging
 import re
@@ -52,11 +53,16 @@ logger.info(f"derived router: {len(_FINDINGS)} findings, {len(_APT)} APT groups,
 _cache: dict[str, tuple[float, Any]] = {}
 
 def _cached(key: str, ttl: int = 600):
-    """Decorator: cache async fn result for `ttl` seconds."""
+    """Decorator: cache async fn result for `ttl` seconds. Uses functools.wraps
+    so FastAPI's signature inspection (for query/path/body params) sees the
+    *original* function — without this the wrapper's *args/**kwargs become
+    required query parameters and every cached endpoint 422s.
+    """
     def deco(fn):
+        @functools.wraps(fn)
         async def wrap(*a, **kw):
             now = time.time()
-            ck = f"{key}:{a}:{kw}"
+            ck = f"{key}:{a}:{tuple(sorted(kw.items()))}"
             if ck in _cache and now - _cache[ck][0] < ttl:
                 return _cache[ck][1]
             v = await fn(*a, **kw)

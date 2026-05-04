@@ -1,0 +1,102 @@
+# Smoke-test config for CreditAccess Grameen (passive OSINT only).
+# NOTE: Active modules (pentest_recon, infra_intel) are disabled - we do not
+# have authorization to actively probe third-party infrastructure.
+brand:
+  name: "CreditAccess Grameen"
+  legal_name: "CreditAccess Grameen Limited"
+  industry: "NBFC / Microfinance"
+  headquarters: "Bengaluru, India"
+  founded: 1991
+  description: "Listed Indian NBFC-MFI (formerly Grameen Koota Financial Services)."
+
+assets:
+  primary_domains:
+    - creditaccessgrameen.in
+  secondary_domains:
+    - cagrameen.in
+    - grameenkoota.org
+  ip_ranges: []   # we do not scan their infra
+  mobile_apps:
+    android:
+      - com.cag.kgfsl     # placeholder; if rogue listings appear they'll be flagged as 'unofficial'
+    ios: []
+  brand_keywords:
+    - "CreditAccess"
+    - "Grameen Koota"
+    - "CAGrameen"
+    - "CA Grameen"
+  trademarks:
+    - "CreditAccess Grameen"
+    - "Grameen Koota"
+  product_names:
+    - "Group Loan"
+    - "Retail Finance"
+  social_handles:
+    twitter: ["CAGrameen"]
+    instagram: ["creditaccessgrameen"]
+    facebook: ["CreditAccessGrameen"]
+    linkedin: ["creditaccess-grameen-limited"]
+    youtube: ["CreditAccessGrameen", "grameenkootajagruti"]   # added after Tier-2 discovery
+    tiktok: []
+    telegram: []
+
+people:
+  executives: []   # smoke test - no exec email exposure check (would need verified emails)
+  vips: []
+  support_handles: []
+
+engagement:
+  client_name: "Smoke Test Demonstration"
+  engagement_id: "BM-SMOKE-CAG-001"
+  start_date: "2026-05-01"
+  end_date: "2026-05-01"
+  methodology: "passive OSINT only (no active probing)"
+  authorized_by: "Internal evaluation"
+  authorization_ref: "EVAL-2026-001"
+  classification: "TLP:AMBER"
+  contacts: ["fde@transilienceai.com"]
+
+compliance:
+  - ISO27001
+  - NIST_CSF
+  - RBI_CYBER_RESILIENCE
+  - DPDP_ACT
+  - GDPR
+
+modules:
+  # PASSIVE OSINT — third-party database lookups, no traffic to target infra
+  domain_intel:         { enabled: true, permutations: full, check_live: true, capture_screenshots: false, max_permutations: 600, max_enrich: 15, dns_concurrency: 48, timeout: 240 }
+  phishing_intel:       { enabled: true, sources: [urlscan, virustotal, ipqs, phishtank, openphish, urlhaus, threatfox], timeout: 600 }
+  social_impersonation: { enabled: true, use_sherlock: false, use_maigret: false, apify_scrape: true }
+  social_deep_scrape:   { enabled: true, timeout: 600 }
+  telegram_intel:       { enabled: true, timeout: 600, max_channels: 25, scrape_concurrency: 6 }
+  document_leaks:       { enabled: true, timeout: 600, max_queries: 50, use_intelx: true }
+  darkweb_intel:        { enabled: true, sources: [intelx, ransomware_live] }
+  mobile_apps:          { enabled: true, stores: [google_play, apple_app_store] }   # APK mirrors omitted to save Apify credits
+
+  # SKIPPED — would actively touch target infra OR need data we don't have
+  infra_intel:          { enabled: false }   # would Shodan-query their IPs
+  email_exposure:       { enabled: false }   # need verified exec emails
+  code_leaks:           { enabled: false }   # GITHUB_TOKEN not configured
+  content_abuse:        { enabled: false }   # heavy Apify usage
+  ad_fraud:             { enabled: false }   # heavy Apify usage
+  deepfake_intel:       { enabled: false }
+  pentest_recon:        { enabled: false }   # would actively probe target
+
+screenshots:
+  enabled: true
+  max_count: 25
+  concurrency: 4
+
+ai_triage:
+  enabled: true
+  model: claude-opus-4-7
+  batch_size: 20
+  max_findings: 200
+  concurrency: 3
+
+report:
+  generate_executive: true
+  generate_technical: true
+  include_appendix_raw: true
+  preparer: "Transilience AI Threat Intelligence (smoke test)"

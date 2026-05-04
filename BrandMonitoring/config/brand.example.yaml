@@ -1,0 +1,146 @@
+# Brand Monitoring scan configuration
+# Copy to config/brand.yaml and customize.
+
+brand:
+  name: "ExampleCorp"
+  legal_name: "Example Corporation Pvt Ltd"
+  industry: "Financial Services"
+  headquarters: "Mumbai, India"
+  founded: 2010
+  description: "Leading digital payments platform serving 50M+ customers."
+  logo_path: "config/logo.png"   # optional; embedded into report cover
+
+# All assets to monitor / scan
+assets:
+  primary_domains:
+    - example.com
+    - example.in
+  secondary_domains:
+    - examplepay.com
+    - example-support.com
+  ip_ranges:
+    - 203.0.113.0/24
+  mobile_apps:
+    android:
+      - com.example.app
+    ios:
+      - id1234567890
+  brand_keywords:
+    - Example
+    - ExamplePay
+    - Example Wallet
+  trademarks:
+    - "ExamplePay®"
+    - "Example Secure™"
+  product_names:
+    - ExamplePay Gold
+    - Example Business
+  social_handles:
+    twitter: ["example", "examplesupport"]
+    instagram: ["example.official"]
+    facebook: ["ExampleOfficial"]
+    linkedin: ["example-corp"]
+    youtube: ["@exampleofficial"]
+    telegram: ["exampleofficial"]
+
+# People to monitor for impersonation / breach exposure
+people:
+  executives:
+    - name: "Jane Doe"
+      title: "CEO"
+      email: "jane.doe@example.com"
+      aliases: ["jdoe", "jane-doe"]
+    - name: "John Smith"
+      title: "CISO"
+      email: "john.smith@example.com"
+  vips: []
+  support_handles:
+    - "support@example.com"
+    - "help@example.com"
+
+# Scan engagement metadata (appears in report)
+engagement:
+  client_name: "ExampleCorp Security"
+  engagement_id: "BM-2026-0001"
+  start_date: "2026-05-01"
+  end_date: "2026-05-07"
+  methodology: "grey-box"
+  authorized_by: "John Smith, CISO"
+  authorization_ref: "RoE-2026-001"
+  classification: "TLP:AMBER"
+  contacts:
+    - "soc@example.com"
+
+# Compliance frameworks to map findings against
+compliance:
+  - ISO27001
+  - NIST_CSF
+  - PCI_DSS
+  - SOC2
+  - GDPR
+  - DPDP_ACT
+  - RBI_CYBER_RESILIENCE
+
+# Module enable/disable + tuning
+modules:
+  domain_intel:
+    enabled: true
+    permutations: full   # full | basic
+    check_live: true
+    capture_screenshots: true
+  phishing_intel:
+    enabled: true
+    sources: [urlscan, virustotal, ipqs]
+  infra_intel:
+    enabled: true
+    sources: [shodan, abuseipdb, otx, netlas, dnsdumpster]
+    cve_min_cvss: 7.0
+  social_impersonation:
+    enabled: true
+    use_sherlock: true
+    use_maigret: false   # heavier, optional
+    apify_scrape: true
+  social_deep_scrape:
+    enabled: true
+    timeout: 900
+    # Optionally disable specific platforms:
+    # disable_platforms: [pinterest, snapchat]
+  email_exposure:
+    enabled: true
+    use_hibp: true
+    use_holehe: true
+  code_leaks:
+    enabled: true
+    github_search: true
+  darkweb_intel:
+    enabled: true
+    sources: [intelx, ransomware_live]
+  mobile_apps:
+    enabled: true
+    stores: [google_play, apple_app_store, apkpure]
+  content_abuse:
+    enabled: true
+  ad_fraud:
+    enabled: true
+  deepfake_intel:
+    enabled: false   # requires per-asset image/video samples
+  pentest_recon:
+    enabled: true
+    deep_cve_lookup: true
+
+# AI triage — Claude classifies each finding to suppress false positives and
+# promote real impersonations. Uses prompt caching to keep cost low.
+ai_triage:
+  enabled: true
+  model: claude-opus-4-7         # or claude-sonnet-4-6 / claude-haiku-4-5 for cost
+  batch_size: 20                  # findings per Claude call
+  max_findings: 200               # cap to control cost
+  concurrency: 3                  # parallel batches
+
+# Reporting
+report:
+  generate_executive: true
+  generate_technical: true
+  include_appendix_raw: true
+  preparer: "Transilience AI Threat Intelligence"
+  preparer_logo: "config/preparer_logo.png"

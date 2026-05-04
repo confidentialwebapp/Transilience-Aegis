@@ -1,0 +1,62 @@
+# Minimal config for end-to-end smoke test (uses public benign target).
+brand:
+  name: "ExampleCorp"
+  legal_name: "Example Corporation"
+  industry: "Technology"
+  headquarters: "Internet"
+  founded: 2020
+  description: "Smoke test."
+
+assets:
+  primary_domains:
+    - example.com
+  secondary_domains: []
+  ip_ranges: []
+  mobile_apps:
+    android: []
+    ios: []
+  brand_keywords: ["example"]
+  trademarks: []
+  product_names: []
+  social_handles: {twitter: ["example"], instagram: [], facebook: [], linkedin: [], youtube: [], telegram: []}
+
+people:
+  executives:
+    - name: "Jane Doe"
+      title: "CEO"
+      email: "test@example.com"
+  vips: []
+  support_handles: []
+
+engagement:
+  client_name: "ExampleCorp"
+  engagement_id: "BM-SMOKE-001"
+  start_date: "2026-05-01"
+  end_date: "2026-05-01"
+  methodology: "grey-box"
+  authorized_by: "Self"
+  authorization_ref: "SMOKE"
+  classification: "TLP:AMBER"
+  contacts: ["test@example.com"]
+
+compliance: [ISO27001, NIST_CSF, GDPR]
+
+modules:
+  domain_intel: { enabled: false }
+  phishing_intel: { enabled: false }
+  infra_intel: { enabled: false }
+  social_impersonation: { enabled: false }
+  email_exposure: { enabled: false }
+  code_leaks: { enabled: false }
+  darkweb_intel: { enabled: false }
+  mobile_apps: { enabled: false }
+  content_abuse: { enabled: false }
+  ad_fraud: { enabled: false }
+  deepfake_intel: { enabled: false }
+  pentest_recon: { enabled: true }
+
+report:
+  generate_executive: true
+  generate_technical: true
+  include_appendix_raw: true
+  preparer: "Smoke Test Run"

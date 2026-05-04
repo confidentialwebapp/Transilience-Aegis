@@ -1,0 +1,41 @@
+# Core
+python-dotenv>=1.0.0
+pyyaml>=6.0
+pydantic>=2.6
+httpx[http2]>=0.27
+tenacity>=8.2
+rich>=13.7
+typer>=0.12
+anyio>=4.3
+
+# AI triage
+anthropic>=0.40
+
+# Domain / DNS / TLS
+dnstwist>=20240507
+tldextract>=5.1
+python-whois>=0.9
+dnspython>=2.6
+cryptography>=42.0
+
+# Intel SDKs
+shodan>=1.31
+PyGithub>=2.3
+
+# Reporting
+jinja2>=3.1
+weasyprint>=61.0
+matplotlib>=3.8
+pillow>=10.2
+markdown>=3.6
+qrcode>=7.4
+
+# OSINT helpers
+requests>=2.31
+beautifulsoup4>=4.12
+lxml>=5.1
+
+# Optional CLI integrations (install separately if used)
+# sherlock-project
+# maigret
+# holehe

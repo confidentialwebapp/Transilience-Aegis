@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>{{ brand.name }} — Brand Monitoring Executive Report</title>
+<style>{{ styles|safe }}</style>
+</head><body>
+{% from "_macros.html" import severity_pill %}
+
+{% include "cover.html" %}
+
+<div class="toc">
+  <h1>Table of Contents</h1>
+  <ol>
+    <li>Executive Summary</li>
+    <li>Scope &amp; Rules of Engagement</li>
+    <li>Methodology &amp; Standards</li>
+    <li>Brand Monitoring Findings (Summary)</li>
+    <li>Pentesting / Technical Findings (Summary)</li>
+    <li>Attack Narrative / Kill Chain</li>
+    <li>Risk Matrix &amp; Heatmap</li>
+    <li>Remediation Roadmap</li>
+    <li>Compliance &amp; Regulatory Mapping</li>
+    <li>Appendices (Top Findings)</li>
+    <li>Document Control</li>
+  </ol>
+</div>
+
+<!-- 1. Executive Summary -->
+<div class="section always-break">
+<h1>1. Executive Summary</h1>
+<p><strong>Engagement objective.</strong> Provide {{ brand.name }} with a 360° view of brand abuse, impersonation,
+data exposure, and technical security posture across surface, deep, and dark web sources.</p>
+
+<p><strong>Overall risk posture:</strong>
+{{ severity_pill(overall_severity) }}
+&mdash; based on {{ stats.total }} findings across {{ stats.module_count }} intelligence modules.</p>
+
+<div class="metric-row">
+  <div class="metric-card"><div class="num">{{ stats.by_severity.Critical }}</div><div class="lbl">Critical</div></div>
+  <div class="metric-card"><div class="num">{{ stats.by_severity.High }}</div><div class="lbl">High</div></div>
+  <div class="metric-card"><div class="num">{{ stats.by_severity.Medium }}</div><div class="lbl">Medium</div></div>
+  <div class="metric-card"><div class="num">{{ stats.brand_findings }}</div><div class="lbl">Brand Abuse</div></div>
+  <div class="metric-card"><div class="num">{{ stats.pentest_findings }}</div><div class="lbl">Pentest</div></div>
+  <div class="metric-card"><div class="num">{{ stats.exposed_credentials }}</div><div class="lbl">Cred. Leaks</div></div>
+</div>
+
+{% if stats.ai_triaged > 0 %}
+<h3>AI Triage Summary</h3>
+<p>Of <strong>{{ stats.raw_findings_total }}</strong> candidate signals discovered, AI triage filtered out
+<strong>{{ stats.filtered_total }}</strong> as non-threats
+({{ stats.own_assets_discovered }} confirmed brand-owned assets,
+{{ stats.irrelevant_filtered }} unrelated false positives,
+{{ stats.spam_filtered }} SEO spam).
+This report focuses on the <strong>{{ stats.total }}</strong> remaining findings,
+of which <strong>{{ stats.ai_real_threats }}</strong> are confirmed real impersonation or active scam activity.</p>
+<table>
+<thead><tr><th>Label</th><th>Count</th><th>Meaning</th></tr></thead>
+<tbody>
+{% for label, count in stats.ai_labels.items() %}
+<tr><td><code>{{ label }}</code></td><td>{{ count }}</td><td>
+{% if label == 'IMPERSONATION' %}Unauthorized account/page/app posing as the brand
+{% elif label == 'SCAM' %}Active scam targeting customers in the brand's name
+{% elif label == 'OFFICIAL' %}Brand's own owned channel / content
+{% elif label == 'EMPLOYEE' %}Employee personal post mentioning the brand
+{% elif label == 'PARTNER' %}Authorized partner / distributor
+{% elif label == 'FAN' %}Genuine customer / fan
+{% elif label == 'NEWS' %}News article / financial coverage
+{% elif label == 'SPAM' %}Low-quality SEO / clickbait
+{% elif label == 'IRRELEVANT' %}False positive — unrelated to brand
+{% elif label == 'INDETERMINATE' %}Insufficient evidence to classify
+{% endif %}
+</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+
+<h3>Top {{ top_findings|length }} findings</h3>
+<table>
+  <thead><tr><th>Severity</th><th>Title</th><th>Asset</th><th>Recommended action</th></tr></thead>
+  <tbody>
+  {% for f in top_findings %}
+  <tr class="severity-{{ f.severity.value }}">
+    <td>{{ severity_pill(f.severity.value) }}</td>
+    <td><strong>{{ f.title }}</strong><div class="small muted">{{ f.category|replace("_"," ")|title }}</div></td>
+    <td><code>{{ f.affected_asset }}</code></td>
+    <td>{{ f.recommendation[:160] }}{% if f.recommendation|length > 160 %}…{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<div class="callout">
+  <strong>Bottom line for leadership:</strong> {{ exec_takeaway }}
+</div>
+</div>
+
+<!-- 2. Scope -->
+<div class="section always-break">
+<h1>2. Scope &amp; Rules of Engagement</h1>
+<table>
+  <tr><th>Brand</th><td>{{ brand.name }} ({{ brand.legal_name }})</td></tr>
+  <tr><th>Industry</th><td>{{ brand.industry }}</td></tr>
+  <tr><th>Headquarters</th><td>{{ brand.headquarters }}</td></tr>
+  <tr><th>Engagement period</th><td>{{ engagement.start_date }} → {{ engagement.end_date }}</td></tr>
+  <tr><th>Methodology</th><td>{{ engagement.methodology|title }}</td></tr>
+  <tr><th>Authorized by</th><td>{{ engagement.authorized_by }}</td></tr>
+  <tr><th>Authorization reference</th><td>{{ engagement.authorization_ref }}</td></tr>
+  <tr><th>Classification</th><td>{{ engagement.classification }}</td></tr>
+</table>
+
+<h3>Assets in scope</h3>
+<table>
+  <tr><th>Primary domains</th><td>{{ assets.primary_domains|join(", ") }}</td></tr>
+  <tr><th>Secondary domains</th><td>{{ assets.secondary_domains|join(", ") }}</td></tr>
+  <tr><th>IP ranges</th><td>{{ assets.ip_ranges|join(", ") }}</td></tr>
+  <tr><th>Mobile apps (Android)</th><td>{{ (assets.mobile_apps or {}).android|join(", ") }}</td></tr>
+  <tr><th>Mobile apps (iOS)</th><td>{{ (assets.mobile_apps or {}).ios|join(", ") }}</td></tr>
+  <tr><th>Brand keywords</th><td>{{ assets.brand_keywords|join(", ") }}</td></tr>
+  <tr><th>Trademarks</th><td>{{ assets.trademarks|join(", ") }}</td></tr>
+  <tr><th>Executives monitored</th><td>{{ people.executives|length }}</td></tr>
+</table>
+
+<h3>Exclusions / limitations</h3>
+<ul>
+  <li>No active exploitation; OSINT and passive enumeration only unless explicitly authorized.</li>
+  <li>No social-engineering of staff outside agreed scope.</li>
+  <li>Findings reflect data observable at time of scan; threat landscape changes continuously.</li>
+</ul>
+</div>
+
+<!-- 3. Methodology -->
+<div class="section always-break">
+<h1>3. Methodology &amp; Standards Followed</h1>
+<p>This engagement combined OSINT-driven brand monitoring with a lightweight passive technical assessment, aligned to:</p>
+<ul>
+  <li><strong>OWASP Top 10 (2021)</strong> &amp; OWASP ASVS for application risk classification</li>
+  <li><strong>OWASP MASVS</strong> for mobile app threat surface</li>
+  <li><strong>PTES</strong> &amp; <strong>NIST SP 800-115</strong> for security testing methodology</li>
+  <li><strong>MITRE ATT&amp;CK</strong> for adversary technique mapping</li>
+</ul>
+
+<h3>Intelligence sources used</h3>
+<table>
+<tr><th>Layer</th><th>Sources</th></tr>
+<tr><td>Surface web</td><td>Google (via Apify), URLScan, VirusTotal, OTX, IPQS</td></tr>
+<tr><td>Infra / hosting</td><td>Shodan, Netlas, DNSDumpster, AbuseIPDB</td></tr>
+<tr><td>Domain intel</td><td>dnstwist permutations, WHOIS, certificate transparency</td></tr>
+<tr><td>Social media</td><td>Sherlock, Maigret, Apify (Instagram / Facebook / X / TikTok)</td></tr>
+<tr><td>Mobile stores</td><td>Google Play, Apple App Store iTunes API, third-party APK mirrors</td></tr>
+<tr><td>Email exposure</td><td>HIBP, Holehe</td></tr>
+<tr><td>Code leaks</td><td>GitHub code search, regex secret detection</td></tr>
+<tr><td>Dark / deep web</td><td>IntelX, ransomware.live</td></tr>
+<tr><td>Vulnerability data</td><td>NVD, Shodan CVE feed</td></tr>
+</table>
+</div>
+
+<!-- 4. Brand findings summary -->
+<div class="section always-break">
+<h1>4. Brand Monitoring Findings (Summary)</h1>
+<img class="chart" src="{{ charts.category }}" alt="Category breakdown"/>
+<img class="chart" src="{{ charts.severity }}" alt="Severity distribution"/>
+<table>
+<thead><tr><th>Category</th><th>Count</th><th>Highest severity</th></tr></thead>
+<tbody>
+{% for row in brand_summary %}
+<tr><td>{{ row.category|replace("_"," ")|title }}</td><td>{{ row.count }}</td><td>{{ severity_pill(row.max_severity) }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+<!-- 5. Pentest findings summary -->
+<div class="section always-break">
+<h1>5. Pentesting / Technical Findings (Summary)</h1>
+{% if pentest_summary %}
+<table>
+<thead><tr><th>Asset</th><th>Findings</th><th>Highest severity</th></tr></thead>
+<tbody>
+{% for row in pentest_summary %}
+<tr><td><code>{{ row.asset }}</code></td><td>{{ row.count }}</td><td>{{ severity_pill(row.max_severity) }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<p class="muted">No pentest-class findings produced; expand the <code>pentest_recon</code> module configuration or run a full pentest engagement to populate this section.</p>
+{% endif %}
+</div>
+
+<!-- 6. Attack narrative -->
+<div class="section always-break">
+<h1>6. Attack Narrative / Kill Chain</h1>
+<div class="callout">{{ kill_chain|safe }}</div>
+</div>
+
+<!-- 7. Risk matrix -->
+<div class="section always-break">
+<h1>7. Risk Matrix &amp; Heatmap</h1>
+<img class="chart" src="{{ charts.risk_heatmap }}" alt="Risk matrix"/>
+<img class="chart" src="{{ charts.top_assets }}" alt="Top affected assets"/>
+</div>
+
+<!-- 8. Remediation roadmap -->
+<div class="section always-break">
+<h1>8. Remediation Roadmap</h1>
+<h3>Immediate (0–7 days)</h3>
+<ul>{% for f in roadmap.immediate %}<li>{{ severity_pill(f.severity.value) }} {{ f.title }} — <em>{{ f.recommendation[:200] }}</em></li>{% endfor %}</ul>
+<h3>Short-term (8–30 days)</h3>
+<ul>{% for f in roadmap.short_term %}<li>{{ severity_pill(f.severity.value) }} {{ f.title }} — <em>{{ f.recommendation[:200] }}</em></li>{% endfor %}</ul>
+<h3>Long-term (30–90+ days)</h3>
+<ul>{% for f in roadmap.long_term %}<li>{{ severity_pill(f.severity.value) }} {{ f.title }} — <em>{{ f.recommendation[:200] }}</em></li>{% endfor %}</ul>
+</div>
+
+<!-- 9. Compliance -->
+<div class="section always-break">
+<h1>9. Compliance &amp; Regulatory Mapping</h1>
+<table>
+<thead><tr><th>Framework</th><th>Findings touched</th><th>Sample controls</th></tr></thead>
+<tbody>
+{% for row in compliance_matrix %}
+<tr><td><strong>{{ row.framework }}</strong></td><td>{{ row.count }}</td><td class="small">{{ row.sample|join(" • ") }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+<!-- 10. Appendices -->
+<div class="section always-break">
+<h1>10. Appendices — Top Findings</h1>
+{% from "_macros.html" import finding_card %}
+{% for f in top_findings %}{{ finding_card(f) }}{% endfor %}
+</div>
+
+{% if own_assets %}
+<div class="section always-break">
+<h1>10b. Discovered Brand-Owned Assets</h1>
+<p class="muted">The following channels / accounts were detected during scanning and confirmed by AI triage as the brand's own properties (not findings). Add them to the brand configuration's official-handles list to whitelist them in future scans.</p>
+<table>
+<thead><tr><th>Asset</th><th>Platform / Indicator</th><th>AI Confidence</th></tr></thead>
+<tbody>
+{% for f in own_assets %}
+<tr>
+  <td>{{ f.title }}</td>
+  <td><code>{{ f.indicator }}</code></td>
+  <td>{{ "%.0f"|format(f.raw.ai_triage.confidence * 100) }}%</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% endif %}
+
+<!-- 11. Document control -->
+<div class="section always-break">
+<h1>11. Document Control</h1>
+<table>
+  <tr><th>Document title</th><td>{{ brand.name }} — Brand Monitoring &amp; Cyber Threat Intelligence Report (Executive)</td></tr>
+  <tr><th>Version</th><td>1.0</td></tr>
+  <tr><th>Classification</th><td>{{ engagement.classification }}</td></tr>
+  <tr><th>Distribution</th><td>{{ engagement.contacts|join(", ") }}</td></tr>
+  <tr><th>Author</th><td>{{ report.preparer }}</td></tr>
+  <tr><th>Generated</th><td>{{ generated_at }}</td></tr>
+  <tr><th>Scan ID</th><td><code>{{ scan_id }}</code></td></tr>
+</table>
+<footer class="disclaimer">
+This report is intended solely for the named recipient(s). It contains confidential intelligence about
+brand abuse and cyber-security exposure. Findings reflect observable data at the time of testing and
+should not be construed as an exhaustive enumeration of all possible risks. Active exploitation was not
+performed unless explicitly authorized in the Rules of Engagement.
+</footer>
+</div>
+
+</body></html>

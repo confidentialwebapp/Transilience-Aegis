@@ -1,0 +1,20 @@
+<div class="cover-page" data-brand="{{ brand.name }}" data-classification="{{ engagement.classification }}">
+  <h1>Brand Monitoring &<br/>Cyber Threat Intelligence Report</h1>
+  <h2>{{ brand.name }}</h2>
+  {% if brand.legal_name %}<div class="muted" style="color:#bbc; font-size: 11pt;">{{ brand.legal_name }}</div>{% endif %}
+
+  <div class="cover-meta">
+    <div><strong>Engagement:</strong> {{ engagement.engagement_id }}</div>
+    <div><strong>Period:</strong> {{ engagement.start_date }} → {{ engagement.end_date }}</div>
+    <div><strong>Methodology:</strong> {{ engagement.methodology|title }}</div>
+    <div><strong>Authorized by:</strong> {{ engagement.authorized_by }}</div>
+    <div><strong>Authorization ref:</strong> {{ engagement.authorization_ref }}</div>
+    <div><strong>Prepared by:</strong> {{ report.preparer }}</div>
+    <div><strong>Report variant:</strong> {{ variant|title }}</div>
+    <div><strong>Generated:</strong> {{ generated_at }}</div>
+  </div>
+
+  <div class="classification {% if 'RED' in engagement.classification %}red{% elif 'AMBER' in engagement.classification %}amber{% elif 'GREEN' in engagement.classification %}green{% endif %}">
+    {{ engagement.classification }}
+  </div>
+</div>

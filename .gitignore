@@ -198,3 +198,14 @@ Thumbs.db
 
 # Nightowl
 nightowl/
+
+# BrandMonitoring scan outputs (large binary data, never commit)
+BrandMonitoring/data/
+BrandMonitoring/reports/
+BrandMonitoring/.env
+
+# Local secrets / keys
+*.pem
+*.key
+.env.production
+.env.local

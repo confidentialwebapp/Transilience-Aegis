@@ -1,0 +1,74 @@
+{% macro severity_pill(sev) -%}
+<span class="severity-pill pill-{{ sev }}">{{ sev }}</span>
+{%- endmacro %}
+
+{% macro finding_card(f) -%}
+<div class="finding-card">
+  <div class="meta">
+    <span><strong>ID:</strong> <code>{{ f.id }}</code></span>
+    <span><strong>Severity:</strong> {{ severity_pill(f.severity.value if f.severity.value is defined else f.severity) }}</span>
+    <span><strong>Risk score:</strong> {{ f.risk_score }} / 25 (L{{ f.likelihood }} × I{{ f.impact }})</span>
+    <span><strong>Module:</strong> {{ f.module }}</span>
+    {% if f.cvss %}<span><strong>CVSS:</strong> {{ "%.1f"|format(f.cvss) }}</span>{% endif %}
+    {% if f.raw and f.raw.ai_triage %}
+      <span><strong>AI:</strong> <code>{{ f.raw.ai_triage.label }}</code> ({{ "%.0f"|format(f.raw.ai_triage.confidence * 100) }}%)</span>
+    {% endif %}
+  </div>
+  {% if f.raw and f.raw.ai_triage %}
+  <div class="callout {% if f.raw.ai_triage.label in ['IMPERSONATION','SCAM'] %}critical{% elif f.raw.ai_triage.label in ['OFFICIAL','EMPLOYEE','PARTNER','FAN','NEWS','IRRELEVANT','SPAM'] %}info{% else %}medium{% endif %}" style="font-size: 9pt; padding: 6px 10px;">
+    <strong>AI Triage</strong> — {{ f.raw.ai_triage.label }} (confidence {{ "%.0f"|format(f.raw.ai_triage.confidence * 100) }}%, was {{ f.raw.ai_triage.original_severity }}): {{ f.raw.ai_triage.reasoning }}
+  </div>
+  {% endif %}
+  <div class="title">{{ f.title }}</div>
+  <p style="margin: 6px 0;">{{ f.description }}</p>
+  <div><strong>Affected asset:</strong> <code>{{ f.affected_asset }}</code></div>
+  {% if f.indicator %}<div><strong>Indicator:</strong> <code>{{ f.indicator }}</code></div>{% endif %}
+
+  {% if f.evidence %}
+  <div class="label">Evidence</div>
+  <ul style="margin:4px 0; padding-left:18px;">
+    {% for e in f.evidence %}
+    <li class="small">[{{ e.type }}] {{ e.label }}{% if e.value %} — <code>{{ e.value }}</code>{% endif %}{% if e.file_path %} — <code>{{ e.file_path.split('/')[-1] }}</code>{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {# Render any screenshot evidence inline #}
+  {% for e in f.evidence %}
+    {% if e.type == 'screenshot' and e.file_path %}
+    <div style="margin: 6px 0;">
+      <img src="file://{{ e.file_path }}" style="max-width: 100%; max-height: 280px; border: 1px solid #ccc; border-radius: 3px;"/>
+      <div class="small muted">{{ e.label }}{% if e.hash_sha256 %} — sha256:{{ e.hash_sha256[:16] }}…{% endif %}</div>
+    </div>
+    {% endif %}
+  {% endfor %}
+  {% endif %}
+
+  {% if f.recommendation %}
+  <div class="label">Recommendation</div>
+  <p style="margin:4px 0;">{{ f.recommendation }}</p>
+  {% endif %}
+
+  <div class="label">Remediation priority</div>
+  <p style="margin:4px 0;">{{ f.remediation_priority|replace("_", " ")|title }}</p>
+
+  {% if f.cwe or f.owasp or f.mitre_attack %}
+  <div class="label">Frameworks</div>
+  <p class="small" style="margin:4px 0;">
+    {% if f.cwe %}<strong>CWE:</strong> {{ f.cwe }}&nbsp;&nbsp;{% endif %}
+    {% if f.owasp %}<strong>OWASP:</strong> {{ f.owasp }}&nbsp;&nbsp;{% endif %}
+    {% if f.mitre_attack %}<strong>MITRE ATT&CK:</strong> {{ f.mitre_attack|join(", ") }}{% endif %}
+  </p>
+  {% endif %}
+
+  {% if f.compliance_tags %}
+  <div class="label">Compliance mapping</div>
+  <ul class="compliance-tags">
+    {% for t in f.compliance_tags %}<li>{{ t }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if f.references %}
+  <div class="label">References</div>
+  <ul class="compliance-tags">{% for r in f.references %}<li><code>{{ r }}</code></li>{% endfor %}</ul>
+  {% endif %}
+</div>
+{%- endmacro %}

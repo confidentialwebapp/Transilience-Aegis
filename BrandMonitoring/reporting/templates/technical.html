@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>{{ brand.name }} — Brand Monitoring Technical Report</title>
+<style>{{ styles|safe }}</style>
+</head><body>
+{% from "_macros.html" import severity_pill, finding_card %}
+
+{% include "cover.html" %}
+
+<div class="toc">
+<h1>Table of Contents</h1>
+<ol>
+  <li>Executive Summary (condensed)</li>
+  <li>Scope &amp; Rules of Engagement</li>
+  <li>Methodology</li>
+  <li>Brand Monitoring Findings (Full)</li>
+  <li>Pentesting / Technical Findings (Full)</li>
+  <li>Attack Narrative</li>
+  <li>Risk Matrix</li>
+  <li>Remediation Roadmap</li>
+  <li>Compliance Mapping</li>
+  <li>Appendices (Asset inventory, Tool output index)</li>
+  <li>Document Control</li>
+</ol>
+</div>
+
+<!-- 1 -->
+<div class="section always-break">
+<h1>1. Executive Summary</h1>
+<p><strong>Risk posture:</strong> {{ severity_pill(overall_severity) }} &mdash; {{ stats.total }} findings.</p>
+<div class="metric-row">
+  <div class="metric-card"><div class="num">{{ stats.by_severity.Critical }}</div><div class="lbl">Critical</div></div>
+  <div class="metric-card"><div class="num">{{ stats.by_severity.High }}</div><div class="lbl">High</div></div>
+  <div class="metric-card"><div class="num">{{ stats.by_severity.Medium }}</div><div class="lbl">Medium</div></div>
+  <div class="metric-card"><div class="num">{{ stats.by_severity.Low }}</div><div class="lbl">Low</div></div>
+  <div class="metric-card"><div class="num">{{ stats.by_severity.Informational }}</div><div class="lbl">Info</div></div>
+</div>
+<p>{{ exec_takeaway }}</p>
+</div>
+
+<!-- 2 -->
+<div class="section always-break">
+<h1>2. Scope</h1>
+<table>
+  <tr><th>Engagement</th><td>{{ engagement.engagement_id }}</td></tr>
+  <tr><th>Period</th><td>{{ engagement.start_date }} → {{ engagement.end_date }}</td></tr>
+  <tr><th>Methodology</th><td>{{ engagement.methodology|title }}</td></tr>
+  <tr><th>Authorized by</th><td>{{ engagement.authorized_by }} ({{ engagement.authorization_ref }})</td></tr>
+  <tr><th>Classification</th><td>{{ engagement.classification }}</td></tr>
+</table>
+<h3>Assets in scope</h3>
+<pre>{{ assets|tojson(indent=2) }}</pre>
+</div>
+
+<!-- 3 -->
+<div class="section always-break">
+<h1>3. Methodology</h1>
+<p>Frameworks: OWASP Top 10 / ASVS / MASVS, PTES, NIST SP 800-115, MITRE ATT&amp;CK.</p>
+<p>Tooling: dnstwist, Sherlock, Maigret, Holehe, Apify, Shodan, VirusTotal, URLScan, IPQS, AbuseIPDB,
+OTX, IntelX, HIBP, Ransomware.live, Netlas, DNSDumpster, NVD, GitHub Search.</p>
+
+<h3>Module execution log</h3>
+<table>
+<thead><tr><th>Module</th><th>Status</th><th>Start</th><th>Finish</th><th>Findings</th><th>Error</th></tr></thead>
+<tbody>
+{% for m in module_results %}
+<tr>
+<td><code>{{ m.module }}</code></td>
+<td>{{ m.status }}</td>
+<td class="small">{{ m.started_at }}</td>
+<td class="small">{{ m.finished_at }}</td>
+<td>{{ m.findings|length }}</td>
+<td class="small">{{ m.error or "" }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+<!-- 4 Brand findings full -->
+<div class="section always-break">
+<h1>4. Brand Monitoring Findings — Detailed</h1>
+{% for f in brand_findings %}
+{{ finding_card(f) }}
+{% else %}
+<p class="muted">No brand-monitoring findings.</p>
+{% endfor %}
+</div>
+
+<!-- 5 Pentest findings full -->
+<div class="section always-break">
+<h1>5. Pentesting / Technical Findings — Detailed</h1>
+{% for f in pentest_findings %}
+{{ finding_card(f) }}
+{% else %}
+<p class="muted">No pentest-class findings.</p>
+{% endfor %}
+</div>
+
+<!-- 6 -->
+<div class="section always-break">
+<h1>6. Attack Narrative / Kill Chain</h1>
+<div class="callout">{{ kill_chain|safe }}</div>
+</div>
+
+<!-- 7 -->
+<div class="section always-break">
+<h1>7. Risk Matrix</h1>
+<img class="chart" src="{{ charts.risk_heatmap }}" alt="Risk matrix"/>
+<img class="chart" src="{{ charts.severity }}" alt="Severity distribution"/>
+<img class="chart" src="{{ charts.category }}" alt="Category breakdown"/>
+<img class="chart" src="{{ charts.top_assets }}" alt="Top affected assets"/>
+</div>
+
+<!-- 8 -->
+<div class="section always-break">
+<h1>8. Remediation Roadmap</h1>
+{% for bucket, label in [("immediate","Immediate (0–7 days)"), ("short_term","Short-term (8–30 days)"), ("long_term","Long-term (30–90+ days)")] %}
+<h3>{{ label }}</h3>
+<table>
+<thead><tr><th>Severity</th><th>Title</th><th>Asset</th><th>Owner</th></tr></thead>
+<tbody>
+{% for f in roadmap[bucket] %}
+<tr class="severity-{{ f.severity.value }}">
+<td>{{ severity_pill(f.severity.value) }}</td>
+<td>{{ f.title }}</td>
+<td><code>{{ f.affected_asset }}</code></td>
+<td class="muted">SOC / IT / Brand</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endfor %}
+</div>
+
+<!-- 9 -->
+<div class="section always-break">
+<h1>9. Compliance &amp; Regulatory Mapping</h1>
+<table>
+<thead><tr><th>Framework</th><th>Findings touched</th><th>Controls referenced</th></tr></thead>
+<tbody>
+{% for row in compliance_matrix %}
+<tr><td><strong>{{ row.framework }}</strong></td><td>{{ row.count }}</td><td class="small">{{ row.sample|join(" • ") }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+<!-- 10 Appendices -->
+<div class="section always-break">
+<h1>10. Appendices</h1>
+
+<h3>10.1 Full asset inventory (resolved)</h3>
+<pre class="small">{{ resolved_assets|tojson(indent=2) }}</pre>
+
+<h3>10.2 Tool output index</h3>
+<table class="appendix-listing">
+<thead><tr><th>File</th><th>Module</th><th>Size</th></tr></thead>
+<tbody>
+{% for f in raw_evidence_index %}
+<tr><td><code>{{ f.path }}</code></td><td>{{ f.module }}</td><td>{{ f.size }} B</td></tr>
+{% endfor %}
+</tbody>
+</table>
+
+{% if own_assets %}
+<h3>10.3 Discovered Brand-Owned Assets (filtered from main report)</h3>
+<p class="muted small">AI-confirmed brand properties — not findings. Add these to the brand config to whitelist in future scans.</p>
+<table class="appendix-listing">
+<thead><tr><th>Title</th><th>Indicator</th><th>Conf.</th><th>Reasoning</th></tr></thead>
+<tbody>
+{% for f in own_assets %}
+<tr><td>{{ f.title }}</td><td><code>{{ f.indicator }}</code></td>
+<td>{{ "%.0f"|format(f.raw.ai_triage.confidence * 100) }}%</td>
+<td class="small">{{ f.raw.ai_triage.reasoning }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+
+{% if irrelevant_filtered %}
+<h3>10.4 Filtered as Unrelated (false positives)</h3>
+<p class="muted small">Surfaced by keyword match but AI determined they don't relate to the brand. Provided for audit.</p>
+<table class="appendix-listing">
+<thead><tr><th>Title</th><th>Indicator</th><th>Conf.</th><th>Reasoning</th></tr></thead>
+<tbody>
+{% for f in irrelevant_filtered %}
+<tr><td>{{ f.title }}</td><td><code>{{ f.indicator }}</code></td>
+<td>{{ "%.0f"|format(f.raw.ai_triage.confidence * 100) }}%</td>
+<td class="small">{{ f.raw.ai_triage.reasoning }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+
+<h3>10.5 Glossary</h3>
+<table>
+<tr><td><strong>OSINT</strong></td><td>Open-Source Intelligence</td></tr>
+<tr><td><strong>NRD</strong></td><td>Newly Registered Domain</td></tr>
+<tr><td><strong>IDN</strong></td><td>Internationalized Domain Name (used in homograph attacks)</td></tr>
+<tr><td><strong>BEC</strong></td><td>Business Email Compromise</td></tr>
+<tr><td><strong>TLP</strong></td><td>Traffic Light Protocol — content-classification scheme</td></tr>
+<tr><td><strong>IOC</strong></td><td>Indicator of Compromise</td></tr>
+</table>
+</div>
+
+<!-- 11 -->
+<div class="section always-break">
+<h1>11. Document Control</h1>
+<table>
+  <tr><th>Document title</th><td>{{ brand.name }} — Brand Monitoring &amp; Cyber Threat Intelligence Report (Technical)</td></tr>
+  <tr><th>Version</th><td>1.0</td></tr>
+  <tr><th>Classification</th><td>{{ engagement.classification }}</td></tr>
+  <tr><th>Author</th><td>{{ report.preparer }}</td></tr>
+  <tr><th>Generated</th><td>{{ generated_at }}</td></tr>
+  <tr><th>Scan ID</th><td><code>{{ scan_id }}</code></td></tr>
+</table>
+<footer class="disclaimer">
+Confidential. Findings represent observed data at time of scan. Active exploitation not performed unless
+authorized. Brand monitoring intelligence is best refreshed continuously; consider scheduling recurring scans.
+</footer>
+</div>
+
+</body></html>

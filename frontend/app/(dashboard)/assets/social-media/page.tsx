@@ -17,11 +17,11 @@ interface SocialRow {
 const PLATFORMS = ["Instagram", "Facebook", "Twitter / X", "LinkedIn", "YouTube", "Telegram", "TikTok", "Threads"];
 
 const ROWS: SocialRow[] = [
-  { handle: "@acmebank", platform: "Instagram", brand: "Acme Bank", followers: 218000, status: "VERIFIED", added: "01 Mar 2024" },
-  { handle: "@acmebank", platform: "Twitter / X", brand: "Acme Bank", followers: 142000, status: "VERIFIED", added: "01 Mar 2024" },
-  { handle: "@globex_insurance", platform: "Instagram", brand: "Globex Insurance", followers: 84000, status: "VERIFIED", added: "01 Mar 2024" },
-  { handle: "@initech_official", platform: "Telegram", brand: "Initech Telecom", followers: 12000, status: "UNVERIFIED", added: "12 May 2024" },
-  { handle: "@stark_retail", platform: "TikTok", brand: "Stark Retail", followers: 320000, status: "VERIFIED", added: "12 May 2024" },
+  { handle: "@creditaccessgrameen", platform: "Instagram", brand: "CreditAccessGrameen", followers: 218000, status: "VERIFIED", added: "01 Mar 2024" },
+  { handle: "@creditaccessgrameen", platform: "Twitter / X", brand: "CreditAccessGrameen", followers: 142000, status: "VERIFIED", added: "01 Mar 2024" },
+  { handle: "@creditaccessgrameen", platform: "Instagram", brand: "CreditAccessGrameen", followers: 84000, status: "VERIFIED", added: "01 Mar 2024" },
+  { handle: "@creditaccessgrameen", platform: "Telegram", brand: "CreditAccessGrameen", followers: 12000, status: "UNVERIFIED", added: "12 May 2024" },
+  { handle: "@creditaccessgrameen", platform: "TikTok", brand: "CreditAccessGrameen", followers: 320000, status: "VERIFIED", added: "12 May 2024" },
 ];
 
 export default function SocialMediaAssetsPage() {

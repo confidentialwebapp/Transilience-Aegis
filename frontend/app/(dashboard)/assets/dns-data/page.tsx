@@ -14,12 +14,12 @@ interface DnsDataRow {
 }
 
 const ROWS: DnsDataRow[] = [
-  { domain: "acmebank.com", recordType: "A", value: "104.21.42.18", ttl: 300, brand: "Acme Bank" },
-  { domain: "acmebank.com", recordType: "MX", value: "10 mail.acmebank.com", ttl: 3600, brand: "Acme Bank" },
-  { domain: "acmebank.com", recordType: "TXT (SPF)", value: "v=spf1 include:_spf.acmebank.com -all", ttl: 3600, brand: "Acme Bank" },
-  { domain: "acmebank.com", recordType: "TXT (DMARC)", value: "v=DMARC1; p=reject; rua=mailto:dmarc@acme.com", ttl: 3600, brand: "Acme Bank" },
-  { domain: "globexinsurance.com", recordType: "A", value: "172.67.155.84", ttl: 300, brand: "Globex Insurance" },
-  { domain: "globexinsurance.com", recordType: "TXT (SPF)", value: "v=spf1 ip4:18.244.0.0/16 -all", ttl: 3600, brand: "Globex Insurance" },
+  { domain: "creditaccessgrameen.com", recordType: "A", value: "104.21.42.18", ttl: 300, brand: "CreditAccessGrameen" },
+  { domain: "creditaccessgrameen.com", recordType: "MX", value: "10 mail.creditaccessgrameen.com", ttl: 3600, brand: "CreditAccessGrameen" },
+  { domain: "creditaccessgrameen.com", recordType: "TXT (SPF)", value: "v=spf1 include:_spf.creditaccessgrameen.com -all", ttl: 3600, brand: "CreditAccessGrameen" },
+  { domain: "creditaccessgrameen.com", recordType: "TXT (DMARC)", value: "v=DMARC1; p=reject; rua=mailto:dmarc@creditaccessgrameen.com", ttl: 3600, brand: "CreditAccessGrameen" },
+  { domain: "creditaccessgrameen.com", recordType: "A", value: "172.67.155.84", ttl: 300, brand: "CreditAccessGrameen" },
+  { domain: "creditaccessgrameen.com", recordType: "TXT (SPF)", value: "v=spf1 ip4:18.244.0.0/16 -all", ttl: 3600, brand: "CreditAccessGrameen" },
 ];
 
 export default function DnsDataPage() {

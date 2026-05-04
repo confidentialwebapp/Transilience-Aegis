@@ -15,10 +15,10 @@ interface ExecRow {
 
 const ROWS: ExecRow[] = [
   { name: "Karthik Raja", title: "CEO", company: "Transilience", email: "fde@transilienceai.com", vip: true },
-  { name: "Priya Iyer", title: "CFO", company: "Acme Bank", email: "priya.iyer@acme.com", vip: true },
-  { name: "Rohit Mehta", title: "CISO", company: "Globex Insurance", email: "rohit.mehta@globex.com", vip: true },
-  { name: "Anita Nair", title: "COO", company: "Stark Retail", email: "anita.nair@stark.com", vip: false },
-  { name: "Vikram Shah", title: "CTO", company: "Umbrella Pharma", email: "vikram@umbrella.com", vip: true },
+  { name: "Priya Iyer", title: "CFO", company: "CreditAccessGrameen", email: "priya.iyer@creditaccessgrameen.com", vip: true },
+  { name: "Rohit Mehta", title: "CISO", company: "CreditAccessGrameen", email: "rohit.mehta@creditaccessgrameen.com", vip: true },
+  { name: "Anita Nair", title: "COO", company: "CreditAccessGrameen", email: "anita.nair@creditaccessgrameen.com", vip: false },
+  { name: "Vikram Shah", title: "CTO", company: "CreditAccessGrameen", email: "vikram@creditaccessgrameen.com", vip: true },
 ];
 
 export default function ExecutivesAssetsPage() {

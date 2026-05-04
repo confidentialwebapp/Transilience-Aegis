@@ -5,16 +5,8 @@ import { Building2, ChevronDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CLIENT_MODES, type ClientMode } from "@/lib/navigation";
 
-const MOCK_CLIENTS = [
-  "Acme Bank",
-  "Globex Insurance",
-  "Initech Telecom",
-  "Soylent Health",
-  "Wayne Manufacturing",
-  "Stark Retail",
-  "Umbrella Pharma",
-  "Pied Piper Gaming",
-];
+// Single-tenant deployment: the entire platform is scoped to one client.
+const MOCK_CLIENTS = ["CreditAccessGrameen"];
 
 const STORE_KEY = "tai_client_mode";
 const STORE_DEFAULT_KEY = "tai_client_mode_default";

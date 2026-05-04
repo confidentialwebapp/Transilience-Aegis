@@ -15,8 +15,8 @@ import { toast } from "sonner";
 type Tool = "subdomains" | "typosquats" | "nmap" | "nuclei";
 
 const TOOLS: { id: Tool; label: string; icon: any; placeholder: string; desc: string; color: string }[] = [
-  { id: "subdomains", label: "Subdomains",  icon: Network,        placeholder: "acme.com",          desc: "subfinder → dnsx → httpx pipeline. Returns alive hosts with status code, title, and tech stack.", color: "#3b82f6" },
-  { id: "typosquats", label: "Typosquats",  icon: Globe,          placeholder: "acme.com",          desc: "dnstwist — detects lookalike, IDN, and homograph domains targeting your brand.",                  color: "#a855f7" },
+  { id: "subdomains", label: "Subdomains",  icon: Network,        placeholder: "creditaccessgrameen.com",          desc: "subfinder → dnsx → httpx pipeline. Returns alive hosts with status code, title, and tech stack.", color: "#3b82f6" },
+  { id: "typosquats", label: "Typosquats",  icon: Globe,          placeholder: "creditaccessgrameen.com",          desc: "dnstwist — detects lookalike, IDN, and homograph domains targeting your brand.",                  color: "#a855f7" },
   { id: "nmap",       label: "Nmap",        icon: Server,         placeholder: "scanme.nmap.org",   desc: "Port + service detection. Default: top 100 TCP ports with version detection. Auth required.",      color: "#f97316" },
   { id: "nuclei",     label: "Nuclei",      icon: Bug,            placeholder: "https://example.com", desc: "Templated vulnerability scanner. Critical/High/Medium severity by default. Auth required.",     color: "#ef4444" },
 ];

@@ -16,10 +16,10 @@ interface TrademarkRow {
 }
 
 const ROWS: TrademarkRow[] = [
-  { reg: "TM-US-7281019", mark: "ACME BANK", brand: "Acme Bank", jurisdiction: "USA", classes: "9, 36", filed: "12 Apr 2018", status: "ACTIVE" },
-  { reg: "TM-EU-018412004", mark: "GLOBEX", brand: "Globex Insurance", jurisdiction: "EU", classes: "36", filed: "04 Sep 2019", status: "ACTIVE" },
-  { reg: "TM-IN-4218023", mark: "INITECH", brand: "Initech Telecom", jurisdiction: "India", classes: "38, 42", filed: "18 Mar 2020", status: "ACTIVE" },
-  { reg: "TM-IN-5028311", mark: "STARK", brand: "Stark Retail", jurisdiction: "India", classes: "35", filed: "01 Apr 2024", status: "PENDING" },
+  { reg: "TM-US-7281019", mark: "CREDITACCESS GRAMEEN", brand: "CreditAccessGrameen", jurisdiction: "USA", classes: "9, 36", filed: "12 Apr 2018", status: "ACTIVE" },
+  { reg: "TM-EU-018412004", mark: "CREDITACCESS", brand: "CreditAccessGrameen", jurisdiction: "EU", classes: "36", filed: "04 Sep 2019", status: "ACTIVE" },
+  { reg: "TM-IN-4218023", mark: "CREDITACCESS", brand: "CreditAccessGrameen", jurisdiction: "India", classes: "38, 42", filed: "18 Mar 2020", status: "ACTIVE" },
+  { reg: "TM-IN-5028311", mark: "CREDITACCESS", brand: "CreditAccessGrameen", jurisdiction: "India", classes: "35", filed: "01 Apr 2024", status: "PENDING" },
 ];
 
 export default function TrademarkPage() {

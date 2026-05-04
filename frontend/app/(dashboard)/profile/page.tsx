@@ -201,17 +201,17 @@ export default function ProfilePage() {
               className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Field label="Display name" placeholder="Acme Corp"
+            <Field label="Display name" placeholder="CreditAccessGrameen"
               value={form.display_name} onChange={(v) => setForm({ ...form, display_name: v })} />
             <Field label="Sectors (comma)" placeholder="Healthcare, Finance"
               value={form.sectors} onChange={(v) => setForm({ ...form, sectors: v })} icon={Tag} />
             <Field label="Countries (ISO codes)" placeholder="US, GB, IN"
               value={form.countries} onChange={(v) => setForm({ ...form, countries: v })} icon={MapPin} />
-            <Field label="Domains" placeholder="acme.com, *.acme.io"
+            <Field label="Domains" placeholder="creditaccessgrameen.com, *.creditaccessgrameen.com"
               value={form.domains} onChange={(v) => setForm({ ...form, domains: v })} icon={Globe} />
-            <Field label="Brand keywords" placeholder="acme, AcmeCorp"
+            <Field label="Brand keywords" placeholder="CreditAccess, Grameen"
               value={form.brand_keywords} onChange={(v) => setForm({ ...form, brand_keywords: v })} icon={Building2} />
-            <Field label="Notify email (optional)" placeholder="soc@acme.com"
+            <Field label="Notify email (optional)" placeholder="soc@creditaccessgrameen.com"
               value={form.notify_email} onChange={(v) => setForm({ ...form, notify_email: v })} />
             <Field label="Telegram chat ID (optional)" placeholder="-100123456789"
               value={form.notify_telegram_chat_id} onChange={(v) => setForm({ ...form, notify_telegram_chat_id: v })} />
@@ -294,11 +294,11 @@ export default function ProfilePage() {
               <button
                 onClick={() => {
                   setForm({
-                    display_name: "Acme Corp",
+                    display_name: "CreditAccessGrameen",
                     sectors: "Healthcare",
                     countries: "US",
-                    domains: "acme.com",
-                    brand_keywords: "acme, AcmeCorp",
+                    domains: "creditaccessgrameen.com",
+                    brand_keywords: "CreditAccess, Grameen",
                     notify_email: "",
                     notify_telegram_chat_id: "",
                     digest_frequency: "daily",

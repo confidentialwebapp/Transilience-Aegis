@@ -333,7 +333,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </div>
                   <div className="max-h-[400px] overflow-y-auto">
                     {[
-                      { sev: "critical", icon: AlertTriangle, color: "#ef4444", title: "Phishing site live for 3h", desc: "secure-acme-bank-login.com — registered 14m ago", time: "2m ago", unread: true, href: "/threat-management/incidents" },
+                      { sev: "critical", icon: AlertTriangle, color: "#ef4444", title: "Phishing site live for 3h", desc: "secure-creditaccessgrameen-login.com — registered 14m ago", time: "2m ago", unread: true, href: "/threat-management/incidents" },
                       { sev: "high", icon: KeyRound, color: "#3b82f6", title: "Credential leak match", desc: "27 credentials for your domain in new combolist", time: "18m ago", unread: true, href: "/threat-management/data-loss-recovery" },
                       { sev: "high", icon: Skull, color: "#ec4899", title: "LockBit claimed victim in your industry", desc: "Healthcare provider listed on leak site", time: "1h ago", unread: true, href: "/cti/threat-actors" },
                       { sev: "medium", icon: Eye, color: "#a855f7", title: "Brand mention on dark web forum", desc: "Thread: \"buying access to your customer\"", time: "3h ago", unread: true, href: "/cti/advisory" },

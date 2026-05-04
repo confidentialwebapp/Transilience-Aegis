@@ -1133,7 +1133,7 @@ function OrganizationTab({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <FieldLabel>Organization name</FieldLabel>
-              <Input value={org.name} onChange={e => setOrg(p => ({ ...p, name: e.target.value }))} placeholder="Acme Security Inc." />
+              <Input value={org.name} onChange={e => setOrg(p => ({ ...p, name: e.target.value }))} placeholder="CreditAccessGrameen" />
             </div>
             <div>
               <FieldLabel>Primary domain</FieldLabel>

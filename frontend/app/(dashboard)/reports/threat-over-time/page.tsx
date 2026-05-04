@@ -43,8 +43,8 @@ export default function ThreatOverTimeReport() {
             xLabels={MONTHS_12}
             yMax={4}
             series={[
-              { name: "Acme Bank",        data: [0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 4, 1], color: "#f97316" },
-              { name: "Globex Insurance", data: [0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 4, 2], color: "#ef4444" },
+              { name: "CreditAccessGrameen",        data: [0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 4, 1], color: "#f97316" },
+              { name: "CreditAccessGrameen", data: [0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 4, 2], color: "#ef4444" },
             ]}
           />
         </GraphViewCard>

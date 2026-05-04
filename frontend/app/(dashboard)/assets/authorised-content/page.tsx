@@ -15,10 +15,10 @@ interface ContentRow {
 }
 
 const ROWS: ContentRow[] = [
-  { title: "Annual Report 2025", type: "PDF", brand: "Acme Bank", url: "acmebank.com/annual-report-2025.pdf", added: "12 Mar 2026", status: "ACTIVE" },
-  { title: "Brand Guidelines v3", type: "PDF", brand: "Globex Insurance", url: "globex.com/brand-guidelines.pdf", added: "01 Feb 2026", status: "ACTIVE" },
-  { title: "Customer Charter", type: "Web Page", brand: "Initech Telecom", url: "initech.com/charter", added: "20 Jan 2026", status: "ACTIVE" },
-  { title: "Press Release Q1 2026", type: "Web Page", brand: "Stark Retail", url: "stark.com/news/q1-2026", added: "06 Apr 2026", status: "ACTIVE" },
+  { title: "Annual Report 2025", type: "PDF", brand: "CreditAccessGrameen", url: "creditaccessgrameen.com/annual-report-2025.pdf", added: "12 Mar 2026", status: "ACTIVE" },
+  { title: "Brand Guidelines v3", type: "PDF", brand: "CreditAccessGrameen", url: "creditaccessgrameen.com/brand-guidelines.pdf", added: "01 Feb 2026", status: "ACTIVE" },
+  { title: "Customer Charter", type: "Web Page", brand: "CreditAccessGrameen", url: "creditaccessgrameen.com/charter", added: "20 Jan 2026", status: "ACTIVE" },
+  { title: "Press Release Q1 2026", type: "Web Page", brand: "CreditAccessGrameen", url: "creditaccessgrameen.com/news/q1-2026", added: "06 Apr 2026", status: "ACTIVE" },
 ];
 
 export default function AuthorisedContentPage() {

@@ -14,14 +14,14 @@ const MONTHS_12 = [
 
 // Per-brand 12-month incident counts. Flat at 0 from Jun → Nov, ramps Dec → Mar peak, tapers Apr.
 const BRAND_TREND: Record<string, number[]> = {
-  "Acme Bank":            [0, 0, 0, 0, 0, 0, 1, 1, 2, 4, 1],
-  "Globex Insurance":     [0, 0, 0, 0, 0, 0, 0, 1, 3, 4, 2],
-  "Initech Telecom":      [0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 1],
-  "Soylent Health":       [0, 0, 0, 0, 0, 0, 1, 0, 2, 3, 2],
-  "Wayne Manufacturing":  [0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1],
-  "Stark Retail":         [0, 0, 0, 0, 0, 0, 0, 1, 2, 4, 2],
-  "Umbrella Pharma":      [0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 1],
-  "Pied Piper Gaming":    [0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 1],
+  "CreditAccessGrameen":            [0, 0, 0, 0, 0, 0, 1, 1, 2, 4, 1],
+  "CreditAccessGrameen":     [0, 0, 0, 0, 0, 0, 0, 1, 3, 4, 2],
+  "CreditAccessGrameen":      [0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 1],
+  "CreditAccessGrameen":       [0, 0, 0, 0, 0, 0, 1, 0, 2, 3, 2],
+  "CreditAccessGrameen":  [0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1],
+  "CreditAccessGrameen":         [0, 0, 0, 0, 0, 0, 0, 1, 2, 4, 2],
+  "CreditAccessGrameen":      [0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 1],
+  "CreditAccessGrameen":    [0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 1],
 };
 
 function BrandLine({ name, data }: { name: string; data: number[] }) {

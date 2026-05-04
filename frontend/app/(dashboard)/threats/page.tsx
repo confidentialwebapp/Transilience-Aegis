@@ -52,7 +52,7 @@ const IOC_POOL = [
   "evil-domain.ru", "c2-server.xyz", "update-microsoft.cc", "cdn-secure.net",
   "d41d8cd98f00b204e9800998ecf8427e", "5f4dcc3b5aa765d61d8327deb882cf99",
   "CVE-2024-21762", "CVE-2024-3400", "CVE-2024-1709", "CVE-2023-46805",
-  "john.doe@acme.com", "admin@target-corp.com",
+  "john.doe@creditaccessgrameen.com", "admin@target-corp.com",
 ];
 
 const DEMO_TITLES = [

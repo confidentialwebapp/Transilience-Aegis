@@ -21,7 +21,7 @@ import {
 // ─── Demo data ────────────────────────────────────────────────────────────────
 
 const DEMO_ASSIGNEES = ["Alice Chen", "Bob Kumar", "Carla Rivera", "David Park", "Unassigned"];
-const DEMO_COMPANIES = ["Acme Corp", "GlobalBank", "HealthNet", "RetailGiant", "TechStartup X"];
+const DEMO_COMPANIES = ["CreditAccessGrameen"];
 const DEMO_CVEs = ["CVE-2024-21762", "CVE-2024-3400", "CVE-2024-1709", "CVE-2023-46805", "CVE-2024-6387"];
 const MITRE_IDS = ["T1078", "T1190", "T1566", "T1059", "T1055", "T1027", "T1003", "T1082", "T1021", "T1071"];
 const MITRE_NAMES = [

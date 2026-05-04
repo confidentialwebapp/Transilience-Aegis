@@ -18,12 +18,12 @@ interface UserRow {
 
 const USERS: UserRow[] = [
   { name: "Karthik Raja", email: "fde@transilienceai.com", role: "Admin", client: "Transilience Holdings", status: "ACTIVE", twoFactor: true, lastLogin: "2m ago" },
-  { name: "Priya Iyer", email: "priya.iyer@acme.com", role: "Analyst", client: "Acme Bank", status: "ACTIVE", twoFactor: true, lastLogin: "12m ago" },
-  { name: "Rohit Mehta", email: "rohit.mehta@globex.com", role: "Read-Only", client: "Globex Insurance", status: "ACTIVE", twoFactor: false, lastLogin: "3h ago" },
-  { name: "Anita Nair", email: "anita.nair@stark.com", role: "Analyst", client: "Stark Retail", status: "PENDING", twoFactor: false, lastLogin: "—" },
-  { name: "Vikram Shah", email: "vikram@umbrella.com", role: "Admin", client: "Umbrella Pharma", status: "ACTIVE", twoFactor: true, lastLogin: "1d ago" },
-  { name: "Meera Krishnan", email: "meera@soylent.com", role: "Analyst", client: "Soylent Health", status: "INACTIVE", twoFactor: false, lastLogin: "32d ago" },
-  { name: "Sanjay Kapoor", email: "sanjay@wayne.com", role: "Read-Only", client: "Wayne Manufacturing", status: "ACTIVE", twoFactor: true, lastLogin: "5h ago" },
+  { name: "Priya Iyer", email: "priya.iyer@creditaccessgrameen.com", role: "Analyst", client: "CreditAccessGrameen", status: "ACTIVE", twoFactor: true, lastLogin: "12m ago" },
+  { name: "Rohit Mehta", email: "rohit.mehta@creditaccessgrameen.com", role: "Read-Only", client: "CreditAccessGrameen", status: "ACTIVE", twoFactor: false, lastLogin: "3h ago" },
+  { name: "Anita Nair", email: "anita.nair@creditaccessgrameen.com", role: "Analyst", client: "CreditAccessGrameen", status: "PENDING", twoFactor: false, lastLogin: "—" },
+  { name: "Vikram Shah", email: "vikram@creditaccessgrameen.com", role: "Admin", client: "CreditAccessGrameen", status: "ACTIVE", twoFactor: true, lastLogin: "1d ago" },
+  { name: "Meera Krishnan", email: "meera@creditaccessgrameen.com", role: "Analyst", client: "CreditAccessGrameen", status: "INACTIVE", twoFactor: false, lastLogin: "32d ago" },
+  { name: "Sanjay Kapoor", email: "sanjay@creditaccessgrameen.com", role: "Read-Only", client: "CreditAccessGrameen", status: "ACTIVE", twoFactor: true, lastLogin: "5h ago" },
 ];
 
 export default function ClientUsersPage() {

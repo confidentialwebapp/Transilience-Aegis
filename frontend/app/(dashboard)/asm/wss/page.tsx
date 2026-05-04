@@ -47,10 +47,11 @@ export default function WssPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [brand, setBrand] = useState("");
+  // Single-tenant deployment: pre-fill the only brand we monitor.
+  const [brand, setBrand] = useState("CreditAccessGrameen");
   const [domain, setDomain] = useState("");
-  const [domains, setDomains] = useState<string[]>([]);
-  const [keywords, setKeywords] = useState("");
+  const [domains, setDomains] = useState<string[]>(["creditaccessgrameen.com"]);
+  const [keywords, setKeywords] = useState("CreditAccess, Grameen, CreditAccess Grameen");
   const [submitting, setSubmitting] = useState(false);
   const [activeScan, setActiveScan] = useState<ScanState | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -103,7 +104,10 @@ export default function WssPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: ScanState = await res.json();
       setActiveScan(data);
-      setBrand(""); setDomains([]); setKeywords("");
+      // Reset to single-brand defaults so subsequent scans stay scoped.
+      setBrand("CreditAccessGrameen");
+      setDomains(["creditaccessgrameen.com"]);
+      setKeywords("CreditAccess, Grameen, CreditAccess Grameen");
       // Start polling
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(() => poll(data.scan_id), 2000);
@@ -188,7 +192,7 @@ export default function WssPage() {
           <div className="space-y-3">
             <div>
               <label className="text-[10px] font-semibold tracking-[0.1em] text-slate-500 uppercase">Brand name</label>
-              <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="ACME Corp"
+              <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="CreditAccessGrameen"
                 className="mt-1 w-full h-9 px-3 rounded-lg text-[12.5px] text-slate-200 placeholder:text-slate-600 outline-none focus:border-purple-500/40"
                 style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(139,92,246,0.18)" }} />
             </div>
@@ -223,7 +227,7 @@ export default function WssPage() {
             <div>
               <label className="text-[10px] font-semibold tracking-[0.1em] text-slate-500 uppercase">Keywords (comma-separated, optional)</label>
               <input value={keywords} onChange={(e) => setKeywords(e.target.value)}
-                placeholder="ACME, ACMEPay"
+                placeholder="CreditAccess, Grameen"
                 className="mt-1 w-full h-9 px-3 rounded-lg text-[12.5px] text-slate-200 placeholder:text-slate-600 outline-none focus:border-purple-500/40"
                 style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(139,92,246,0.18)" }} />
             </div>

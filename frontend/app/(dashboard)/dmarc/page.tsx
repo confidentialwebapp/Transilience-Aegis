@@ -214,7 +214,7 @@ export default function DmarcPage() {
       <FilterCard onSearch={() => {}} onReset={() => {}}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <FilterSelect icon={Building2} label="Clients" options={BRANDS} />
-          <FilterSelect icon={Globe} label="Domains" options={["acme.com", "globex.com", "initech.com"]} />
+          <FilterSelect icon={Globe} label="Domains" options={["creditaccessgrameen.com", "creditaccessgrameen.com", "creditaccessgrameen.com"]} />
           <FilterInput icon={Calendar} placeholder="Start Date" helper="Date range cannot be exceeded more than 31 days" />
           <FilterInput icon={Calendar} placeholder="End Date" />
         </div>

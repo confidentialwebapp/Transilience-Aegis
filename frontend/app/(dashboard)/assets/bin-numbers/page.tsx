@@ -14,11 +14,11 @@ interface BinRow {
 }
 
 const ROWS: BinRow[] = [
-  { bin: "424242", scheme: "Visa", type: "Credit", brand: "Acme Bank", status: "ACTIVE" },
-  { bin: "411111", scheme: "Visa", type: "Debit", brand: "Acme Bank", status: "ACTIVE" },
-  { bin: "555555", scheme: "Mastercard", type: "Credit", brand: "Acme Bank", status: "ACTIVE" },
-  { bin: "603489", scheme: "RuPay", type: "Debit", brand: "Globex Insurance", status: "ACTIVE" },
-  { bin: "378282", scheme: "Amex", type: "Credit", brand: "Stark Retail", status: "INACTIVE" },
+  { bin: "424242", scheme: "Visa", type: "Credit", brand: "CreditAccessGrameen", status: "ACTIVE" },
+  { bin: "411111", scheme: "Visa", type: "Debit", brand: "CreditAccessGrameen", status: "ACTIVE" },
+  { bin: "555555", scheme: "Mastercard", type: "Credit", brand: "CreditAccessGrameen", status: "ACTIVE" },
+  { bin: "603489", scheme: "RuPay", type: "Debit", brand: "CreditAccessGrameen", status: "ACTIVE" },
+  { bin: "378282", scheme: "Amex", type: "Credit", brand: "CreditAccessGrameen", status: "INACTIVE" },
 ];
 
 export default function BinNumbersPage() {

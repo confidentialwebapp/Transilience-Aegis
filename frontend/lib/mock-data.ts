@@ -1,16 +1,9 @@
 // Deterministic-ish mock data generators used across new modules.
 // Each function returns realistic shapes mirroring the documented platform.
 
-export const BRANDS = [
-  "Acme Bank",
-  "Globex Insurance",
-  "Initech Telecom",
-  "Soylent Health",
-  "Wayne Manufacturing",
-  "Stark Retail",
-  "Umbrella Pharma",
-  "Pied Piper Gaming",
-];
+// Single-tenant deployment: the entire platform is scoped to one brand.
+// Adding more brands here would re-introduce multi-brand UI elsewhere.
+export const BRANDS = ["CreditAccessGrameen"];
 
 export const COUNTRIES = [
   "United States", "United Kingdom", "Germany", "France", "India", "Singapore",

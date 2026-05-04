@@ -1,98 +1,65 @@
 "use client";
 
-import { useState } from "react";
-import { Mail, Plus, Users } from "lucide-react";
-import { PageHeader, FilterCard, FilterInput, FilterSelect, DataTable, StatusPill, Toggle, KPICard } from "@/components/platform";
-import type { Column } from "@/components/platform";
-import { BRANDS } from "@/lib/mock-data";
-
-interface UserRow {
-  name: string;
-  email: string;
-  role: string;
-  client: string;
-  status: "ACTIVE" | "INACTIVE" | "PENDING";
-  twoFactor: boolean;
-  lastLogin: string;
-}
-
-const USERS: UserRow[] = [
-  { name: "Karthik Raja", email: "fde@transilienceai.com", role: "Admin", client: "Transilience Holdings", status: "ACTIVE", twoFactor: true, lastLogin: "2m ago" },
-  { name: "Priya Iyer", email: "priya.iyer@creditaccessgrameen.com", role: "Analyst", client: "CreditAccessGrameen", status: "ACTIVE", twoFactor: true, lastLogin: "12m ago" },
-  { name: "Rohit Mehta", email: "rohit.mehta@creditaccessgrameen.com", role: "Read-Only", client: "CreditAccessGrameen", status: "ACTIVE", twoFactor: false, lastLogin: "3h ago" },
-  { name: "Anita Nair", email: "anita.nair@creditaccessgrameen.com", role: "Analyst", client: "CreditAccessGrameen", status: "PENDING", twoFactor: false, lastLogin: "—" },
-  { name: "Vikram Shah", email: "vikram@creditaccessgrameen.com", role: "Admin", client: "CreditAccessGrameen", status: "ACTIVE", twoFactor: true, lastLogin: "1d ago" },
-  { name: "Meera Krishnan", email: "meera@creditaccessgrameen.com", role: "Analyst", client: "CreditAccessGrameen", status: "INACTIVE", twoFactor: false, lastLogin: "32d ago" },
-  { name: "Sanjay Kapoor", email: "sanjay@creditaccessgrameen.com", role: "Read-Only", client: "CreditAccessGrameen", status: "ACTIVE", twoFactor: true, lastLogin: "5h ago" },
-];
+import { useEffect, useState } from "react";
+import { Users, Shield } from "lucide-react";
+import { PageHeader } from "@/components/platform";
+import { fetchClientUsers } from "@/lib/derived";
 
 export default function ClientUsersPage() {
-  const [twoFactorMap, setTwoFactorMap] = useState<Record<string, boolean>>({});
+  const [items, setItems] = useState<any[]>([]);
+  const [note, setNote] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const cols: Column<UserRow>[] = [
-    {
-      key: "user",
-      header: "User",
-      render: (r) => (
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[12px] font-bold text-white"
-            style={{ background: "linear-gradient(135deg, #8b5cf6, #ec4899)" }}
-          >
-            {r.name[0]}
-          </div>
-          <div>
-            <p className="text-[12.5px] font-semibold text-slate-200">{r.name}</p>
-            <p className="text-[10.5px] text-slate-500">{r.email}</p>
-          </div>
-        </div>
-      ),
-    },
-    { key: "role", header: "Role", render: (r) => <span className="text-[11.5px] text-slate-300 font-medium">{r.role}</span> },
-    { key: "client", header: "Client", render: (r) => <span className="text-[12px] text-slate-300">{r.client}</span> },
-    { key: "status", header: "Status", render: (r) => <StatusPill status={r.status} /> },
-    {
-      key: "2fa",
-      header: "2FA",
-      render: (r) => {
-        const on = twoFactorMap[r.email] ?? r.twoFactor;
-        return (
-          <Toggle on={on} onChange={(v) => setTwoFactorMap((m) => ({ ...m, [r.email]: v }))} />
-        );
-      },
-    },
-    { key: "last", header: "Last Login", render: (r) => <span className="text-[11px] text-slate-500">{r.lastLogin}</span> },
-  ];
+  useEffect(() => {
+    fetchClientUsers().then((j) => { setItems(j.items || []); setNote(j.note || ""); }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
 
   return (
     <>
       <PageHeader
         title="Client Users"
-        description="Manage users that belong to your client tenants. Roles, 2FA enrolment, and session activity for the entire portfolio."
-        rightSlot={
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white"
-            style={{ background: "linear-gradient(135deg,#8b5cf6,#7c3aed)" }}>
-            <Plus className="w-3 h-3" /> Invite User
-          </button>
-        }
+        description="User accounts on this CreditAccessGrameen tenant — sourced from Supabase Auth. Every row is a real authenticated identity; not synthesised."
       />
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <KPICard label="Total Users" value={USERS.length} accent="purple" icon={Users} />
-        <KPICard label="Active" value={USERS.filter((u) => u.status === "ACTIVE").length} accent="green" />
-        <KPICard label="Pending" value={USERS.filter((u) => u.status === "PENDING").length} accent="amber" />
-        <KPICard label="2FA enrolled" value={USERS.filter((u) => u.twoFactor).length} accent="blue" />
-      </div>
-
-      <FilterCard onSearch={() => {}} onReset={() => {}}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <FilterInput icon={Mail} placeholder="Email" />
-          <FilterSelect label="Client" options={BRANDS} />
-          <FilterSelect label="Role" options={["Admin", "Analyst", "Read-Only"]} />
+      {items.length === 0 && note && (
+        <div className="px-3 py-3 mb-3 rounded-lg text-[11.5px] text-slate-400" style={{ background: "rgba(139,92,246,0.04)", border: "1px solid rgba(139,92,246,0.15)" }}>
+          {note}
         </div>
-      </FilterCard>
-
-      <DataTable<UserRow> columns={cols} rows={USERS} rowAction />
+      )}
+      <div className="rounded-xl overflow-hidden" style={{ background: "rgba(139,92,246,0.03)", border: "1px solid rgba(139,92,246,0.12)" }}>
+        <table className="w-full text-[12.5px]">
+          <thead style={{ background: "rgba(139,92,246,0.05)" }}>
+            <tr className="text-left text-[10px] font-semibold tracking-[0.1em] uppercase text-slate-500">
+              <th className="px-3 py-2.5">Email</th>
+              <th className="px-3 py-2.5">Role</th>
+              <th className="px-3 py-2.5">Client</th>
+              <th className="px-3 py-2.5">Status</th>
+              <th className="px-3 py-2.5">2FA</th>
+              <th className="px-3 py-2.5">Last Sign In</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-500">Loading…</td></tr>
+            ) : items.length === 0 ? (
+              <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-500">No users yet — invite via Supabase Auth.</td></tr>
+            ) : items.map((u) => (
+              <tr key={u.id} className="border-t border-purple-500/[0.06] hover:bg-white/[0.02]">
+                <td className="px-3 py-2.5 text-slate-200 font-mono"><Users className="w-3 h-3 inline mr-1.5 text-purple-300" />{u.email}</td>
+                <td className="px-3 py-2.5 text-slate-400">{u.role}</td>
+                <td className="px-3 py-2.5 text-slate-400">{u.client}</td>
+                <td className="px-3 py-2.5">
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold rounded uppercase"
+                    style={{ background: u.status === "ACTIVE" ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)", color: u.status === "ACTIVE" ? "#6ee7b7" : "#fca5a5" }}>
+                    {u.status}
+                  </span>
+                </td>
+                <td className="px-3 py-2.5">{u.twoFactor ? <Shield className="w-3.5 h-3.5 text-emerald-400" /> : <span className="text-[10px] text-slate-600">off</span>}</td>
+                <td className="px-3 py-2.5 text-slate-500 text-[11px] font-mono">{u.lastLogin ? new Date(u.lastLogin).toLocaleString() : "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }

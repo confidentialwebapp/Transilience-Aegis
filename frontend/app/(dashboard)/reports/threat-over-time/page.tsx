@@ -1,53 +1,66 @@
 "use client";
 
-import { Calendar } from "lucide-react";
-import { PageHeader, FilterCard, FilterInput, FilterSelect } from "@/components/platform";
-import { GraphViewCard, SeverityLineChart, DualPanelLines } from "@/components/platform/ReportChart";
-import { BRANDS } from "@/lib/mock-data";
+import { useEffect, useState } from "react";
+import { PageHeader } from "@/components/platform";
+import { fetchReportThreatOverTime } from "@/lib/derived";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts";
 
-const MONTHS_12 = [
-  "May 25", "Jun 25", "Jul 25", "Aug 25", "Sep 25", "Oct 25",
-  "Nov 25", "Dec 25", "Jan 26", "Feb 26", "Mar 26", "Apr 26",
-];
+export default function ThreatOverTimePage() {
+  const [timeline, setTimeline] = useState<any[]>([]);
 
-export default function ThreatOverTimeReport() {
+  useEffect(() => { fetchReportThreatOverTime().then((j) => setTimeline(j.timeline || [])).catch(() => {}); }, []);
+
+  const chartData = timeline.map((t) => ({
+    date: t.date,
+    total: t.count,
+    Critical: t.by_severity?.Critical || 0,
+    High: t.by_severity?.High || 0,
+    Medium: (t.by_severity?.Medium || 0) + (t.by_severity?.Moderate || 0),
+    Low: t.by_severity?.Low || 0,
+    Informational: t.by_severity?.Informational || 0,
+  }));
+
   return (
     <>
       <PageHeader
         title="Threats Over Time"
-        description="Recent or historic data of all incidents summarised on threat level. View severity concentration and 12-month trends per series."
+        description={`Time-series of detected findings, bucketed by ISO date. ${timeline.length} day(s) of history in the current scan corpus.`}
       />
-      <FilterCard onSearch={() => {}} onReset={() => {}}>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <FilterSelect label="Brand" options={BRANDS} />
-          <FilterSelect label="Severity" options={["Critical", "High", "Substantial", "Moderate", "Low"]} />
-          <FilterInput icon={Calendar} placeholder="From" />
-          <FilterInput icon={Calendar} placeholder="To" />
-        </div>
-      </FilterCard>
+      <div className="rounded-xl p-4" style={{ background: "rgba(139,92,246,0.03)", border: "1px solid rgba(139,92,246,0.12)" }}>
+        <p className="text-[10px] font-semibold tracking-[0.13em] text-purple-300 uppercase mb-3">Total volume per day</p>
+        <ResponsiveContainer width="100%" height={260}>
+          <AreaChart data={chartData}>
+            <defs>
+              <linearGradient id="vol" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(139,92,246,0.08)" />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#94a3b8" }} />
+            <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} />
+            <Tooltip contentStyle={{ background: "#110d1a", border: "1px solid rgba(139,92,246,0.25)", borderRadius: 8 }} />
+            <Area type="monotone" dataKey="total" stroke="#8b5cf6" fill="url(#vol)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
 
-      <div className="space-y-4">
-        <GraphViewCard
-          title="Graph View"
-          descriptor="Threats of each brand in selected date range"
-        >
-          {/* Severity peak — Critical · High · Substantial · Moderate · Low; peaks at Substantial */}
-          <SeverityLineChart data={[0, 0, 1, 0, 0]} max={1} />
-        </GraphViewCard>
-
-        <GraphViewCard
-          title="Graph View"
-          descriptor="Threats over the time of past 12 months"
-        >
-          <DualPanelLines
-            xLabels={MONTHS_12}
-            yMax={4}
-            series={[
-              { name: "CreditAccessGrameen",        data: [0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 4, 1], color: "#f97316" },
-              { name: "CreditAccessGrameen", data: [0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 4, 2], color: "#ef4444" },
-            ]}
-          />
-        </GraphViewCard>
+      <div className="rounded-xl p-4 mt-3" style={{ background: "rgba(139,92,246,0.03)", border: "1px solid rgba(139,92,246,0.12)" }}>
+        <p className="text-[10px] font-semibold tracking-[0.13em] text-purple-300 uppercase mb-3">Per-severity stack</p>
+        <ResponsiveContainer width="100%" height={260}>
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(139,92,246,0.08)" />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#94a3b8" }} />
+            <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} />
+            <Tooltip contentStyle={{ background: "#110d1a", border: "1px solid rgba(139,92,246,0.25)", borderRadius: 8 }} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Line dataKey="Critical" stroke="#ef4444" />
+            <Line dataKey="High" stroke="#f97316" />
+            <Line dataKey="Medium" stroke="#eab308" />
+            <Line dataKey="Low" stroke="#3b82f6" />
+            <Line dataKey="Informational" stroke="#64748b" />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
     </>
   );

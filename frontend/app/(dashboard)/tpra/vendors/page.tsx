@@ -1,112 +1,70 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import { Building2, Plus } from "lucide-react";
-import { PageHeader, FilterCard, FilterInput, FilterSelect, DataTable, Toggle } from "@/components/platform";
-import type { Column } from "@/components/platform";
-import { genVendors, type VendorRow, BRANDS } from "@/lib/mock-data";
-import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { Building2, ShieldCheck, ShieldAlert } from "lucide-react";
+import { PageHeader } from "@/components/platform";
+import { fetchTprmVendors } from "@/lib/derived";
 
-export default function VendorsListPage() {
-  const [page, setPage] = useState(1);
-  const pageSize = 50;
-  const rows = useMemo<VendorRow[]>(() => genVendors(28), []);
-  const [statusMap, setStatusMap] = useState<Record<string, boolean>>({});
+const GRADE_COLOR: Record<string, { bg: string; fg: string; bd: string }> = {
+  A: { bg: "rgba(16,185,129,0.18)", fg: "#6ee7b7", bd: "rgba(16,185,129,0.3)" },
+  B: { bg: "rgba(59,130,246,0.15)", fg: "#93c5fd", bd: "rgba(59,130,246,0.3)" },
+  C: { bg: "rgba(245,158,11,0.15)", fg: "#fcd34d", bd: "rgba(245,158,11,0.3)" },
+  D: { bg: "rgba(249,115,22,0.18)", fg: "#fdba74", bd: "rgba(249,115,22,0.3)" },
+  F: { bg: "rgba(239,68,68,0.18)", fg: "#fca5a5", bd: "rgba(239,68,68,0.3)" },
+};
 
-  const cols: Column<VendorRow>[] = [
-    {
-      key: "name",
-      header: "Vendor Name",
-      render: (r) => (
-        <Link href={`/tpra/vendors/${r.id}`} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[12px] font-bold text-white"
-            style={{ background: "linear-gradient(135deg, #8b5cf6, #ec4899)" }}
-          >
-            {r.name[0]}
-          </div>
-          <div>
-            <p className="text-[12.5px] font-semibold text-slate-200">{r.name}</p>
-            <p className="text-[10.5px] text-slate-500">{r.email}</p>
-          </div>
-        </Link>
-      ),
-    },
-    { key: "client", header: "Client", render: (r) => <span className="text-[12px] text-slate-300">{r.client}</span> },
-    {
-      key: "risk",
-      header: "Risk Score",
-      align: "right",
-      render: (r) => (
-        <div className="flex flex-col items-end gap-0.5 min-w-[60px]">
-          <span
-            className={cn(
-              "text-[12px] font-bold tabular-nums",
-              r.riskScore >= 70 ? "text-red-400" : r.riskScore >= 40 ? "text-amber-400" : "text-emerald-400"
-            )}
-          >
-            {r.riskScore}%
-          </span>
-          <div className="w-14 h-1 rounded-full bg-purple-500/10 overflow-hidden">
-            <div
-              className="h-full rounded-full"
-              style={{
-                width: `${r.riskScore}%`,
-                background: r.riskScore >= 70 ? "#ef4444" : r.riskScore >= 40 ? "#f59e0b" : "#10b981",
-              }}
-            />
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (r) => {
-        const on = statusMap[r.id] ?? r.status;
-        return (
-          <Toggle
-            on={on}
-            onChange={(v) => setStatusMap((m) => ({ ...m, [r.id]: v }))}
-          />
-        );
-      },
-    },
-    { key: "added", header: "Added Date", render: (r) => <span className="text-[12px] text-slate-400">{r.added}</span> },
-  ];
+export default function VendorsPage() {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTprmVendors().then((j) => setItems(j.items || [])).catch(() => {}).finally(() => setLoading(false));
+  }, []);
 
   return (
     <>
       <PageHeader
-        title="Third-Party Vendors"
-        description="Central repository and management of third-party vendors. Risk scores combine surface-level posture, compliance signals, and continuous dark-web monitoring."
-        rightSlot={
-          <button
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white transition-all"
-            style={{ background: "linear-gradient(135deg,#8b5cf6,#7c3aed)" }}
-          >
-            <Plus className="w-3 h-3" /> Add Vendor
-          </button>
-        }
+        title="Vendors"
+        description="Third-party JavaScript hosts and supply-chain vendors loading on your brand pages — auto-discovered by the BrandMonitoring supply_chain module. Each is letter-graded by VirusTotal + OTX reputation."
       />
-
-      <FilterCard onSearch={() => {}} onReset={() => {}}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          <FilterInput icon={Building2} placeholder="Vendor name" />
-          <FilterSelect label="Client" options={BRANDS} />
-          <FilterSelect label="Risk band" options={["High (≥70%)", "Medium (40-69%)", "Low (<40%)"]} />
-        </div>
-      </FilterCard>
-
-      <DataTable<VendorRow>
-        columns={cols}
-        rows={rows}
-        totalEntries={rows.length}
-        pageSize={pageSize}
-        page={page}
-        onPageChange={setPage}
-      />
+      <div className="rounded-xl overflow-hidden" style={{ background: "rgba(139,92,246,0.03)", border: "1px solid rgba(139,92,246,0.12)" }}>
+        <table className="w-full text-[12.5px]">
+          <thead style={{ background: "rgba(139,92,246,0.05)" }}>
+            <tr className="text-left text-[10px] font-semibold tracking-[0.1em] uppercase text-slate-500">
+              <th className="px-3 py-2.5">Vendor (Host)</th>
+              <th className="px-3 py-2.5">Category</th>
+              <th className="px-3 py-2.5">Score</th>
+              <th className="px-3 py-2.5">VT Malicious</th>
+              <th className="px-3 py-2.5">OTX Pulses</th>
+              <th className="px-3 py-2.5">First Seen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-500">Loading…</td></tr>
+            ) : items.length === 0 ? (
+              <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-500">No third-party vendors detected on the brand's pages yet.</td></tr>
+            ) : items.map((v) => {
+              const g = GRADE_COLOR[v.score] || GRADE_COLOR.A;
+              return (
+                <tr key={v.vendor} className="border-t border-purple-500/[0.06] hover:bg-white/[0.02]">
+                  <td className="px-3 py-2.5 text-slate-200 font-mono">
+                    <Building2 className="w-3 h-3 inline mr-1.5 text-purple-300" />{v.vendor}
+                  </td>
+                  <td className="px-3 py-2.5 text-slate-400 text-[11.5px]">{v.category}</td>
+                  <td className="px-3 py-2.5">
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-md text-[12px] font-bold"
+                      style={{ background: g.bg, color: g.fg, border: `1px solid ${g.bd}` }}>{v.score}</span>
+                  </td>
+                  <td className="px-3 py-2.5 text-slate-300 font-mono tabular-nums">{v.vt_malicious}</td>
+                  <td className="px-3 py-2.5 text-slate-300 font-mono tabular-nums">{v.otx_pulses}</td>
+                  <td className="px-3 py-2.5 text-slate-500 text-[11px] font-mono">{v.first_seen ? new Date(v.first_seen).toLocaleString() : "—"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }

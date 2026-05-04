@@ -1,92 +1,78 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { Copy } from "lucide-react";
 import { PageHeader } from "@/components/platform";
-import { ApiDocs, CodeBlock, EndpointTable, type DocSection } from "@/components/platform/ApiDocs";
+import { fetchApiInfo } from "@/lib/derived";
 
-const endpoints = [
-  { name: "POST /api/Data/GetMalwareFeed", purpose: "Bulk malware feed for a time range (≤ 3 days). Returns Sha256/Sha1/Sha3_384/Md5 hash, Signature, First/Last seen, Imphash, Ssdeep, Tlsh, Tags, File_information." },
-  { name: "POST /api/Data/GetMalwareFeedSearch", purpose: "Lookup a single Sha256 hash → adds Origin_country, File_name, File_size, File_type, File_type_mime, Anonymous, Telfhash, Gimphash, Magika, Dhash_icon, Trid, Comment, Archive_pw." },
-  { name: "POST /api/Data/GetCVERecord", purpose: "Bulk CVE list for a time range (≤ 3 days)." },
-  { name: "POST /api/Data/GetCVERecordSearch", purpose: "Lookup a specific CVE name." },
-  { name: "POST /api/Data/GetIndicators", purpose: "List indicators by IndicatorType (cve, yara, email, filehash, url, ip, other)." },
-  { name: "POST /api/Data/GetIndicatorSearch", purpose: "Search a specific indicator value." },
-  { name: "POST /api/Data/GetCyberIntelAdvisory", purpose: "Last 24h cyber intel advisories." },
-  { name: "POST /api/Data/SearchBlacklistedIndicator", purpose: "Reputation lookup (daily limit 500). Returns Indicator, IndicatorType, Verdict, Confidence, FirstSeen, LastSeen." },
-];
-
-const sections: DocSection[] = [
-  {
-    id: "summary",
-    title: "Summary",
-    body: (
-      <>
-        <p>The Threat Intel REST API delivers malware, CVE, indicator, and advisory feeds in JSON.</p>
-        <p>Base URL: <code className="text-purple-300">https://api.transilience.ai/v3</code></p>
-      </>
-    ),
-  },
-  {
-    id: "auth",
-    title: "Authentication",
-    body: (
-      <>
-        <p>Token-based authentication. Exchange your API key + secret for an auth token.</p>
-        <CodeBlock lang="POST /api/token/authenticate">{`{
-  "APIKey": "ak_live_...",
-  "SecretKey": "sk_live_..."
-}`}</CodeBlock>
-        <CodeBlock lang="Response">{`{
-  "AuthToken": "eyJhbGciOi...",
-  "ExpiresAt": "2026-05-01T00:00:00Z"
-}`}</CodeBlock>
-        <p>Pass the <code className="text-purple-300">AuthToken</code> as the <code>Authorization: Bearer</code> header on subsequent calls.</p>
-      </>
-    ),
-  },
-  ...endpoints.map((ep, i) => ({
-    id: `ep-${i}`,
-    title: ep.name,
-    body: (
-      <>
-        <p>{ep.purpose}</p>
-        <CodeBlock lang="Request">{`POST ${ep.name.replace("POST ", "")}
-Authorization: Bearer {AuthToken}
-Content-Type: application/json
-
-{
-  "DateFrom": "2026-04-25",
-  "DateTo": "2026-04-28"
-}`}</CodeBlock>
-      </>
-    ),
-  })),
-  {
-    id: "errors",
-    title: "Error Codes",
-    body: (
-      <EndpointTable rows={[
-        { code: "*401", meaning: "Invalid credentials / missing API key" },
-        { code: "*404", meaning: "Resource not found" },
-        { code: "*500", meaning: "Internal server error" },
-        { code: "*2001", meaning: "Validation error — required field missing" },
-        { code: "*2002", meaning: "Date range exceeds 3-day limit" },
-        { code: "*2010", meaning: "Daily quota exceeded" },
-        { code: "*2015", meaning: "Invalid indicator format" },
-        { code: "*2018", meaning: "Token expired" },
-        { code: "*2020", meaning: "File not found / unsupported type" },
-      ]} />
-    ),
-  },
-];
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://tai-aegis-api.onrender.com";
 
 export default function ThreatIntelApiPage() {
+  const [endpoints, setEndpoints] = useState<any[]>([]);
+  const [version, setVersion] = useState("v1");
+
+  useEffect(() => {
+    fetchApiInfo().then((j) => { setEndpoints(j.endpoints || []); setVersion(j.version || "v1"); }).catch(() => {});
+  }, []);
+
   return (
     <>
       <PageHeader
-        title="Threat Intel API"
-        description="Subscribe to indicator, malware, CVE, and dark-web advisory feeds programmatically. Token-based authentication, 3-day window queries, and JSON responses."
+        title={`Threat Intel API (${version})`}
+        description="Self-describing JSON API for every dashboard data source. Integrate this into your SIEM, SOAR, or own tooling — every endpoint accepts the X-Org-Id header and returns JSON."
       />
-      <ApiDocs sections={sections} title="Reference" />
+
+      <div className="rounded-xl p-4 mb-4" style={{ background: "rgba(139,92,246,0.04)", border: "1px solid rgba(139,92,246,0.15)" }}>
+        <p className="text-[10px] font-semibold tracking-[0.13em] text-purple-300 uppercase mb-2">Base URL</p>
+        <div className="flex items-center gap-2">
+          <code className="flex-1 text-[12px] text-slate-200 font-mono px-3 py-2 rounded-lg" style={{ background: "rgba(0,0,0,0.35)" }}>
+            {API_BASE}
+          </code>
+          <button onClick={() => navigator.clipboard.writeText(API_BASE)} className="px-2 py-2 rounded-lg text-slate-300 hover:text-white"
+            style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(139,92,246,0.12)" }}>
+            <Copy className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-xl overflow-hidden" style={{ background: "rgba(139,92,246,0.03)", border: "1px solid rgba(139,92,246,0.12)" }}>
+        <table className="w-full text-[12.5px]">
+          <thead style={{ background: "rgba(139,92,246,0.05)" }}>
+            <tr className="text-left text-[10px] font-semibold tracking-[0.1em] uppercase text-slate-500">
+              <th className="px-3 py-2.5">Method</th>
+              <th className="px-3 py-2.5">Path</th>
+              <th className="px-3 py-2.5">Description</th>
+              <th className="px-3 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {endpoints.map((e, i) => (
+              <tr key={i} className="border-t border-purple-500/[0.06] hover:bg-white/[0.02]">
+                <td className="px-3 py-2.5">
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold rounded uppercase tracking-wider"
+                    style={{
+                      background: e.method === "POST" ? "rgba(249,115,22,0.15)" : "rgba(59,130,246,0.12)",
+                      color: e.method === "POST" ? "#fdba74" : "#93c5fd",
+                    }}>{e.method}</span>
+                </td>
+                <td className="px-3 py-2.5 text-purple-300 font-mono text-[11.5px]">{e.path}</td>
+                <td className="px-3 py-2.5 text-slate-400">{e.desc}</td>
+                <td className="px-3 py-2.5">
+                  <button onClick={() => navigator.clipboard.writeText(`${API_BASE}${e.path}`)} className="text-slate-500 hover:text-purple-300">
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-4 rounded-xl p-4" style={{ background: "rgba(139,92,246,0.03)", border: "1px solid rgba(139,92,246,0.12)" }}>
+        <p className="text-[10px] font-semibold tracking-[0.13em] text-purple-300 uppercase mb-2">Example: list High-severity findings</p>
+        <pre className="text-[11.5px] text-slate-200 font-mono px-3 py-2 rounded-lg overflow-x-auto" style={{ background: "rgba(0,0,0,0.35)" }}>{`curl -H "X-Org-Id: 00000000-0000-0000-0000-000000000001" \\
+  "${API_BASE}/api/v1/findings?severity=Critical,High&limit=50"`}</pre>
+      </div>
     </>
   );
 }

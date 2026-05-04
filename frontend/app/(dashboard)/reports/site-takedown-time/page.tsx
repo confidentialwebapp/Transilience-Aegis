@@ -1,128 +1,29 @@
 "use client";
 
-import { Calendar } from "lucide-react";
-import { PageHeader, FilterCard, FilterInput, FilterSelect, DataTable } from "@/components/platform";
-import type { Column } from "@/components/platform";
-import { GraphViewCard, IncidentTypeChart } from "@/components/platform/ReportChart";
-import { BRANDS } from "@/lib/mock-data";
+import { useEffect, useState } from "react";
+import { PageHeader } from "@/components/platform";
+import { fetchReportTakedownTime } from "@/lib/derived";
 
-interface RowData {
-  type: string;
-  total: number;
-  open: number;
-  avgUptime: string; // hh:mm
-  medianUptime: string; // hh:mm
-  pending: number;
-  closed: number;
-}
-
-// Per spec: 11 incident-type rows, only Social Media has data
-const ROWS: RowData[] = [
-  { type: "Phishing",     total: 0, open: 0, avgUptime: "00:00", medianUptime: "00:00", pending: 0, closed: 0 },
-  { type: "Malware",      total: 0, open: 0, avgUptime: "00:00", medianUptime: "00:00", pending: 0, closed: 0 },
-  { type: "Pharming",     total: 0, open: 0, avgUptime: "00:00", medianUptime: "00:00", pending: 0, closed: 0 },
-  { type: "Smishing",     total: 0, open: 0, avgUptime: "00:00", medianUptime: "00:00", pending: 0, closed: 0 },
-  { type: "Vishing",      total: 0, open: 0, avgUptime: "00:00", medianUptime: "00:00", pending: 0, closed: 0 },
-  { type: "Mobile Apps",  total: 0, open: 0, avgUptime: "00:00", medianUptime: "00:00", pending: 0, closed: 0 },
-  { type: "Social Media", total: 4, open: 0, avgUptime: "34:23", medianUptime: "34:36", pending: 0, closed: 4 },
-  { type: "Email",        total: 0, open: 0, avgUptime: "00:00", medianUptime: "00:00", pending: 0, closed: 0 },
-  { type: "Executive",    total: 0, open: 0, avgUptime: "00:00", medianUptime: "00:00", pending: 0, closed: 0 },
-  { type: "Other",        total: 0, open: 0, avgUptime: "00:00", medianUptime: "00:00", pending: 0, closed: 0 },
-  { type: "Domain",       total: 0, open: 0, avgUptime: "00:00", medianUptime: "00:00", pending: 0, closed: 0 },
-];
-
-const X_LABELS = ROWS.map((r) => r.type);
-// Phishing + Social Media spike to ~340-380 on the chart, everything else flat at 0
-const AVG_DATA = X_LABELS.map((l) => (l === "Phishing" ? 380 : l === "Social Media" ? 340 : 0));
-const MED_DATA = X_LABELS.map((l) => (l === "Phishing" ? 360 : l === "Social Media" ? 320 : 0));
-
-export default function SiteTakedownTimeReport() {
-  const cols: Column<RowData>[] = [
-    {
-      key: "type",
-      header: "Incident Type",
-      render: (r) => <span className="text-[12.5px] font-semibold text-slate-200">{r.type}</span>,
-    },
-    {
-      key: "total",
-      header: "Total",
-      align: "right",
-      render: (r) => <span className="text-[12px] text-slate-300 tabular-nums">{r.total}</span>,
-    },
-    {
-      key: "open",
-      header: "Open",
-      align: "right",
-      render: (r) => <span className="text-[12px] text-slate-300 tabular-nums">{r.open}</span>,
-    },
-    {
-      key: "avg",
-      header: "Avg Uptime (hh:mm)",
-      align: "right",
-      render: (r) => <span className="text-[12px] font-mono text-slate-300 tabular-nums">{r.avgUptime}</span>,
-    },
-    {
-      key: "median",
-      header: "Median Uptime (hh:mm)",
-      align: "right",
-      render: (r) => <span className="text-[12px] font-mono text-slate-300 tabular-nums">{r.medianUptime}</span>,
-    },
-    {
-      key: "pending",
-      header: "Pending",
-      align: "right",
-      render: (r) => <span className="text-[12px] text-slate-300 tabular-nums">{r.pending}</span>,
-    },
-    {
-      key: "closed",
-      header: "Closed",
-      align: "right",
-      render: (r) => <span className="text-[12px] text-slate-300 tabular-nums">{r.closed}</span>,
-    },
-  ];
+export default function TakedownTimePage() {
+  const [data, setData] = useState<any>(null);
+  useEffect(() => { fetchReportTakedownTime().then(setData).catch(() => {}); }, []);
 
   return (
     <>
       <PageHeader
         title="Site Take Down Time"
-        description="Recent or historic data of all incidents summarised on incident type with average and median takedown time."
+        description="Mean / median / P95 takedown latency per registrar and hosting provider. Populated from real case-resolution timestamps once the takedown workflow runs against findings."
       />
-      <FilterCard onSearch={() => {}} onReset={() => {}}>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <FilterSelect label="Brand" options={BRANDS} />
-          <FilterSelect label="Incident Type" options={X_LABELS} />
-          <FilterInput icon={Calendar} placeholder="From" />
-          <FilterInput icon={Calendar} placeholder="To" />
+      <div className="rounded-xl p-6" style={{ background: "rgba(139,92,246,0.03)", border: "1px solid rgba(139,92,246,0.12)" }}>
+        <p className="text-[12px] text-slate-400">{data?.note || "Loading…"}</p>
+        <div className="grid grid-cols-3 gap-3 mt-4">
+          {["mean_hours", "median_hours", "p95_hours"].map((k) => (
+            <div key={k} className="rounded-lg p-3" style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(139,92,246,0.1)" }}>
+              <p className="text-[10px] tracking-[0.13em] uppercase text-slate-500">{k.replace("_", " ")}</p>
+              <p className="text-2xl font-bold text-white mt-1 font-mono tabular-nums">{data?.stats?.[k] ?? "—"}</p>
+            </div>
+          ))}
         </div>
-      </FilterCard>
-
-      <DataTable<RowData>
-        columns={cols}
-        rows={ROWS}
-        rowAction={false}
-        totalEntries={ROWS.length}
-      />
-
-      <div className="mt-4 space-y-4">
-        <GraphViewCard title="Graph View" descriptor="Average takedown time by incident type">
-          <IncidentTypeChart
-            xLabels={X_LABELS}
-            series={[
-              { name: "Average", data: AVG_DATA, color: "#f97316" },
-              { name: "Median",  data: MED_DATA, color: "#3b82f6" },
-            ]}
-          />
-        </GraphViewCard>
-
-        <GraphViewCard title="Graph View" descriptor="Median takedown time by incident type">
-          <IncidentTypeChart
-            xLabels={X_LABELS}
-            series={[
-              { name: "Average", data: AVG_DATA, color: "#f97316" },
-              { name: "Median",  data: MED_DATA, color: "#3b82f6" },
-            ]}
-          />
-        </GraphViewCard>
       </div>
     </>
   );

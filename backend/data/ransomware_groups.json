@@ -1,0 +1,14 @@
+[
+  {"name":"LockBit","country":"Russia","victim_count":1857,"first_seen":"2019","status":"active"},
+  {"name":"ALPHV / BlackCat","country":"Russia","victim_count":643,"first_seen":"2021","status":"active"},
+  {"name":"Cl0p","country":"Russia","victim_count":506,"first_seen":"2019","status":"active"},
+  {"name":"Play","country":"Romania","victim_count":489,"first_seen":"2022","status":"active"},
+  {"name":"Akira","country":"Russia","victim_count":412,"first_seen":"2023","status":"active"},
+  {"name":"Black Basta","country":"Russia","victim_count":381,"first_seen":"2022","status":"active"},
+  {"name":"8Base","country":"Ukraine","victim_count":312,"first_seen":"2022","status":"active"},
+  {"name":"BianLian","country":"Russia","victim_count":287,"first_seen":"2022","status":"active"},
+  {"name":"Royal","country":"Russia","victim_count":244,"first_seen":"2022","status":"defunct"},
+  {"name":"Medusa","country":"Romania","victim_count":213,"first_seen":"2021","status":"active"},
+  {"name":"RansomHub","country":"Russia","victim_count":198,"first_seen":"2024","status":"active"},
+  {"name":"Hunters International","country":"Russia","victim_count":162,"first_seen":"2023","status":"active"}
+]

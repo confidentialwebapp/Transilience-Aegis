@@ -1,96 +1,56 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Calendar, FileSearch, Download } from "lucide-react";
-import { PageHeader, FilterCard, FilterInput, FilterSelect, Pagination } from "@/components/platform";
-import { BRANDS } from "@/lib/mock-data";
+import { useEffect, useState } from "react";
+import { ScanLine } from "lucide-react";
+import { PageHeader } from "@/components/platform";
+import { fetchReportWss } from "@/lib/derived";
+import { SEV_COLOR } from "@/lib/findings";
 
-interface LedgerRow {
-  title: string;
-  generatedAt: string;
-}
+export default function WssReportsPage() {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-function makeReports(): LedgerRow[] {
-  const rows: LedgerRow[] = [];
-  // 95 entries — one row per WSS scan run; ScanID is a 10-digit Unix timestamp
-  const baseTs = 1714521600; // 2024-05-01 UTC
-  for (let i = 0; i < 95; i++) {
-    const brand = BRANDS[i % BRANDS.length];
-    const scanId = (baseTs + i * 86400 * 7).toString(); // weekly scans
-    const d = new Date(parseInt(scanId, 10) * 1000);
-    const ts = `${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getDate().toString().padStart(2, "0")}/${d.getFullYear()} ${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}:${d.getSeconds().toString().padStart(2, "0")} AM`;
-    rows.push({
-      title: `${brand} - WSS Report - ${scanId}`,
-      generatedAt: ts,
-    });
-  }
-  return rows;
-}
-
-const ALL = makeReports();
-
-export default function WssReport() {
-  const [page, setPage] = useState(1);
-  const perPage = 50;
-  const totalPages = Math.ceil(ALL.length / perPage);
-  const visible = useMemo(() => ALL.slice((page - 1) * perPage, page * perPage), [page]);
+  useEffect(() => {
+    fetchReportWss().then((j) => setItems(j.items || [])).catch(() => {}).finally(() => setLoading(false));
+  }, []);
 
   return (
     <>
       <PageHeader
         title="Website Scanning Suite Reports"
-        description="Summary report of all websites placed under WSS (Website Scanning Suite) — one row per scan run. Click any row to open the underlying PDF."
+        description={`Per-scan findings rollup. ${items.length} scan(s) on file, derived from the _scan_source field on every finding in the corpus.`}
       />
-      <FilterCard onSearch={() => {}} onReset={() => {}}>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <FilterSelect label="Brand" options={BRANDS} />
-          <FilterInput placeholder="Scan ID" />
-          <FilterInput icon={Calendar} placeholder="From" />
-          <FilterInput icon={Calendar} placeholder="To" />
-        </div>
-      </FilterCard>
-
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(139,92,246,0.10)" }}
-      >
-        <div className="px-4 py-2.5 border-b grid grid-cols-[1fr_240px]" style={{ borderColor: "rgba(139,92,246,0.10)" }}>
-          <span className="text-[10px] font-bold tracking-[0.13em] uppercase text-slate-400">Report Title</span>
-          <span className="text-[10px] font-bold tracking-[0.13em] uppercase text-slate-400 text-right">Generated</span>
-        </div>
-        <div className="divide-y divide-purple-500/[0.05]">
-          {visible.map((r, i) => (
-            <button
-              key={`${page}-${i}`}
-              className="w-full grid grid-cols-[1fr_240px] items-center gap-3 px-4 py-2.5 text-left hover:bg-white/[0.02] transition-colors group"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div
-                  className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{ background: "rgba(59,130,246,0.10)", border: "1px solid rgba(59,130,246,0.25)" }}
-                >
-                  <FileSearch className="w-3.5 h-3.5 text-blue-300" />
+      <div className="space-y-3">
+        {loading && <p className="text-[12px] text-slate-500 italic">Loading…</p>}
+        {items.map((r) => (
+          <div key={r.scan_id} className="rounded-xl p-4" style={{ background: "rgba(139,92,246,0.03)", border: "1px solid rgba(139,92,246,0.12)" }}>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2"><ScanLine className="w-3.5 h-3.5 text-purple-300" />
+                  <p className="text-[12.5px] font-mono text-slate-200">{r.scan_id}</p>
                 </div>
-                <span className="text-[12.5px] text-slate-200 group-hover:text-purple-200 truncate">{r.title}</span>
+                <p className="text-[10.5px] text-slate-500 mt-0.5">{r.count} total findings</p>
               </div>
-              <div className="flex items-center justify-end gap-3">
-                <span className="text-[11px] text-slate-500 font-mono tabular-nums">{r.generatedAt}</span>
-                <Download className="w-3.5 h-3.5 text-slate-500 group-hover:text-purple-300" />
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {Object.entries(r.by_severity || {}).map(([sev, n]) => {
+                  const c = (SEV_COLOR as any)[sev] || SEV_COLOR.Informational;
+                  return (
+                    <span key={sev} className="px-1.5 py-0.5 text-[10px] font-bold rounded uppercase tracking-wider"
+                      style={{ background: c.bg, color: c.fg, border: `1px solid ${c.bd}` }}>
+                      {sev}: {n as number}
+                    </span>
+                  );
+                })}
               </div>
-            </button>
-          ))}
-        </div>
-        <div
-          className="flex items-center justify-between px-4 py-2.5 border-t"
-          style={{ borderColor: "rgba(139,92,246,0.10)", background: "rgba(255,255,255,0.015)" }}
-        >
-          <span className="text-[11px] text-slate-500">
-            Showing <span className="text-slate-300 font-medium">{(page - 1) * perPage + 1}</span> to{" "}
-            <span className="text-slate-300 font-medium">{Math.min(page * perPage, ALL.length)}</span> of{" "}
-            <span className="text-slate-300 font-medium">{ALL.length}</span> entries
-          </span>
-          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
-        </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1">
+              {Object.entries(r.by_module || {}).map(([m, n]) => (
+                <span key={m} className="px-1.5 py-0.5 text-[10px] font-mono rounded text-slate-300"
+                  style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(139,92,246,0.1)" }}>{m}: {n as number}</span>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </>
   );

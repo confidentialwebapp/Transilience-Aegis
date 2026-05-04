@@ -46,6 +46,7 @@ export const SIDEBAR_SECTIONS: NavSection[] = [
   {
     title: "CYBER THREAT INTELLIGENCE",
     items: [
+      { href: "/live", label: "Live Threat Map", icon: Globe, badge: "LIVE" },
       { href: "/cti/ioc-feed", label: "IOC Feed", icon: Radio, badge: null },
       { href: "/cti/advisory", label: "Cyber Intel Advisory", icon: FileText, badge: "NEW" },
       { href: "/cti/threat-actors", label: "Threat Actors", icon: Skull, badge: null },

@@ -58,6 +58,7 @@ def create_app():
         from routers import attack_surface_monitor as as_monitor
         from routers import transilience_ai
         from routers import status_proxy
+        from routers import brand_monitoring
         app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
         app.include_router(assets.router, prefix="/api/v1/assets", tags=["Assets"])
         app.include_router(alerts.router, prefix="/api/v1/alerts", tags=["Alerts"])
@@ -84,6 +85,7 @@ def create_app():
         app.include_router(as_monitor.router, prefix="/api/v1/attack-surface", tags=["Attack Surface Monitor"])
         app.include_router(transilience_ai.router, prefix="/api/v1/transilience-ai", tags=["Transilience AI"])
         app.include_router(status_proxy.router, prefix="/api/v1/status", tags=["Status"])
+        app.include_router(brand_monitoring.router, prefix="/api/v1/brand-monitoring", tags=["BrandMonitoring Scans"])
         logger.info("All routers loaded successfully.")
     except Exception as e:
         import traceback

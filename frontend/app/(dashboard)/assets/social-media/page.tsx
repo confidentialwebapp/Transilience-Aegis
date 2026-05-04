@@ -1,64 +1,19 @@
 "use client";
 
-import { Plus } from "lucide-react";
-import { PageHeader, FilterCard, FilterInput, FilterSelect, DataTable, StatusPill } from "@/components/platform";
-import type { Column } from "@/components/platform";
-import { BRANDS } from "@/lib/mock-data";
+import { PageHeader } from "@/components/platform";
+import { FindingsTable } from "@/components/shared/FindingsTable";
 
-interface SocialRow {
-  handle: string;
-  platform: string;
-  brand: string;
-  followers: number;
-  status: "VERIFIED" | "UNVERIFIED";
-  added: string;
-}
-
-const PLATFORMS = ["Instagram", "Facebook", "Twitter / X", "LinkedIn", "YouTube", "Telegram", "TikTok", "Threads"];
-
-const ROWS: SocialRow[] = [
-  { handle: "@creditaccessgrameen", platform: "Instagram", brand: "CreditAccessGrameen", followers: 218000, status: "VERIFIED", added: "01 Mar 2024" },
-  { handle: "@creditaccessgrameen", platform: "Twitter / X", brand: "CreditAccessGrameen", followers: 142000, status: "VERIFIED", added: "01 Mar 2024" },
-  { handle: "@creditaccessgrameen", platform: "Instagram", brand: "CreditAccessGrameen", followers: 84000, status: "VERIFIED", added: "01 Mar 2024" },
-  { handle: "@creditaccessgrameen", platform: "Telegram", brand: "CreditAccessGrameen", followers: 12000, status: "UNVERIFIED", added: "12 May 2024" },
-  { handle: "@creditaccessgrameen", platform: "TikTok", brand: "CreditAccessGrameen", followers: 320000, status: "VERIFIED", added: "12 May 2024" },
-];
-
-export default function SocialMediaAssetsPage() {
-  const cols: Column<SocialRow>[] = [
-    { key: "handle", header: "Handle", render: (r) => <span className="text-[12.5px] text-slate-200 font-semibold">{r.handle}</span> },
-    { key: "platform", header: "Platform", render: (r) => <span className="text-[12px] text-slate-300">{r.platform}</span> },
-    { key: "brand", header: "Brand", render: (r) => <span className="text-[12px] text-slate-400">{r.brand}</span> },
-    {
-      key: "followers",
-      header: "Followers",
-      align: "right",
-      render: (r) => <span className="text-[12px] text-slate-300 tabular-nums">{r.followers.toLocaleString()}</span>,
-    },
-    { key: "status", header: "Status", render: (r) => <StatusPill status={r.status} /> },
-    { key: "added", header: "Added", render: (r) => <span className="text-[11px] text-slate-500">{r.added}</span> },
-  ];
-
+export default function SocialMediaPage() {
   return (
     <>
       <PageHeader
-        title="Social Media Accounts"
-        description="Owned social profiles. Used to disambiguate impersonators in incident triage."
-        rightSlot={
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white"
-            style={{ background: "linear-gradient(135deg,#8b5cf6,#7c3aed)" }}>
-            <Plus className="w-3 h-3" /> Add Account
-          </button>
-        }
+        title="Social Media Account"
+        description="Social-platform handles surfaced by the BrandMonitoring social_deep_scrape + social_impersonation modules — Instagram, Facebook, X, Telegram, YouTube, TikTok, LinkedIn, Reddit, Threads, Bluesky."
       />
-      <FilterCard onSearch={() => {}} onReset={() => {}}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <FilterInput placeholder="Handle / username" />
-          <FilterSelect label="Platform" options={PLATFORMS} />
-          <FilterSelect label="Brand" options={BRANDS} />
-        </div>
-      </FilterCard>
-      <DataTable<SocialRow> columns={cols} rows={ROWS} totalEntries={ROWS.length} />
+      <FindingsTable
+        category="social_impersonation"
+        pageSize={50}
+      />
     </>
   );
 }

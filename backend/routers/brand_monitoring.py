@@ -28,6 +28,16 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# Import the backend's own typosquat generator at module load time, BEFORE any
+# sys.path mutation done later by _try_import_brandmonitoring(). Otherwise the
+# inserted BrandMonitoring/modules/ shadows backend/modules/ and the fallback
+# can no longer resolve `modules.brand_monitor`.
+try:
+    from modules.brand_monitor import generate_typosquats as _generate_typosquats  # type: ignore
+except Exception as _e:  # pragma: no cover
+    _generate_typosquats = None
+    logger.warning(f"Backend brand_monitor unavailable, fallback will be limited: {_e}")
+
 # In-process scan registry. Acceptable for single-worker FastAPI on Render's
 # free tier; revisit when we move to multi-replica.
 _SCANS: dict[str, "ScanState"] = {}
@@ -75,15 +85,25 @@ class ScanRequest(BaseModel):
 def _try_import_brandmonitoring():
     """Best-effort import of the BrandMonitoring package. Returns the
     orchestrator's run_scan callable or None.
+
+    Carefully manages sys.path so the BrandMonitoring/modules/ subpackage
+    doesn't shadow the backend's own /modules/ when the import fails.
     """
     try:
         repo_root = Path(__file__).resolve().parent.parent.parent
         bm_root = repo_root / "BrandMonitoring"
         if not bm_root.exists():
             return None
-        sys.path.insert(0, str(bm_root))
-        from core.orchestrator import run_scan  # type: ignore
-        return run_scan
+        bm_path = str(bm_root)
+        original_path = list(sys.path)
+        sys.path.insert(0, bm_path)
+        try:
+            from core.orchestrator import run_scan  # type: ignore
+            return run_scan
+        finally:
+            # Always restore sys.path so backend's `modules` package
+            # remains the one that resolves first elsewhere.
+            sys.path[:] = original_path
     except Exception as e:
         logger.info(f"BrandMonitoring engine unavailable: {e}")
         return None
@@ -160,17 +180,15 @@ async def _run_fallback(state: ScanState, req: ScanRequest) -> None:
     state.engine = "fallback"
     findings: list[dict[str, Any]] = []
 
-    try:
-        from modules.brand_monitor import generate_typosquats  # type: ignore
-    except Exception as e:
-        state.error = f"Fallback module unavailable: {e}"
+    if _generate_typosquats is None:
+        state.error = "Fallback typosquat generator not importable"
         state.status = "failed"
         return
 
     state.progress = 10
     for i, domain in enumerate(req.primary_domains):
         try:
-            squats = generate_typosquats(domain)
+            squats = _generate_typosquats(domain)
         except Exception as e:
             squats = []
             findings.append({
